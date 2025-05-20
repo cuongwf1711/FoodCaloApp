@@ -1,0 +1,1 @@
+export const TITLE_APP: string = 'Food Calo Estimate App';
