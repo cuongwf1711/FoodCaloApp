@@ -5,12 +5,17 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack, usePathname, useRouter } from 'expo-router';
 import React, { useContext } from 'react';
-import { StyleSheet, Text, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export default function HomeLayout() {
     const { email, setToken, setEmail } = useContext(AuthContext);
     const router = useRouter();
     const pathname = usePathname();
+
+    // nếu email chưa load xong, không render gì hoặc có thể show loading
+    if (!email) {
+        return <View style={styles.loadingContainer}><Text>Đang tải...</Text></View>;
+    }
 
     const isChangePasswordScreen = pathname.includes('change-password');
 
@@ -34,11 +39,16 @@ export default function HomeLayout() {
                         onPress={navigateToHome}
                     >
                         <Text style={styles.emailText}>{email}</Text>
-                        <Ionicons name="home-outline" size={18} color="#007AFF" style={styles.homeIcon} />
+                        <Ionicons
+                            name="home-outline"
+                            size={18}
+                            color="#007AFF"
+                            style={styles.homeIcon}
+                        />
                     </TouchableOpacity>
                 ),
                 headerTitleAlign: 'center',
-                headerLeft: () => (
+                headerLeft: () =>
                     !isChangePasswordScreen ? (
                         <TouchableOpacity
                             style={styles.leftIconButton}
@@ -46,9 +56,8 @@ export default function HomeLayout() {
                         >
                             <Ionicons name="exit-outline" size={22} color="#007AFF" />
                         </TouchableOpacity>
-                    ) : null
-                ),
-                headerRight: () => (
+                    ) : null,
+                headerRight: () =>
                     !isChangePasswordScreen ? (
                         <TouchableOpacity
                             style={styles.rightIconButton}
@@ -56,21 +65,21 @@ export default function HomeLayout() {
                         >
                             <Ionicons name="key-outline" size={22} color="#007AFF" />
                         </TouchableOpacity>
-                    ) : null
-                ),
+                    ) : null,
             }}
         >
             <Stack.Screen name="index" />
-            <Stack.Screen
-                name="change-password"
-                options={{
-                }}
-            />
+            <Stack.Screen name="change-password" />
         </Stack>
     );
 }
 
 const styles = StyleSheet.create({
+    loadingContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
     headerTitleContainer: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -91,5 +100,5 @@ const styles = StyleSheet.create({
     rightIconButton: {
         padding: 8,
         marginRight: 0,
-    }
+    },
 });
