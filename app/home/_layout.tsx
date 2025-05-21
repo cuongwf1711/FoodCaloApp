@@ -5,12 +5,13 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack, usePathname, useRouter } from 'expo-router';
 import React, { useContext } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 
 export default function HomeLayout() {
     const { email, setToken, setEmail } = useContext(AuthContext);
     const router = useRouter();
     const pathname = usePathname();
+
 
     const isChangePasswordScreen = pathname.includes('change-password');
 
