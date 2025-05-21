@@ -12,11 +12,6 @@ export default function HomeLayout() {
     const router = useRouter();
     const pathname = usePathname();
 
-    // nếu email chưa load xong, không render gì hoặc có thể show loading
-    if (!email) {
-        return <View style={styles.loadingContainer}><Text>Đang tải...</Text></View>;
-    }
-
     const isChangePasswordScreen = pathname.includes('change-password');
 
     const handleSignOut = async () => {
