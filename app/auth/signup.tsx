@@ -1,6 +1,6 @@
 // app/signup.tsx
 import { SIGNIN_ROUTE, VERIFY_ROUTE } from '@/constants/router_constants';
-import { postData } from '@/context/auth_context';
+import { postData } from '@/context/request_context';
 import { showMessage } from '@/utils/showMessage';
 import { getEmailErrorMessage } from '@/utils/validation';
 import { useRouter } from 'expo-router';

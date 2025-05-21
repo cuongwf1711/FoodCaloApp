@@ -1,5 +1,8 @@
 // export const BASE_URL = 'https://mighty-baboon-busy.ngrok-free.app/api/v1';
 export const BASE_URL = 'http://104.214.179.114:8000/api/v1';
+// 127.0.0.1
+// 10.0.2.2
+// 104.214.179.114
 
 export default BASE_URL;
 
@@ -13,6 +16,5 @@ export const URL_CHANGE_PASSWORD = `${BASE_URL}/iam/change-password`;
 export const URL_RESEND_EMAIL = `${BASE_URL}/iam/resend-email`;
 export const URL_FORGOT_PASSWORD = `${BASE_URL}/iam/forgot-password`;
 export const URL_FOOD_CALO_ESTIMATOR = `${BASE_URL}/food-calo-estimator`;
-// 127.0.0.1
-// 10.0.2.2
-// 104.214.179.114
+
+export const URL_REFERENCE_POINT = `${BASE_URL}/iam/reference-point`;

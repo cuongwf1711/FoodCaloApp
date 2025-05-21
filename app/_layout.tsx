@@ -1,9 +1,9 @@
 import { HOME_ROUTE, SIGNIN_ROUTE } from '@/constants/router_constants';
 import { ACCESS_TOKEN, REFRESH_TOKEN, USER_EMAIL } from '@/constants/token_constants';
-import { postData, verifyAccessToken } from '@/context/auth_context';
 import { AuthContext } from '@/context/AuthContext';
+import { postData, verifyAccessToken } from '@/context/request_context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Redirect, Stack, useRouter, useSegments } from 'expo-router';
+import { Redirect, Stack, useSegments } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { URL_REFRESH_TOKEN } from '../constants/url_constants';
@@ -12,7 +12,6 @@ export default function RootLayout() {
   const [token, setToken] = useState<string | null>(null);
   const [email, setEmail] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
   const segments = useSegments();
 
   // Kiểm tra xác thực khi khởi động ứng dụng
@@ -47,7 +46,7 @@ export default function RootLayout() {
             if (refresh) {
               try {
                 // Lấy access token mới
-                const { data } = await postData(URL_REFRESH_TOKEN, { refresh });
+                const { data } = await postData(URL_REFRESH_TOKEN, { refresh }) as { data: { access: string } };
 
                 // Lưu token mới vào AsyncStorage
                 await AsyncStorage.setItem(ACCESS_TOKEN, data.access);
@@ -68,7 +67,7 @@ export default function RootLayout() {
         } else if (refresh) {
           // Chỉ có refresh token, thử refresh
           try {
-            const { data } = await postData(URL_REFRESH_TOKEN, { refresh });
+            const { data } = await postData(URL_REFRESH_TOKEN, { refresh }) as { data: { access: string } };
 
             await AsyncStorage.setItem(ACCESS_TOKEN, data.access);
             setToken(data.access);
