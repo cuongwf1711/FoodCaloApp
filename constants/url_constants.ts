@@ -12,9 +12,11 @@ export const URL_SET_PASSWORD = `${BASE_URL}/iam/set-password`;
 export const URL_REFRESH_TOKEN = `${BASE_URL}/iam/refresh-token`;
 export const URL_VERIFY_TOKEN = `${BASE_URL}/iam/verify-token`;
 
+export const URL_USER_PROFILE = `${BASE_URL}/iam/user-profile`;
+
+
 export const URL_CHANGE_PASSWORD = `${BASE_URL}/iam/change-password`;
 export const URL_RESEND_EMAIL = `${BASE_URL}/iam/resend-email`;
 export const URL_FORGOT_PASSWORD = `${BASE_URL}/iam/forgot-password`;
 export const URL_FOOD_CALO_ESTIMATOR = `${BASE_URL}/food-calo-estimator`;
 
-export const URL_REFERENCE_POINT = `${BASE_URL}/iam/reference-point`;

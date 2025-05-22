@@ -82,6 +82,14 @@ export default function RootLayout() {
                 }}
             />
             <Tabs.Screen
+                name="personal"
+                options={{
+                    title: 'Personal',
+                    tabBarIcon: ({ color, size }) => <Ionicons name="accessibility-outline" size={size} color={color} />,
+                    tabBarShowLabel: false, // Ẩn text label
+                }}
+            />
+            <Tabs.Screen
                 name="change-password"
                 options={{
                     href: null,
