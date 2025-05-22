@@ -37,6 +37,7 @@ interface UserProfile {
     widthReferencePoint: number
     areaReferencePoint: number
     autoSetCalorieLimit?: boolean
+    totalCalories?: number // Thêm trường totalCalories mới
 }
 
 // Thêm interface cho dữ liệu cập nhật
@@ -240,7 +241,7 @@ const Personal = () => {
             setSaving(true)
 
             // Tạo đối tượng chứa chỉ những giá trị đã thay đổi
-            const changedValues: Partial<UserProfileUpdate> = {}
+            const changedValues: Record<string, any> = {}
 
             // So sánh từng trường để xác định giá trị nào đã thay đổi
             Object.keys(editedProfile).forEach((key) => {
@@ -348,6 +349,23 @@ const Personal = () => {
         return option ? option.label : "Ngày"
     }
 
+    // Tính toán phần trăm calo đã sử dụng
+    const calculateCaloriePercentage = () => {
+        if (!profile?.totalCalories || !profile?.calorieLimit || profile.calorieLimit === 0) {
+            return 0
+        }
+        const percentage = (profile.totalCalories / profile.calorieLimit) * 100
+        return Math.round(percentage)
+    }
+
+    // Xác định màu sắc cho thanh progress dựa trên phần trăm
+    const getProgressColor = () => {
+        const percentage = calculateCaloriePercentage()
+        if (percentage < 70) return "#4caf50" // Xanh lá - tốt
+        if (percentage < 90) return "#ff9800" // Cam - cảnh báo
+        return "#f44336" // Đỏ - vượt quá
+    }
+
     // Hiển thị loading khi đang tải dữ liệu
     if (loading) {
         return (
@@ -375,6 +393,43 @@ const Personal = () => {
                 </View>
 
                 <View style={styles.formContainer}>
+                    {/* Hiển thị tổng calo và thanh progress */}
+                    {!isEditing && profile?.totalCalories !== undefined && (
+                        <View style={styles.calorieProgressContainer}>
+                            <View style={styles.calorieInfoRow}>
+                                <Text style={styles.calorieTitle}>Calo đã tiêu thụ</Text>
+                                <Text style={styles.calorieValue}>
+                                    {profile.totalCalories.toFixed(0)} / {profile.calorieLimit}
+                                </Text>
+                            </View>
+
+                            <View style={styles.caloriePeriodRow}>
+                                <Text style={styles.periodText}>Chu kỳ: {getPeriodLabel(profile.calorieLimitPeriod)}</Text>
+                            </View>
+
+                            <View style={styles.progressBarContainer}>
+                                <View
+                                    style={[
+                                        styles.progressBar,
+                                        {
+                                            width: `${Math.min(calculateCaloriePercentage(), 100)}%`,
+                                            backgroundColor: getProgressColor(),
+                                        },
+                                    ]}
+                                />
+                                <View style={styles.progressTextContainer}>
+                                    <Text style={styles.progressText}>{calculateCaloriePercentage()}%</Text>
+                                </View>
+                            </View>
+
+                            {calculateCaloriePercentage() > 100 && (
+                                <View style={styles.warningContainer}>
+                                    <Text style={styles.warningText}>⚠️ Đã vượt quá giới hạn calo!</Text>
+                                </View>
+                            )}
+                        </View>
+                    )}
+
                     {/* Giới tính và Tuổi trên cùng một dòng */}
                     <View style={styles.rowContainer}>
                         <View style={[styles.columnContainer, { marginRight: 8 }]}>
@@ -556,7 +611,7 @@ const Personal = () => {
                     {/* Điểm tham chiếu chiều dài và chiều rộng trên cùng một dòng */}
                     <View style={styles.rowContainer}>
                         <View style={[styles.columnContainer, { marginRight: 8 }]}>
-                            <Text style={styles.fieldLabel}>Điểm tham chiếu dài:</Text>
+                            <Text style={styles.fieldLabel}>Điểm tham chiếu dài (cm):</Text>
                             {isEditing ? (
                                 <>
                                     <TextInput
@@ -576,7 +631,7 @@ const Personal = () => {
                         </View>
 
                         <View style={styles.columnContainer}>
-                            <Text style={styles.fieldLabel}>Điểm tham chiếu rộng:</Text>
+                            <Text style={styles.fieldLabel}>Điểm tham chiếu rộng (cm):</Text>
                             {isEditing ? (
                                 <>
                                     <TextInput
@@ -598,7 +653,7 @@ const Personal = () => {
 
                     {/* Điểm tham chiếu diện tích */}
                     <View style={styles.fieldRow}>
-                        <Text style={styles.fieldLabel}>Điểm tham chiếu diện tích:</Text>
+                        <Text style={styles.fieldLabel}>Điểm tham chiếu diện tích (cm²):</Text>
                         <Text style={styles.fieldValue}>
                             {isEditing ? calculateAreaReferencePoint() : profile?.areaReferencePoint}
                             {isEditing && <Text style={styles.calculatedText}> (dài × rộng)</Text>}
@@ -705,6 +760,90 @@ const styles = StyleSheet.create({
         elevation: 3,
         marginBottom: 16,
         flex: 1,
+    },
+    calorieProgressContainer: {
+        marginBottom: 20,
+        backgroundColor: "#f9f9f9",
+        borderRadius: 12,
+        padding: 16,
+        borderWidth: 1,
+        borderColor: "#eee",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    calorieInfoRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 8,
+    },
+    calorieTitle: {
+        fontSize: 16,
+        fontWeight: "600",
+        color: "#333",
+    },
+    calorieValue: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: "#0066cc",
+    },
+    caloriePeriodRow: {
+        marginBottom: 12,
+    },
+    periodText: {
+        fontSize: 14,
+        color: "#666",
+        fontStyle: "italic",
+    },
+    progressBarContainer: {
+        height: 24,
+        backgroundColor: "#e0e0e0",
+        borderRadius: 12,
+        overflow: "hidden",
+        position: "relative",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    progressBar: {
+        position: "absolute",
+        left: 0,
+        top: 0,
+        height: "100%",
+        borderRadius: 12,
+        minWidth: 2, // Đảm bảo thanh progress có độ rộng tối thiểu
+    },
+    progressTextContainer: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        justifyContent: "center",
+        alignItems: "center",
+        zIndex: 1,
+    },
+    progressText: {
+        fontSize: 14,
+        fontWeight: "bold",
+        color: "#333",
+        textShadowColor: "rgba(255, 255, 255, 0.8)",
+        textShadowOffset: { width: 1, height: 1 },
+        textShadowRadius: 2,
+    },
+    warningContainer: {
+        marginTop: 8,
+        padding: 8,
+        backgroundColor: "#fff3cd",
+        borderRadius: 6,
+    },
+    warningText: {
+        fontSize: 14,
+        color: "#856404",
+        fontWeight: "500",
+        textAlign: "center",
     },
     rowContainer: {
         flexDirection: "row",
