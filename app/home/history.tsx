@@ -1,10 +1,10 @@
 "use client"
 
 import { URL_FOOD_CALO_ESTIMATOR, URL_USER_PROFILE } from "@/constants/url_constants"
-import { getData } from "@/context/request_context"
+import { deleteData, getData, patchData } from "@/context/request_context"
 import { StatusBar } from "expo-status-bar"
 import type React from "react"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import {
     ActivityIndicator,
     Dimensions,
@@ -15,6 +15,7 @@ import {
     RefreshControl,
     StyleSheet,
     Text,
+    TextInput,
     TouchableOpacity,
     View,
 } from "react-native"
@@ -82,6 +83,136 @@ const ImageModal: React.FC<{
                     <TouchableOpacity style={styles.closeButton} onPress={onClose}>
                         <Text style={styles.closeButtonText}>✕</Text>
                     </TouchableOpacity>
+                </View>
+            </TouchableOpacity>
+        </Modal>
+    )
+}
+
+// Edit Modal Component
+const EditModal: React.FC<{
+    visible: boolean
+    initialCalo: string
+    initialComment: string
+    onSave: (calo: string, comment: string) => void
+    onCancel: () => void
+}> = ({ visible, initialCalo, initialComment, onSave, onCancel }) => {
+    const [editedCalo, setEditedCalo] = useState(initialCalo)
+    const [editedComment, setEditedComment] = useState(initialComment)
+
+    useEffect(() => {
+        setEditedCalo(initialCalo)
+        setEditedComment(initialComment)
+    }, [initialCalo, initialComment, visible])
+
+    const handleSave = () => {
+        onSave(editedCalo, editedComment)
+    }
+
+    if (!visible) return null
+
+    if (Platform.OS === "web") {
+        return (
+            <div style={webModalStyles.overlay} onClick={onCancel}>
+                <div style={webModalStyles.editContent} onClick={(e) => e.stopPropagation()}>
+                    <h3 style={{ marginBottom: "15px", fontSize: "18px" }}>Edit Food Item</h3>
+
+                    <div style={{ marginBottom: "15px" }}>
+                        <label style={{ display: "block", marginBottom: "5px" }}>Calories:</label>
+                        <input
+                            type="number"
+                            value={editedCalo}
+                            onChange={(e) => setEditedCalo(e.target.value)}
+                            style={{
+                                width: "100%",
+                                padding: "8px",
+                                borderRadius: "4px",
+                                border: "1px solid #ddd",
+                            }}
+                        />
+                    </div>
+
+                    <div style={{ marginBottom: "20px" }}>
+                        <label style={{ display: "block", marginBottom: "5px" }}>Comment:</label>
+                        <textarea
+                            value={editedComment}
+                            onChange={(e) => setEditedComment(e.target.value)}
+                            style={{
+                                width: "100%",
+                                padding: "8px",
+                                borderRadius: "4px",
+                                border: "1px solid #ddd",
+                                minHeight: "80px",
+                            }}
+                        />
+                    </div>
+
+                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                        <button
+                            onClick={onCancel}
+                            style={{
+                                padding: "8px 16px",
+                                borderRadius: "4px",
+                                border: "1px solid #ddd",
+                                background: "#f5f5f5",
+                                cursor: "pointer",
+                            }}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleSave}
+                            style={{
+                                padding: "8px 16px",
+                                borderRadius: "4px",
+                                border: "none",
+                                background: "#3498db",
+                                color: "white",
+                                cursor: "pointer",
+                            }}
+                        >
+                            Save
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+            <TouchableOpacity style={styles.modalOverlay} onPress={onCancel} activeOpacity={1}>
+                <View style={styles.editModalContent}>
+                    <Text style={styles.editModalTitle}>Edit Food Item</Text>
+
+                    <View style={styles.editInputGroup}>
+                        <Text style={styles.editInputLabel}>Calories:</Text>
+                        <TextInput
+                            style={styles.editInput}
+                            value={editedCalo}
+                            onChangeText={setEditedCalo}
+                            keyboardType="numeric"
+                        />
+                    </View>
+
+                    <View style={styles.editInputGroup}>
+                        <Text style={styles.editInputLabel}>Comment:</Text>
+                        <TextInput
+                            style={[styles.editInput, styles.editTextarea]}
+                            value={editedComment}
+                            onChangeText={setEditedComment}
+                            multiline
+                        />
+                    </View>
+
+                    <View style={styles.editButtonGroup}>
+                        <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
+                            <Text style={styles.cancelButtonText}>Cancel</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+                            <Text style={styles.saveButtonText}>Save</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </TouchableOpacity>
         </Modal>
@@ -160,6 +291,10 @@ const FoodHistoryScreen: React.FC = () => {
     const [modalVisible, setModalVisible] = useState(false)
     const [modalImageUri, setModalImageUri] = useState("")
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
+    const [editingItem, setEditingItem] = useState<FoodItem | null>(null)
+    const [isEditing, setIsEditing] = useState(false)
+    const [showScrollToTop, setShowScrollToTop] = useState(false)
+    const flatListRef = useRef<FlatList>(null)
 
     // Fetch user profile data
     const fetchUserProfile = useCallback(async () => {
@@ -249,6 +384,85 @@ const FoodHistoryScreen: React.FC = () => {
         setModalVisible(false)
     }, [])
 
+    // Delete food item
+    const handleDeleteItem = useCallback(
+        async (id: string) => {
+            try {
+                const response = await deleteData(URL_FOOD_CALO_ESTIMATOR, id)
+                if (response.status === 204) {
+                    // Remove the item from the list
+                    setFoodItems((prev) => prev.filter((item) => item.id !== id))
+                    // Update total calories
+                    setTotalCalories((prev) => {
+                        const deletedItem = foodItems.find((item) => item.id === id)
+                        return deletedItem ? prev - deletedItem.calo : prev
+                    })
+                }
+            } catch (error) {
+                console.error("Error deleting food item:", error)
+                setError("Failed to delete food item. Please try again.")
+            }
+        },
+        [foodItems],
+    )
+
+    // Start editing an item
+    const startEditing = useCallback((item: FoodItem) => {
+        setEditingItem(item)
+        setIsEditing(true)
+    }, [])
+
+    // Save edited item
+    const saveEditedItem = useCallback(
+        async (calo: string, comment: string) => {
+            if (!editingItem) return
+
+            try {
+                const updatedData = {
+                    calo: Number(calo),
+                    comment: comment,
+                }
+
+                const response = await patchData<FoodItem>(`${URL_FOOD_CALO_ESTIMATOR}/${editingItem.id}`, updatedData)
+
+                if (response.status === 200) {
+                    // Update the item in the list with the response data
+                    const updatedItem = response.data
+
+                    setFoodItems((prev) => prev.map((item) => (item.id === editingItem.id ? updatedItem : item)))
+
+                    // Update total calories
+                    setTotalCalories((prev) => prev - editingItem.calo + updatedItem.calo)
+                }
+
+                // Close the editing mode
+                setIsEditing(false)
+                setEditingItem(null)
+            } catch (error) {
+                console.error("Error updating food item:", error)
+                setError("Failed to update food item. Please try again.")
+            }
+        },
+        [editingItem],
+    )
+
+    // Cancel editing
+    const cancelEditing = useCallback(() => {
+        setIsEditing(false)
+        setEditingItem(null)
+    }, [])
+
+    // Handle scroll events
+    const handleScroll = useCallback((event: any) => {
+        const scrollY = event.nativeEvent.contentOffset.y
+        setShowScrollToTop(scrollY > 300) // Show button when scrolled down 300px
+    }, [])
+
+    // Scroll to top function
+    const scrollToTop = useCallback(() => {
+        flatListRef.current?.scrollToOffset({ offset: 0, animated: true })
+    }, [])
+
     // Format date to match the screenshot
     const formatDate = (dateString: string) => {
         const date = new Date(dateString)
@@ -281,7 +495,25 @@ const FoodHistoryScreen: React.FC = () => {
 
             return (
                 <View style={styles.foodCard}>
-                    <Text style={styles.foodName}>{item.predictName}</Text>
+                    <View style={styles.foodCardHeader}>
+                        <Text style={styles.foodName}>{item.predictName}</Text>
+                        <View style={styles.actionButtons}>
+                            <TouchableOpacity style={styles.editButton} onPress={() => startEditing(item)}>
+                                {Platform.OS === "web" ? (
+                                    <div style={{ color: "#3498db", cursor: "pointer", fontSize: "18px" }}>✎</div>
+                                ) : (
+                                    <Text style={styles.editButtonText}>✎</Text>
+                                )}
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.deleteButton} onPress={() => handleDeleteItem(item.id)}>
+                                {Platform.OS === "web" ? (
+                                    <div style={{ color: "#e74c3c", cursor: "pointer", fontSize: "18px" }}>🗑</div>
+                                ) : (
+                                    <Text style={styles.deleteButtonText}>🗑</Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
                     <Text style={styles.foodCalories}>{item.calo} calories</Text>
 
                     <View style={styles.imagesContainer}>
@@ -312,7 +544,7 @@ const FoodHistoryScreen: React.FC = () => {
                 </View>
             )
         },
-        [openImageModal],
+        [openImageModal, handleDeleteItem, startEditing],
     )
 
     // Render footer (loading indicator for pagination)
@@ -326,6 +558,17 @@ const FoodHistoryScreen: React.FC = () => {
             </View>
         )
     }, [isLoadingMore])
+
+    // Render end of list message
+    const renderEndOfList = useCallback(() => {
+        if (isLoadingMore || hasMore || foodItems.length === 0) return null
+
+        return (
+            <View style={styles.endOfListContainer}>
+                <Text style={styles.endOfListText}>No more items to load</Text>
+            </View>
+        )
+    }, [isLoadingMore, hasMore, foodItems.length])
 
     // Render empty state
     const renderEmpty = useCallback(() => {
@@ -362,13 +605,18 @@ const FoodHistoryScreen: React.FC = () => {
         )
     }
 
-
     return (
         <View style={styles.container}>
             <StatusBar style="dark" />
 
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Food History</Text>
+                <View style={styles.headerRow}>
+                    <Text style={styles.headerTitle}>Food History</Text>
+                    <View style={styles.filterWrapper}>
+                        <Text style={styles.filterText}>Filter by:</Text>
+                        <FilterDropdown value={timeFilter} onChange={setTimeFilter} />
+                    </View>
+                </View>
 
                 <View style={styles.calorieInfoContainer}>
                     <View style={styles.calorieRow}>
@@ -377,33 +625,34 @@ const FoodHistoryScreen: React.FC = () => {
                     </View>
 
                     {userProfile && (
-                        <>
-                            <View style={styles.calorieRow}>
-                                <Text style={styles.calorieLimitLabel}>Calorie Limit:</Text>
-                                <Text style={styles.calorieLimitValue}>
-                                    {userProfile.calorieLimit} / {getPeriodLabel(userProfile.calorieLimitPeriod)}
-                                </Text>
-                            </View>
-                        </>
+                        <View style={styles.calorieRow}>
+                            <Text style={styles.calorieLimitLabel}>Calorie Limit:</Text>
+                            <Text style={styles.calorieLimitValue}>
+                                {userProfile.calorieLimit} / {getPeriodLabel(userProfile.calorieLimitPeriod)}
+                            </Text>
+                        </View>
                     )}
-                </View>
-
-                <View style={styles.filterContainer}>
-                    <Text style={styles.filterLabel}>Filter by:</Text>
-                    <FilterDropdown value={timeFilter} onChange={setTimeFilter} />
                 </View>
             </View>
 
             <FlatList
+                ref={flatListRef}
                 data={foodItems}
                 renderItem={renderFoodItem}
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={styles.listContainer}
                 showsVerticalScrollIndicator={false}
                 ListEmptyComponent={renderEmpty}
-                ListFooterComponent={renderFooter}
+                ListFooterComponent={() => (
+                    <>
+                        {renderFooter()}
+                        {renderEndOfList()}
+                    </>
+                )}
                 onEndReached={handleLoadMore}
                 onEndReachedThreshold={0.3}
+                onScroll={handleScroll}
+                scrollEventThrottle={16}
                 refreshControl={
                     <RefreshControl
                         refreshing={isRefreshing}
@@ -414,7 +663,26 @@ const FoodHistoryScreen: React.FC = () => {
                 }
             />
 
+            {showScrollToTop && (
+                <TouchableOpacity style={styles.scrollToTopButton} onPress={scrollToTop} activeOpacity={0.8}>
+                    {Platform.OS === "web" ? (
+                        <div style={{ color: "#fff", fontSize: "20px" }}>↑</div>
+                    ) : (
+                        <Text style={styles.scrollToTopButtonText}>↑</Text>
+                    )}
+                </TouchableOpacity>
+            )}
+
             <ImageModal visible={modalVisible} imageUri={modalImageUri} onClose={closeImageModal} />
+            {editingItem && (
+                <EditModal
+                    visible={isEditing}
+                    initialCalo={editingItem.calo.toString()}
+                    initialComment={editingItem.comment || ""}
+                    onSave={saveEditedItem}
+                    onCancel={cancelEditing}
+                />
+            )}
         </View>
     )
 }
@@ -459,6 +727,15 @@ const webModalStyles = {
         cursor: "pointer",
         boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
     },
+    editContent: {
+        position: "relative" as const,
+        backgroundColor: "#fff",
+        padding: "20px",
+        borderRadius: "8px",
+        maxWidth: "400px",
+        width: "90%",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+    },
 }
 
 const webDropdownStyles = {
@@ -473,7 +750,7 @@ const webDropdownStyles = {
         fontSize: "14px",
         color: "#333",
         cursor: "pointer",
-        minWidth: "100px",
+        minWidth: "120px",
     },
 }
 
@@ -493,14 +770,27 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: "#E5E5E5",
     },
+    headerRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 10,
+    },
     headerTitle: {
         fontSize: 24,
         fontWeight: "bold",
         color: "#2c3e50",
-        marginBottom: 10,
+    },
+    filterWrapper: {
+        flexDirection: "row",
+        alignItems: "center",
+    },
+    filterText: {
+        fontSize: 16,
+        color: "#666666",
+        marginRight: 10,
     },
     calorieInfoContainer: {
-        marginBottom: 15,
         backgroundColor: "#f8f9fa",
         padding: 10,
         borderRadius: 8,
@@ -561,16 +851,6 @@ const styles = StyleSheet.create({
         color: "#666",
         width: 40,
         textAlign: "right",
-    },
-    filterContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "flex-end",
-    },
-    filterLabel: {
-        fontSize: 16,
-        color: "#666666",
-        marginRight: 10,
     },
     dropdownContainer: {
         position: "relative",
@@ -646,6 +926,12 @@ const styles = StyleSheet.create({
         shadowRadius: 4,
         elevation: 3,
         padding: 16,
+    },
+    foodCardHeader: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 4,
     },
     foodName: {
         fontSize: 20,
@@ -783,6 +1069,115 @@ const styles = StyleSheet.create({
         fontSize: 18,
         fontWeight: "bold",
         color: "#333",
+    },
+    actionButtons: {
+        flexDirection: "row",
+        alignItems: "center",
+    },
+    editButton: {
+        marginRight: 10,
+    },
+    deleteButton: {
+        // No specific styles needed
+    },
+    editButtonText: {
+        fontSize: 18,
+        color: "#3498db",
+    },
+    deleteButtonText: {
+        fontSize: 18,
+        color: "#e74c3c",
+    },
+    editModalContent: {
+        backgroundColor: "#fff",
+        borderRadius: 12,
+        padding: 20,
+        width: "90%",
+        maxWidth: 400,
+    },
+    editModalTitle: {
+        fontSize: 18,
+        fontWeight: "bold",
+        marginBottom: 15,
+        color: "#2c3e50",
+    },
+    editInputGroup: {
+        marginBottom: 15,
+    },
+    editInputLabel: {
+        fontSize: 14,
+        color: "#666",
+        marginBottom: 5,
+    },
+    editInput: {
+        borderWidth: 1,
+        borderColor: "#e1e1e1",
+        borderRadius: 8,
+        padding: 10,
+        fontSize: 16,
+    },
+    editTextarea: {
+        minHeight: 80,
+        textAlignVertical: "top",
+    },
+    editButtonGroup: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+    },
+    cancelButton: {
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: "#e1e1e1",
+        backgroundColor: "#f5f5f5",
+    },
+    cancelButtonText: {
+        color: "#666",
+        fontSize: 16,
+    },
+    saveButton: {
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+        backgroundColor: "#3498db",
+    },
+    saveButtonText: {
+        color: "#fff",
+        fontSize: 16,
+        fontWeight: "600",
+    },
+    endOfListContainer: {
+        paddingVertical: 20,
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    endOfListText: {
+        fontSize: 14,
+        color: "#666",
+        fontStyle: "italic",
+    },
+    scrollToTopButton: {
+        position: "absolute",
+        bottom: 20,
+        right: 20,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        backgroundColor: "#3498db",
+        justifyContent: "center",
+        alignItems: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 3,
+        elevation: 5,
+        zIndex: 999,
+    },
+    scrollToTopButtonText: {
+        color: "#fff",
+        fontSize: 20,
+        fontWeight: "bold",
     },
 })
 

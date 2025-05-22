@@ -35,7 +35,7 @@ api.interceptors.request.use(
 
 // Hàm chung thực hiện request với override config nếu cần
 async function request<T>(
-    method: "get" | "post" | "put" | "patch",
+    method: "get" | "post" | "put" | "patch" | "delete",
     url: string,
     dataOrParams?: any,
     extraConfig?: AxiosRequestConfig
@@ -48,12 +48,12 @@ async function request<T>(
 
     if (method === "get") {
         config.params = dataOrParams;
-    } else {
+    } else if (method !== "delete") {
         config.data = dataOrParams;
     }
 
     return api.request<T>(config);
-}
+  }
 
 // Export các helper CRUD
 export const getData = <T>(
@@ -84,3 +84,8 @@ export const patchData = <T>(
 export const verifyAccessToken = async() =>
     api.post(URL_VERIFY_TOKEN, { token: await AsyncStorage.getItem(ACCESS_TOKEN) });
 
+export const deleteData = <T>(
+    url: string,
+    id: string | number,
+    config?: AxiosRequestConfig
+) => request<T>("delete", `${url}/${id}`, undefined, config);
