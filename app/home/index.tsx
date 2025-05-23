@@ -3,20 +3,12 @@
 import { URL_FOOD_CALO_ESTIMATOR } from "@/constants/url_constants"
 import { patchData, postData } from "@/context/request_context"
 import { showMessage } from "@/utils/showMessage"
-import React, { useState } from "react"
-import {
-    Alert,
-    Dimensions,
-    Image,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from "react-native"
+import type React from "react"
+import { useRef, useState } from "react"
+import { Alert, Animated, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native"
+
+// Import shared utilities
+import { EditModal, formatDate, ImageModal, styles as sharedStyles } from "@/utils/food-history-utils"
 
 // Simplified type definitions
 type ImageAsset = {
@@ -98,172 +90,121 @@ type ImagePickerResult = {
     assets: ImageAsset[]
 }
 
-// Image Modal Component
-const ImageModal: React.FC<{
-    visible: boolean
-    imageUri: string
-    onClose: () => void
-}> = ({ visible, imageUri, onClose }) => {
-    if (Platform.OS === "web") {
-        if (!visible) return null
-        return (
-            <div style={webModalStyles.overlay} onClick={onClose}>
-                <div style={webModalStyles.content} onClick={(e) => e.stopPropagation()}>
-                    <img src={imageUri || "/placeholder.svg"} alt="Full size" style={webModalStyles.image} />
-                    <button onClick={onClose} style={webModalStyles.closeButton}>
-                        ✕
-                    </button>
-                </div>
-            </div>
-        )
+// Enhanced Animated Button Component
+const AnimatedButton: React.FC<{
+    style: any
+    onPress: () => void
+    disabled?: boolean
+    children: React.ReactNode
+    activeOpacity?: number
+    buttonType?: "primary" | "success" | "danger"
+}> = ({ style, onPress, disabled = false, children, activeOpacity = 0.8, buttonType = "primary" }) => {
+    const scaleAnim = useRef(new Animated.Value(1)).current
+    const shadowAnim = useRef(new Animated.Value(1)).current
+
+    const handlePressIn = () => {
+        if (!disabled) {
+            Animated.parallel([
+                Animated.spring(scaleAnim, {
+                    toValue: 0.96,
+                    useNativeDriver: true,
+                    tension: 300,
+                    friction: 10,
+                }),
+                Animated.timing(shadowAnim, {
+                    toValue: 0.7,
+                    duration: 150,
+                    useNativeDriver: false,
+                }),
+            ]).start()
+        }
     }
 
-    const { width, height } = Dimensions.get("window")
-    return (
-        <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-            <TouchableOpacity style={styles.modalOverlay} onPress={onClose} activeOpacity={1}>
-                <View style={styles.modalContent}>
-                    <Image
-                        source={{ uri: imageUri }}
-                        style={[styles.fullImage, { maxWidth: width - 40, maxHeight: height - 100 }]}
-                        resizeMode="contain"
-                    />
-                    <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-                        <Text style={styles.closeButtonText}>✕</Text>
-                    </TouchableOpacity>
-                </View>
-            </TouchableOpacity>
-        </Modal>
-    )
-}
-
-// Edit Modal Component
-const EditModal: React.FC<{
-    visible: boolean
-    initialCalo: string
-    initialComment: string
-    onSave: (calo: string, comment: string) => void
-    onCancel: () => void
-}> = ({ visible, initialCalo, initialComment, onSave, onCancel }) => {
-    const [editedCalo, setEditedCalo] = useState(initialCalo)
-    const [editedComment, setEditedComment] = useState(initialComment)
-
-    React.useEffect(() => {
-        setEditedCalo(initialCalo)
-        setEditedComment(initialComment)
-    }, [initialCalo, initialComment, visible])
-
-    const handleSave = () => {
-        onSave(editedCalo, editedComment)
+    const handlePressOut = () => {
+        if (!disabled) {
+            Animated.parallel([
+                Animated.spring(scaleAnim, {
+                    toValue: 1,
+                    useNativeDriver: true,
+                    tension: 300,
+                    friction: 10,
+                }),
+                Animated.timing(shadowAnim, {
+                    toValue: 1,
+                    duration: 150,
+                    useNativeDriver: false,
+                }),
+            ]).start()
+        }
     }
 
-    if (!visible) return null
+    const handlePress = () => {
+        if (!disabled) {
+            // Enhanced bounce effect
+            Animated.sequence([
+                Animated.spring(scaleAnim, {
+                    toValue: 0.92,
+                    useNativeDriver: true,
+                    tension: 400,
+                    friction: 8,
+                }),
+                Animated.spring(scaleAnim, {
+                    toValue: 1,
+                    useNativeDriver: true,
+                    tension: 400,
+                    friction: 8,
+                }),
+            ]).start()
 
-    if (Platform.OS === "web") {
-        return (
-            <div style={webModalStyles.overlay} onClick={onCancel}>
-                <div style={webModalStyles.editContent} onClick={(e) => e.stopPropagation()}>
-                    <h3 style={{ marginBottom: "15px", fontSize: "18px" }}>Chỉnh sửa thông tin</h3>
+            // Add haptic feedback for mobile
+            if (Platform.OS !== "web") {
+                try {
+                    // For Expo, you would use Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
+                    // For now, we'll just call the function
+                } catch (error) {
+                    // Haptic feedback not available
+                }
+            }
 
-                    <div style={{ marginBottom: "15px" }}>
-                        <label style={{ display: "block", marginBottom: "5px" }}>Calories:</label>
-                        <input
-                            type="number"
-                            value={editedCalo}
-                            onChange={(e) => setEditedCalo(e.target.value)}
-                            style={{
-                                width: "100%",
-                                padding: "8px",
-                                borderRadius: "4px",
-                                border: "1px solid #ddd",
-                            }}
-                        />
-                    </div>
-
-                    <div style={{ marginBottom: "20px" }}>
-                        <label style={{ display: "block", marginBottom: "5px" }}>Ghi chú:</label>
-                        <textarea
-                            value={editedComment}
-                            onChange={(e) => setEditedComment(e.target.value)}
-                            style={{
-                                width: "100%",
-                                padding: "8px",
-                                borderRadius: "4px",
-                                border: "1px solid #ddd",
-                                minHeight: "80px",
-                            }}
-                        />
-                    </div>
-
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                        <button
-                            onClick={onCancel}
-                            style={{
-                                padding: "8px 16px",
-                                borderRadius: "4px",
-                                border: "1px solid #ddd",
-                                background: "#f5f5f5",
-                                cursor: "pointer",
-                            }}
-                        >
-                            Hủy
-                        </button>
-                        <button
-                            onClick={handleSave}
-                            style={{
-                                padding: "8px 16px",
-                                borderRadius: "4px",
-                                border: "none",
-                                background: "#3498db",
-                                color: "white",
-                                cursor: "pointer",
-                            }}
-                        >
-                            Lưu
-                        </button>
-                    </div>
-                </div>
-            </div>
-        )
+            setTimeout(onPress, 50)
+        }
     }
+
+    const animatedShadowStyle =
+        Platform.OS === "web"
+            ? {}
+            : {
+                shadowOpacity: shadowAnim.interpolate({
+                    inputRange: [0.7, 1],
+                    outputRange: [0.1, 0.3],
+                }),
+                elevation: shadowAnim.interpolate({
+                    inputRange: [0.7, 1],
+                    outputRange: [2, 5],
+                }),
+            }
 
     return (
-        <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
-            <TouchableOpacity style={styles.modalOverlay} onPress={onCancel} activeOpacity={1}>
-                <View style={styles.editModalContent}>
-                    <Text style={styles.editModalTitle}>Chỉnh sửa thông tin</Text>
-
-                    <View style={styles.editInputGroup}>
-                        <Text style={styles.editInputLabel}>Calories:</Text>
-                        <TextInput
-                            style={styles.editInput}
-                            value={editedCalo}
-                            onChangeText={setEditedCalo}
-                            keyboardType="numeric"
-                        />
-                    </View>
-
-                    <View style={styles.editInputGroup}>
-                        <Text style={styles.editInputLabel}>Ghi chú:</Text>
-                        <TextInput
-                            style={[styles.editInput, styles.editTextarea]}
-                            value={editedComment}
-                            onChangeText={setEditedComment}
-                            multiline
-                        />
-                    </View>
-
-                    <View style={styles.editButtonGroup}>
-                        <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
-                            <Text style={styles.cancelButtonText}>Hủy</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-                            <Text style={styles.saveButtonText}>Lưu</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            </TouchableOpacity>
-        </Modal>
+        <TouchableOpacity
+            onPressIn={handlePressIn}
+            onPressOut={handlePressOut}
+            onPress={handlePress}
+            disabled={disabled}
+            activeOpacity={activeOpacity}
+            style={{ flex: 1 }}
+        >
+            <Animated.View
+                style={[
+                    style,
+                    animatedShadowStyle,
+                    {
+                        transform: [{ scale: scaleAnim }],
+                    },
+                ]}
+            >
+                {children}
+            </Animated.View>
+        </TouchableOpacity>
     )
 }
 
@@ -274,6 +215,10 @@ const Index: React.FC = () => {
     const [modalVisible, setModalVisible] = useState(false)
     const [modalImageUri, setModalImageUri] = useState("")
     const [isEditing, setIsEditing] = useState(false)
+
+    // Animation values for result card
+    const resultCardAnim = useRef(new Animated.Value(0)).current
+    const resultOpacityAnim = useRef(new Animated.Value(0)).current
 
     const pickImage = async () => {
         try {
@@ -293,6 +238,10 @@ const Index: React.FC = () => {
             if (!result.canceled && result.assets?.[0]) {
                 setSelectedImage(result.assets[0])
                 setResult(null) // Reset previous result
+
+                // Reset result animations
+                resultCardAnim.setValue(0)
+                resultOpacityAnim.setValue(0)
             }
         } catch (error) {
             console.error("Error picking image:", error)
@@ -330,6 +279,21 @@ const Index: React.FC = () => {
             })
 
             setResult(response.data)
+
+            // Animate result card appearance
+            Animated.parallel([
+                Animated.spring(resultCardAnim, {
+                    toValue: 1,
+                    useNativeDriver: true,
+                    tension: 100,
+                    friction: 8,
+                }),
+                Animated.timing(resultOpacityAnim, {
+                    toValue: 1,
+                    duration: 500,
+                    useNativeDriver: true,
+                }),
+            ]).start()
         } catch (error) {
             console.error("Error processing image:", error)
             showMessage(error)
@@ -341,6 +305,8 @@ const Index: React.FC = () => {
     const reset = () => {
         setSelectedImage(null)
         setResult(null)
+        resultCardAnim.setValue(0)
+        resultOpacityAnim.setValue(0)
     }
 
     const openImageModal = (uri: string) => {
@@ -382,17 +348,6 @@ const Index: React.FC = () => {
         setIsEditing(false)
     }
 
-    // Format date for display
-    const formatDate = (dateString: string) => {
-        const date = new Date(dateString)
-        const day = date.getDate()
-        const month = date.getMonth() + 1
-        const year = date.getFullYear()
-        const hours = date.getHours()
-        const minutes = String(date.getMinutes()).padStart(2, "0")
-        return `${day}/${month}/${year} • ${hours}:${minutes}`
-    }
-
     return (
         <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
             <View style={styles.header}>
@@ -422,32 +377,56 @@ const Index: React.FC = () => {
                     </View>
                 )}
 
+                {/* Enhanced Button Row with better spacing */}
                 <View style={styles.buttonRow}>
-                    <TouchableOpacity style={styles.button} onPress={pickImage}>
+                    <AnimatedButton style={[styles.button, styles.primaryButton]} onPress={pickImage} buttonType="primary">
                         <Text style={styles.buttonText}>Chọn ảnh</Text>
-                    </TouchableOpacity>
+                    </AnimatedButton>
 
-                    <TouchableOpacity
-                        style={[styles.button, styles.analyzeButton, (!selectedImage || isProcessing) && styles.disabledButton]}
+                    <AnimatedButton
+                        style={[styles.button, styles.successButton, (!selectedImage || isProcessing) && styles.disabledButton]}
                         disabled={!selectedImage || isProcessing}
                         onPress={processImage}
+                        buttonType="success"
                     >
                         <Text style={styles.buttonText}>{isProcessing ? "Đang xử lý..." : "Phân tích"}</Text>
-                    </TouchableOpacity>
+                    </AnimatedButton>
 
-                    <TouchableOpacity
-                        style={[styles.button, styles.resetButton, !selectedImage && !result && styles.disabledButton]}
+                    <AnimatedButton
+                        style={[styles.button, styles.dangerButton, !selectedImage && !result && styles.disabledButton]}
                         disabled={!selectedImage && !result}
                         onPress={reset}
+                        buttonType="danger"
                     >
                         <Text style={styles.buttonText}>Đặt lại</Text>
-                    </TouchableOpacity>
+                    </AnimatedButton>
                 </View>
             </View>
 
-            {/* Results Card */}
+            {/* Results Card with Animation */}
             {result && !isProcessing && (
-                <View style={styles.card}>
+                <Animated.View
+                    style={[
+                        styles.card,
+                        {
+                            opacity: resultOpacityAnim,
+                            transform: [
+                                {
+                                    translateY: resultCardAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [50, 0],
+                                    }),
+                                },
+                                {
+                                    scale: resultCardAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [0.9, 1],
+                                    }),
+                                },
+                            ],
+                        },
+                    ]}
+                >
                     <View style={styles.resultHeader}>
                         <Text style={styles.cardTitle}>Kết quả phân tích</Text>
                         <Text style={styles.resultTimestamp}>{formatDate(result.createdAt)}</Text>
@@ -462,9 +441,9 @@ const Index: React.FC = () => {
                         </View>
                     </View>
 
-                    <TouchableOpacity style={styles.editButton} onPress={startEditing}>
+                    <AnimatedButton style={styles.editButton} onPress={startEditing}>
                         <Text style={styles.editButtonText}>✎ Chỉnh sửa</Text>
-                    </TouchableOpacity>
+                    </AnimatedButton>
 
                     {/* Result Images */}
                     <View style={styles.resultImagesRow}>
@@ -497,17 +476,18 @@ const Index: React.FC = () => {
 
                     {/* Additional Details */}
                     {result.comment && (
-                        <View style={styles.commentContainer}>
-                            <Text style={styles.commentText}>{result.comment}</Text>
+                        <View style={[sharedStyles.commentContainer, styles.commentContainer]}>
+                            <Text style={[sharedStyles.commentLabel, styles.commentLabel]}>Ghi chú:</Text>
+                            <Text style={[sharedStyles.foodComment, styles.commentText]}>{result.comment}</Text>
                         </View>
                     )}
-                </View>
+                </Animated.View>
             )}
 
-            {/* Image Modal */}
+            {/* Image Modal - Using shared component */}
             <ImageModal visible={modalVisible} imageUri={modalImageUri} onClose={closeImageModal} />
 
-            {/* Edit Modal */}
+            {/* Edit Modal - Using shared component */}
             {result && (
                 <EditModal
                     visible={isEditing}
@@ -521,105 +501,54 @@ const Index: React.FC = () => {
     )
 }
 
-// Web modal styles
-const webModalStyles = {
-    overlay: {
-        position: "fixed" as const,
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: "rgba(0, 0, 0, 0.9)",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        zIndex: 1000,
-    },
-    content: {
-        position: "relative" as const,
-        maxWidth: "90%",
-        maxHeight: "90%",
-    },
-    image: {
-        maxWidth: "100%",
-        maxHeight: "90vh",
-        borderRadius: "8px",
-        objectFit: "contain" as const,
-    },
-    closeButton: {
-        position: "absolute" as const,
-        top: "-15px",
-        right: "-15px",
-        backgroundColor: "#fff",
-        border: "none",
-        borderRadius: "50%",
-        width: "40px",
-        height: "40px",
-        fontSize: "18px",
-        fontWeight: "bold",
-        color: "#333",
-        cursor: "pointer",
-        boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-    },
-    editContent: {
-        position: "relative" as const,
-        backgroundColor: "#fff",
-        padding: "20px",
-        borderRadius: "8px",
-        maxWidth: "400px",
-        width: "90%",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-    },
-}
-
 const styles = StyleSheet.create({
     container: {
-        padding: 12,
+        padding: 16,
         backgroundColor: "#f8f9fa",
+        minHeight: Platform.OS === "web" ? "100vh" : undefined,
     },
     header: {
-        marginBottom: 12,
+        marginBottom: 20,
         alignItems: "center",
+        paddingHorizontal: 16,
     },
     headerTitle: {
-        fontSize: 20,
+        fontSize: 24,
         fontWeight: "700",
         textAlign: "center",
         color: "#2c3e50",
-        marginBottom: 2,
+        marginBottom: 8,
     },
     headerSubtitle: {
-        fontSize: 14,
+        fontSize: 16,
         color: "#6c757d",
         textAlign: "center",
+        lineHeight: 22,
     },
     card: {
         backgroundColor: "#fff",
-        borderRadius: 12,
-        padding: 12,
-        marginBottom: 12,
+        borderRadius: 16,
+        padding: 20,
+        marginBottom: 16,
         shadowColor: "#000",
-        shadowOpacity: 0.06,
-        shadowRadius: 8,
-        shadowOffset: { width: 0, height: 2 },
-        elevation: 3,
+        shadowOpacity: Platform.OS === "web" ? 0.1 : 0.08,
+        shadowRadius: 12,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 8,
     },
     cardTitle: {
-        fontSize: 16,
+        fontSize: 18,
         fontWeight: "600",
-        marginBottom: 8,
+        marginBottom: 16,
         color: "#34495e",
     },
     selectedImageContainer: {
         position: "relative",
-        borderRadius: 8,
+        borderRadius: 12,
         overflow: "hidden",
         backgroundColor: "#f8f9fa",
-        marginBottom: 10,
-        height: 150,
+        marginBottom: 20,
+        height: 200,
     },
     selectedImage: {
         width: "100%",
@@ -631,66 +560,90 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
-        backgroundColor: "rgba(0, 0, 0, 0.5)",
-        padding: 6,
+        backgroundColor: "rgba(0, 0, 0, 0.6)",
+        padding: 12,
         alignItems: "center",
     },
     tapHint: {
         color: "#fff",
         fontSize: 14,
+        fontWeight: "500",
     },
     imagePlaceholder: {
-        height: 150,
-        borderRadius: 8,
-        borderWidth: 1,
+        height: 200,
+        borderRadius: 12,
+        borderWidth: 2,
         borderColor: "#e9ecef",
         borderStyle: "dashed",
         justifyContent: "center",
         alignItems: "center",
         backgroundColor: "#f8f9fa",
-        marginBottom: 10,
+        marginBottom: 20,
     },
     placeholderIcon: {
-        fontSize: 28,
+        fontSize: 48,
         color: "#adb5bd",
-        marginBottom: 6,
+        marginBottom: 12,
     },
     placeholderText: {
         color: "#6c757d",
-        fontSize: 14,
+        fontSize: 16,
         fontWeight: "500",
     },
     buttonRow: {
         flexDirection: "row",
-        gap: 8,
+        justifyContent: "space-between",
+        gap: 12,
     },
     button: {
         flex: 1,
-        backgroundColor: "#3498db",
-        borderRadius: 8,
-        paddingVertical: 10,
+        borderRadius: 12,
+        paddingVertical: 14,
+        paddingHorizontal: 8,
         alignItems: "center",
         justifyContent: "center",
+        minHeight: 50,
     },
-    analyzeButton: {
+    primaryButton: {
+        backgroundColor: "#3498db",
+        shadowColor: Platform.OS === "web" ? "transparent" : "#3498db",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 5,
+    },
+    successButton: {
         backgroundColor: "#2ecc71",
+        shadowColor: Platform.OS === "web" ? "transparent" : "#2ecc71",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 5,
     },
-    resetButton: {
+    dangerButton: {
         backgroundColor: "#e74c3c",
+        shadowColor: Platform.OS === "web" ? "transparent" : "#e74c3c",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 5,
     },
     disabledButton: {
         backgroundColor: "#bdc3c7",
+        shadowColor: Platform.OS === "web" ? "transparent" : "#bdc3c7",
+        shadowOpacity: 0.1,
     },
     buttonText: {
         color: "#fff",
         fontSize: 14,
         fontWeight: "600",
+        textAlign: "center",
     },
     resultHeader: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
-        marginBottom: 8,
+        marginBottom: 16,
     },
     resultTimestamp: {
         fontSize: 12,
@@ -698,58 +651,63 @@ const styles = StyleSheet.create({
     },
     highlightResult: {
         backgroundColor: "#f8f9fa",
-        borderRadius: 8,
-        padding: 10,
-        marginBottom: 8,
+        borderRadius: 12,
+        padding: 20,
+        marginBottom: 16,
         alignItems: "center",
     },
     foodNameResult: {
-        fontSize: 18,
+        fontSize: 20,
         fontWeight: "700",
         color: "#2c3e50",
         textAlign: "center",
-        marginBottom: 2,
+        marginBottom: 8,
         textTransform: "capitalize",
     },
     caloriesResult: {
-        fontSize: 22,
+        fontSize: 28,
         fontWeight: "700",
         color: "#e74c3c",
-        marginBottom: 2,
+        marginBottom: 8,
     },
     confidenceBadge: {
         backgroundColor: "#e1f5fe",
-        paddingVertical: 3,
-        paddingHorizontal: 8,
-        borderRadius: 16,
+        paddingVertical: 6,
+        paddingHorizontal: 12,
+        borderRadius: 20,
     },
     confidenceText: {
         color: "#0288d1",
         fontSize: 12,
-        fontWeight: "500",
+        fontWeight: "600",
     },
     editButton: {
         backgroundColor: "#3498db",
-        paddingVertical: 6,
-        paddingHorizontal: 12,
-        borderRadius: 20,
+        paddingVertical: 10,
+        paddingHorizontal: 20,
+        borderRadius: 25,
         alignSelf: "center",
-        marginBottom: 8,
+        marginBottom: 16,
+        shadowColor: Platform.OS === "web" ? "transparent" : "#3498db",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        elevation: 4,
     },
     editButtonText: {
         color: "#fff",
         fontSize: 14,
-        fontWeight: "500",
+        fontWeight: "600",
     },
     resultImagesRow: {
         flexDirection: "row",
-        gap: 8,
+        gap: 12,
     },
     resultImageContainer: {
         flex: 1,
-        borderRadius: 8,
+        borderRadius: 12,
         overflow: "hidden",
-        height: 90,
+        height: 120,
         backgroundColor: "#f8f9fa",
     },
     resultImage: {
@@ -762,123 +720,23 @@ const styles = StyleSheet.create({
         bottom: 0,
         left: 0,
         right: 0,
-        backgroundColor: "rgba(0, 0, 0, 0.6)",
-        padding: 4,
+        backgroundColor: "rgba(0, 0, 0, 0.7)",
+        padding: 8,
         alignItems: "center",
     },
     imageLabelText: {
         color: "#fff",
         fontSize: 12,
-        fontWeight: "500",
+        fontWeight: "600",
     },
     commentContainer: {
-        backgroundColor: "#fff9db",
-        borderRadius: 8,
-        padding: 8,
-        marginTop: 8,
-        borderLeftWidth: 3,
-        borderLeftColor: "#fcc419",
+        marginTop: 16,
+    },
+    commentLabel: {
+        fontSize: 14,
     },
     commentText: {
         fontSize: 13,
-        color: "#495057",
-        fontStyle: "italic",
-    },
-    // Modal styles
-    modalOverlay: {
-        flex: 1,
-        backgroundColor: "rgba(0, 0, 0, 0.9)",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    modalContent: {
-        position: "relative",
-        maxWidth: "90%",
-        maxHeight: "90%",
-    },
-    fullImage: {
-        borderRadius: 8,
-    },
-    closeButton: {
-        position: "absolute",
-        top: -15,
-        right: -15,
-        backgroundColor: "#fff",
-        borderRadius: 25,
-        width: 40,
-        height: 40,
-        justifyContent: "center",
-        alignItems: "center",
-        shadowColor: "#000",
-        shadowOpacity: 0.3,
-        shadowRadius: 5,
-        elevation: 5,
-    },
-    closeButtonText: {
-        fontSize: 18,
-        fontWeight: "bold",
-        color: "#333",
-    },
-    // Edit modal styles
-    editModalContent: {
-        backgroundColor: "#fff",
-        borderRadius: 12,
-        padding: 16,
-        width: "90%",
-        maxWidth: 400,
-    },
-    editModalTitle: {
-        fontSize: 18,
-        fontWeight: "bold",
-        marginBottom: 12,
-        color: "#2c3e50",
-    },
-    editInputGroup: {
-        marginBottom: 12,
-    },
-    editInputLabel: {
-        fontSize: 14,
-        color: "#666",
-        marginBottom: 4,
-    },
-    editInput: {
-        borderWidth: 1,
-        borderColor: "#e1e1e1",
-        borderRadius: 8,
-        padding: 8,
-        fontSize: 16,
-    },
-    editTextarea: {
-        minHeight: 80,
-        textAlignVertical: "top",
-    },
-    editButtonGroup: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        marginTop: 8,
-    },
-    cancelButton: {
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: "#e1e1e1",
-        backgroundColor: "#f5f5f5",
-    },
-    cancelButtonText: {
-        color: "#666",
-        fontSize: 14,
-    },
-    saveButton: {
-        paddingVertical: 8,
-        paddingHorizontal: 16,
-        borderRadius: 8,
-        backgroundColor: "#3498db",
-    },
-    saveButtonText: {
-        color: "#fff",
-        fontSize: 14,
-        fontWeight: "600",
     },
 })
 

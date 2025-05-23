@@ -4,114 +4,50 @@ import type React from "react"
 
 import { StatusBar } from "expo-status-bar"
 import { useCallback, useEffect, useState } from "react"
-import { Animated, Easing, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native"
+import { Animated, Easing, Platform, StyleSheet, Text, View } from "react-native"
+
+// Import shared utilities
+import {
+    FilterDropdown,
+    getPeriodLabel,
+    styles as sharedStyles,
+    SortingDropdown,
+    useUserProfile,
+    type SortOption,
+    type TimeFilter,
+} from "@/utils/food-history-utils"
 
 // Import the different view components
-import FoodHistoryDayView from "./food-history-day"
-import FoodHistoryMonthView from "./food-history-month"
-import FoodHistoryNoneView from "./food-history-none"
-import FoodHistoryWeekView from "./food-history-week"
-
-// Import necessary constants and functions
-import { URL_USER_PROFILE } from "@/constants/url_constants"
-import { getData } from "@/context/request_context"
-
-// Type for time filter
-type TimeFilter = "none" | "day" | "week" | "month"
-
-// Dropdown Component
-const FilterDropdown: React.FC<{
-    value: TimeFilter
-    onChange: (value: TimeFilter) => void
-}> = ({ value, onChange }) => {
-    const [isOpen, setIsOpen] = useState(false)
-
-    const options: { value: TimeFilter; label: string }[] = [
-        { value: "none", label: "None" },
-        { value: "day", label: "Day" },
-        { value: "week", label: "Week" },
-        { value: "month", label: "Month" },
-    ]
-
-    const selectedLabel = options.find((opt) => opt.value === value)?.label || "None"
-
-    if (Platform.OS === "web") {
-        return (
-            <div style={webDropdownStyles.container}>
-                <select value={value} onChange={(e) => onChange(e.target.value as TimeFilter)} style={webDropdownStyles.select}>
-                    {options.map((option) => (
-                        <option key={option.value} value={option.value}>
-                            {option.label}
-                        </option>
-                    ))}
-                </select>
-            </div>
-        )
-    }
-
-    return (
-        <View style={styles.dropdownContainer}>
-            <TouchableOpacity style={styles.dropdownButton} onPress={() => setIsOpen(!isOpen)}>
-                <Text style={styles.dropdownButtonText}>{selectedLabel}</Text>
-                <Text style={styles.dropdownIcon}>{isOpen ? "▲" : "▼"}</Text>
-            </TouchableOpacity>
-
-            {isOpen && (
-                <View style={styles.dropdownOptions}>
-                    {options.map((option) => (
-                        <TouchableOpacity
-                            key={option.value}
-                            style={[styles.dropdownOption, value === option.value && styles.dropdownOptionSelected]}
-                            onPress={() => {
-                                onChange(option.value)
-                                setIsOpen(false)
-                            }}
-                        >
-                            <Text style={[styles.dropdownOptionText, value === option.value && styles.dropdownOptionTextSelected]}>
-                                {option.label}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-            )}
-        </View>
-    )
-}
+import FoodHistoryAllView from "./food-history-all"
+import FoodHistoryDateView from "./food-history-date"
 
 const FoodHistoryScreen: React.FC = () => {
-    const [timeFilter, setTimeFilter] = useState<TimeFilter>("none")
-    const [userProfile, setUserProfile] = useState<{ calorieLimit: number; calorieLimitPeriod: string } | null>(null)
+    const [timeFilter, setTimeFilter] = useState<TimeFilter>("all")
     const [fadeAnim] = useState(new Animated.Value(1))
     const [slideAnim] = useState(new Animated.Value(0))
-    const [currentView, setCurrentView] = useState<TimeFilter>("none")
+    const [currentView, setCurrentView] = useState<TimeFilter>("all")
 
-    // Fetch user profile data
-    const fetchUserProfile = useCallback(async () => {
-        try {
-            const response = await getData(URL_USER_PROFILE)
-            setUserProfile(response.data)
-        } catch (error) {
-            console.error("Error fetching user profile:", error)
-        }
+    // Add state for shared data
+    const [totalCalories, setTotalCalories] = useState(0)
+    const [sortOption, setSortOption] = useState<SortOption>("newest")
+
+    // Use shared hook for user profile
+    const { userProfile, fetchUserProfile } = useUserProfile()
+
+    // Handle data change from child components
+    const handleDataChange = useCallback((calories: number) => {
+        setTotalCalories(calories)
     }, [])
 
+    // Handle sort change
+    const handleSortChange = useCallback((newSortOption: SortOption) => {
+        setSortOption(newSortOption)
+    }, [])
+
+    // Fetch user profile on mount
     useEffect(() => {
         fetchUserProfile()
     }, [fetchUserProfile])
-
-    // Add this helper function inside the FoodHistoryScreen component
-    const getPeriodLabel = (period: string) => {
-        switch (period) {
-            case "day":
-                return "Day"
-            case "week":
-                return "Week"
-            case "month":
-                return "Month"
-            default:
-                return "Day"
-        }
-    }
 
     // Handle filter change with animation
     const handleFilterChange = (newFilter: TimeFilter) => {
@@ -158,37 +94,59 @@ const FoodHistoryScreen: React.FC = () => {
     // Render the appropriate view based on the selected filter
     const renderFilterView = () => {
         switch (currentView) {
-            case "day":
-                return <FoodHistoryDayView />
-            case "week":
-                return <FoodHistoryWeekView />
-            case "month":
-                return <FoodHistoryMonthView />
+            case "date":
+                return (
+                    <FoodHistoryDateView
+                        sortOption={sortOption}
+                        onSortChange={handleSortChange}
+                        onDataChange={handleDataChange}
+                    />
+                )
             default:
-                return <FoodHistoryNoneView />
+                return (
+                    <FoodHistoryAllView sortOption={sortOption} onSortChange={handleSortChange} onDataChange={handleDataChange} />
+                )
         }
     }
 
     return (
-        <View style={styles.container}>
+        <View style={sharedStyles.container}>
             <StatusBar style="dark" />
 
-            {/* Update the header section to combine Food History and Filter in one row */}
-            <View style={styles.header}>
-                <View style={styles.headerRow}>
+            {/* Redesigned header section - more compact and integrated */}
+            <View style={styles.headerContainer}>
+                {/* First row: Title, Calorie Limit, and Filter */}
+                <View style={styles.headerTopRow}>
                     <Text style={styles.headerTitle}>Food History</Text>
-                    <View style={styles.headerRightSection}>
-                        <View style={styles.calorieLimitContainer}>
-                            <Text style={styles.calorieLimitLabel}>Calorie Limit:</Text>
-                            <Text style={styles.calorieLimitValue}>
-                                {userProfile
-                                    ? `${userProfile.calorieLimit} / ${getPeriodLabel(userProfile.calorieLimitPeriod)}`
-                                    : "Loading..."}
-                            </Text>
-                        </View>
-                        <View style={styles.filterWrapper}>
-                            <Text style={styles.filterText}>Filter by:</Text>
+
+                    <View style={styles.headerMiddleSection}>
+                        <Text style={styles.calorieLimitLabel}>Calorie Limit:</Text>
+                        <Text style={styles.calorieLimitValue}>
+                            {userProfile
+                                ? `${userProfile.calorieLimit} / ${getPeriodLabel(userProfile.calorieLimitPeriod)}`
+                                : "Loading..."}
+                        </Text>
+                    </View>
+
+                    <View style={styles.filterSection}>
+                        <Text style={styles.filterLabel}>Filter by:</Text>
+                        <View style={styles.filterDropdownWrapper}>
                             <FilterDropdown value={timeFilter} onChange={handleFilterChange} />
+                        </View>
+                    </View>
+                </View>
+
+                {/* Second row: Total Calories and Sort by */}
+                <View style={styles.headerBottomRow}>
+                    <View style={styles.totalCaloriesSection}>
+                        <Text style={styles.totalCaloriesLabel}>Total Calories:</Text>
+                        <Text style={styles.totalCaloriesValue}>{totalCalories}</Text>
+                    </View>
+
+                    <View style={styles.sortingSection}>
+                        <Text style={styles.sortingLabel}>Sort by:</Text>
+                        <View style={styles.sortingDropdownWrapper}>
+                            <SortingDropdown value={sortOption} onChange={handleSortChange} />
                         </View>
                     </View>
                 </View>
@@ -209,59 +167,50 @@ const FoodHistoryScreen: React.FC = () => {
     )
 }
 
-// Web-specific styles
-const webDropdownStyles = {
-    container: {
-        position: "relative" as const,
-    },
-    select: {
-        padding: "8px 12px",
-        borderRadius: "8px",
-        backgroundColor: "#fff",
-        border: "1px solid #e1e1e1",
-        fontSize: "14px",
-        color: "#333",
-        cursor: "pointer",
-        minWidth: "120px",
-    },
-}
-
 const isWeb = Platform.OS === "web"
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: "#f8f9fa",
-    },
-    animatedContainer: {
-        flex: 1,
-    },
-    header: {
-        paddingTop: isWeb ? 20 : 60,
-        paddingBottom: 15,
-        paddingHorizontal: 20,
+    headerContainer: {
         backgroundColor: "#FFFFFF",
         borderBottomWidth: 1,
         borderBottomColor: "#E5E5E5",
+        paddingTop: isWeb ? 20 : 60,
+        paddingBottom: 10,
+        paddingHorizontal: 16,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.05,
+        shadowRadius: 3,
+        elevation: 2,
     },
-    headerRow: {
+    headerTopRow: {
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
+        paddingBottom: 12,
+    },
+    headerBottomRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        backgroundColor: "#f8f9fa",
+        borderRadius: 8,
+        padding: 10,
+        marginTop: 4,
+        borderWidth: 1,
+        borderColor: "#E5E5E5",
     },
     headerTitle: {
         fontSize: 24,
         fontWeight: "bold",
         color: "#2c3e50",
+        flex: 1,
     },
-    headerRightSection: {
+    headerMiddleSection: {
         flexDirection: "row",
         alignItems: "center",
-    },
-    calorieLimitContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-        marginRight: 15,
+        flex: 1,
+        justifyContent: "center",
     },
     calorieLimitLabel: {
         fontSize: 14,
@@ -273,73 +222,48 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         color: "#3498db",
     },
-    filterWrapper: {
+    filterSection: {
         flexDirection: "row",
         alignItems: "center",
+        flex: 1,
+        justifyContent: "flex-end",
     },
-    filterText: {
+    filterLabel: {
         fontSize: 14,
         color: "#666666",
-        marginRight: 10,
+        marginRight: 8,
     },
-    dropdownContainer: {
-        position: "relative",
-        zIndex: 100,
+    filterDropdownWrapper: {
+        minWidth: 120,
     },
-    dropdownButton: {
+    totalCaloriesSection: {
         flexDirection: "row",
         alignItems: "center",
-        backgroundColor: "#fff",
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: "#e1e1e1",
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        minWidth: 100,
     },
-    dropdownButtonText: {
+    totalCaloriesLabel: {
         fontSize: 14,
-        color: "#333",
-        flex: 1,
+        color: "#666666",
+        marginRight: 5,
     },
-    dropdownIcon: {
-        fontSize: 12,
-        color: "#666",
-        marginLeft: 5,
-    },
-    dropdownOptions: {
-        position: "absolute",
-        top: "100%",
-        left: 0,
-        right: 0,
-        backgroundColor: "#fff",
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: "#e1e1e1",
-        marginTop: 4,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 3,
-        zIndex: 101,
-    },
-    dropdownOption: {
-        paddingVertical: 10,
-        paddingHorizontal: 12,
-        borderBottomWidth: 1,
-        borderBottomColor: "#f0f0f0",
-    },
-    dropdownOptionSelected: {
-        backgroundColor: "#f0f8ff",
-    },
-    dropdownOptionText: {
-        fontSize: 14,
-        color: "#333",
-    },
-    dropdownOptionTextSelected: {
-        color: "#3498db",
+    totalCaloriesValue: {
+        fontSize: 16,
         fontWeight: "bold",
+        color: "#e74c3c",
+    },
+    sortingSection: {
+        flexDirection: "row",
+        alignItems: "center",
+    },
+    sortingLabel: {
+        fontSize: 14,
+        color: "#666666",
+        marginRight: 8,
+    },
+    sortingDropdownWrapper: {
+        minWidth: 140,
+    },
+    animatedContainer: {
+        flex: 1,
     },
 })
 
