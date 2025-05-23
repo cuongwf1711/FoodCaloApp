@@ -32,6 +32,10 @@ interface FoodHistoryAllViewProps {
     onDataChange: (totalCalories: number) => void
 }
 
+/**
+ * Component to display all food history items
+ * Supports sorting, pagination, and item editing/deletion
+ */
 const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({ sortOption, onSortChange, onDataChange }) => {
     const {
         foodItems,
@@ -48,6 +52,7 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({ sortOption, onS
         handleSortChange,
     } = useFoodHistory("newest", sortOption, onDataChange)
 
+    // UI state management
     const [modalVisible, setModalVisible] = useState(false)
     const [modalImageUri, setModalImageUri] = useState("")
     const [editingItem, setEditingItem] = useState<FoodItem | null>(null)
@@ -81,7 +86,7 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({ sortOption, onS
         }
     }, [fetchFoodHistory, isRefreshing])
 
-    // Handle loading more (pagination)
+    // Handle pagination when scrolling to bottom
     const handleLoadMore = useCallback(() => {
         if (!isLoadingMore && hasMore && !isRefreshing) {
             fetchFoodHistory(page + 1)
@@ -107,10 +112,10 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({ sortOption, onS
 
     // Save edited item
     const handleSaveEditedItem = useCallback(
-        async (calo: string, comment: string) => {
+        async (calories: string, comment: string) => {
             if (!editingItem) return
 
-            const success = await saveEditedItem(editingItem, calo, comment)
+            const success = await saveEditedItem(editingItem, calories, comment)
             if (success) {
                 setIsEditing(false)
                 setEditingItem(null)
@@ -194,8 +199,8 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({ sortOption, onS
                     <Text style={sharedStyles.confidenceText}>Confidence: {item.confidencePercentage}</Text>
 
                     <View style={sharedStyles.commentContainer}>
-                        <Text style={sharedStyles.commentLabel}>Ghi chú:</Text>
-                        <Text style={sharedStyles.foodComment}>{item.comment ? item.comment : "Không có ghi chú"}</Text>
+                        <Text style={sharedStyles.commentLabel}>Notes:</Text>
+                        <Text style={sharedStyles.foodComment}>{item.comment ? item.comment : "No notes"}</Text>
                     </View>
                 </View>
             )

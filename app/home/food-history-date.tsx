@@ -28,6 +28,10 @@ interface FoodHistoryDateViewProps {
     onDataChange: (totalCalories: number) => void
 }
 
+/**
+ * Component to display food history filtered by date
+ * Supports day, week, and month filtering
+ */
 const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({ sortOption, onSortChange, onDataChange }) => {
     const {
         foodItems,
@@ -41,6 +45,7 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({ sortOption, o
         handleSortChange,
     } = useFoodHistory("newest", sortOption, onDataChange)
 
+    // UI state management
     const [modalVisible, setModalVisible] = useState(false)
     const [modalImageUri, setModalImageUri] = useState("")
     const [editingItem, setEditingItem] = useState<FoodItem | null>(null)
@@ -190,10 +195,10 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({ sortOption, o
 
     // Save edited item
     const handleSaveEditedItem = useCallback(
-        async (calo: string, comment: string) => {
+        async (calories: string, comment: string) => {
             if (!editingItem) return
 
-            const success = await saveEditedItem(editingItem, calo, comment)
+            const success = await saveEditedItem(editingItem, calories, comment)
             if (success) {
                 setIsEditing(false)
                 setEditingItem(null)
@@ -219,7 +224,7 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({ sortOption, o
         flatListRef.current?.scrollToOffset({ offset: 0, animated: true })
     }, [])
 
-    // Render compact time unit selector and input in one row
+    // Compact time unit selector with inputs in a single row
     const renderCompactTimeSelector = () => {
         return (
             <View style={compactStyles.compactRow}>
@@ -314,8 +319,8 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({ sortOption, o
                     <Text style={sharedStyles.confidenceText}>Confidence: {item.confidencePercentage}</Text>
 
                     <View style={sharedStyles.commentContainer}>
-                        <Text style={sharedStyles.commentLabel}>Ghi chú:</Text>
-                        <Text style={sharedStyles.foodComment}>{item.comment ? item.comment : "Không có ghi chú"}</Text>
+                        <Text style={sharedStyles.commentLabel}>Notes:</Text>
+                        <Text style={sharedStyles.foodComment}>{item.comment ? item.comment : "No notes"}</Text>
                     </View>
                 </View>
             )

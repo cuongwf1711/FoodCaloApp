@@ -22,10 +22,10 @@ import {
 } from "react-native"
 import { TextInput } from "react-native-gesture-handler"
 
-// Lấy kích thước màn hình
+// Get screen dimensions
 const { width, height } = Dimensions.get("window")
 
-// Định nghĩa kiểu dữ liệu cho profile
+// User profile type definition
 interface UserProfile {
     gender: boolean | null
     age: number
@@ -37,10 +37,10 @@ interface UserProfile {
     widthReferencePoint: number
     areaReferencePoint: number
     autoSetCalorieLimit?: boolean
-    totalCalories?: number // Thêm trường totalCalories mới
+    totalCalories?: number // Added field for total calories
 }
 
-// Thêm interface cho dữ liệu cập nhật
+// Interface for profile update data
 interface UserProfileUpdate {
     gender?: boolean | null
     age?: number
@@ -53,7 +53,7 @@ interface UserProfileUpdate {
     autoSetCalorieLimit?: boolean
 }
 
-// Interface cho lỗi xác thực
+// Validation errors interface
 interface ValidationErrors {
     age?: string
     height?: string
@@ -63,15 +63,19 @@ interface ValidationErrors {
     calorieLimit?: string
 }
 
-// Các tùy chọn chu kỳ giới hạn calo
+// Calorie limit period options
 const PERIOD_OPTIONS = [
-    { label: "Ngày", value: "day" },
-    { label: "Tuần", value: "week" },
-    { label: "Tháng", value: "month" },
+    { label: "Day", value: "day" },
+    { label: "Week", value: "week" },
+    { label: "Month", value: "month" },
 ]
 
+/**
+ * Personal Profile Screen
+ * Allows users to view and edit their profile information
+ */
 const Personal = () => {
-    // State cho dữ liệu profile
+    // Profile data state
     const [profile, setProfile] = useState<UserProfile | null>(null)
     const [editedProfile, setEditedProfile] = useState<Partial<UserProfileUpdate>>({})
     const [loading, setLoading] = useState(true)
@@ -81,11 +85,11 @@ const Personal = () => {
     const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
     const [showPeriodDropdown, setShowPeriodDropdown] = useState(false)
 
-    // Animated values cho hiệu ứng nút
+    // Animated values for button effects
     const saveButtonScale = useRef(new Animated.Value(1)).current
     const resetButtonScale = useRef(new Animated.Value(1)).current
 
-    // Hiệu ứng khi nhấn nút
+    // Button press animation
     const animateButton = (animated: Animated.Value) => {
         Animated.sequence([
             Animated.timing(animated, {
@@ -101,17 +105,17 @@ const Personal = () => {
         ]).start()
     }
 
-    // Hàm chuyển đổi chế độ chỉnh sửa
+    // Toggle edit mode
     const toggleEditMode = () => {
         if (isEditing) {
-            // Nếu đang ở chế độ chỉnh sửa, hủy các thay đổi
+            // If currently in edit mode, cancel changes
             setEditedProfile({})
             setValidationErrors({})
         }
         setIsEditing(!isEditing)
     }
 
-    // Hàm reset về giá trị ban đầu bằng cách gọi lại API
+    // Reset to original values by refetching from API
     const resetToOriginal = async () => {
         animateButton(resetButtonScale)
         setResetting(true)
@@ -122,12 +126,12 @@ const Personal = () => {
         }
     }
 
-    // Lấy dữ liệu profile khi component mount
+    // Fetch profile data on component mount
     useEffect(() => {
         fetchUserProfile()
     }, [])
 
-    // Hàm lấy dữ liệu profile từ API
+    // Fetch user profile from API
     const fetchUserProfile = async () => {
         try {
             setLoading(true)
@@ -142,45 +146,45 @@ const Personal = () => {
         }
     }
 
-    // Xác thực dữ liệu trước khi lưu
+    // Validate data before saving
     const validateProfile = (): boolean => {
         const errors: ValidationErrors = {}
 
-        // Xác thực tuổi (0-200)
+        // Validate age (0-200)
         const age = getValue("age") as number
         if (age < 0 || age > 200) {
-            errors.age = "Tuổi phải từ 0 đến 200"
+            errors.age = "Age must be between 0 and 200"
         }
 
-        // Xác thực chiều cao (0-999)
+        // Validate height (0-999)
         const height = getValue("height") as number
         if (height < 0 || height > 999) {
-            errors.height = "Chiều cao phải từ 0 đến 999"
+            errors.height = "Height must be between 0 and 999"
         }
 
-        // Xác thực cân nặng (0-999)
+        // Validate weight (0-999)
         const weight = getValue("weight") as number
         if (weight < 0 || weight > 999) {
-            errors.weight = "Cân nặng phải từ 0 đến 999"
+            errors.weight = "Weight must be between 0 and 999"
         }
 
-        // Xác thực điểm tham chiếu chiều dài (0-20)
+        // Validate length reference point (0-20)
         const lengthRef = getValue("lengthReferencePoint") as number
         if (lengthRef < 0 || lengthRef > 20) {
-            errors.lengthReferencePoint = "Điểm tham chiếu chiều dài phải từ 0 đến 20"
+            errors.lengthReferencePoint = "Length reference point must be between 0 and 20"
         }
 
-        // Xác thực điểm tham chiếu chiều rộng (0-10)
+        // Validate width reference point (0-10)
         const widthRef = getValue("widthReferencePoint") as number
         if (widthRef < 0 || widthRef > 10) {
-            errors.widthReferencePoint = "Điểm tham chiếu chiều rộng phải từ 0 đến 10"
+            errors.widthReferencePoint = "Width reference point must be between 0 and 10"
         }
 
-        // Xác thực giới hạn calo (chỉ khi không tự động tính)
+        // Validate calorie limit (only when not auto-calculated)
         if (!isAutoSetCalorieLimit()) {
             const calorieLimit = getValue("calorieLimit") as number
             if (calorieLimit < 0) {
-                errors.calorieLimit = "Giới hạn calo không được âm"
+                errors.calorieLimit = "Calorie limit cannot be negative"
             }
         }
 
@@ -188,19 +192,19 @@ const Personal = () => {
         return Object.keys(errors).length === 0
     }
 
-    // Kiểm tra xem có thay đổi nào không
+    // Check if there are any changes
     const hasChanges = (): boolean => {
-        // Nếu không có trường nào được chỉnh sửa, không có thay đổi
+        // If no fields have been edited, there are no changes
         if (Object.keys(editedProfile).length === 0) {
             return false
         }
 
-        // Kiểm tra từng trường đã chỉnh sửa
+        // Check each edited field
         for (const key in editedProfile) {
             const field = key as keyof typeof editedProfile
             let originalValue: any
 
-            // Xử lý các trường đặc biệt
+            // Handle special fields
             if (field === "lengthReferencePointCustom") {
                 originalValue = profile?.lengthReferencePoint
             } else if (field === "widthReferencePointCustom") {
@@ -211,28 +215,28 @@ const Personal = () => {
 
             const newValue = editedProfile[field]
 
-            // Nếu giá trị khác với giá trị ban đầu, có thay đổi
+            // If value is different from original, there are changes
             if (originalValue !== newValue) {
                 return true
             }
         }
 
-        // Tất cả các trường đã quay lại giá trị ban đầu
+        // All fields have reverted to original values
         return false
     }
 
-    // Hàm cập nhật profile
+    // Update user profile
     const updateProfile = async () => {
-        // Hiệu ứng nút
+        // Button animation effect
         animateButton(saveButtonScale)
 
-        // Kiểm tra xem có thay đổi nào không
+        // Check if there are any changes
         if (!hasChanges()) {
-            showMessage({ message: "Không có thay đổi nào để lưu" }, true)
+            showMessage({ message: "No changes to save" }, true)
             return
         }
 
-        // Xác thực dữ liệu
+        // Validate data
         if (!validateProfile()) {
             return
         }
@@ -240,27 +244,27 @@ const Personal = () => {
         try {
             setSaving(true)
 
-            // Tạo đối tượng chứa chỉ những giá trị đã thay đổi
+            // Create object with only changed values
             const changedValues: Record<string, any> = {}
 
-            // So sánh từng trường để xác định giá trị nào đã thay đổi
+            // Compare each field to determine which values have changed
             Object.keys(editedProfile).forEach((key) => {
                 const field = key as keyof typeof editedProfile
                 const originalValue = profile?.[field as keyof UserProfile]
                 const newValue = editedProfile[field]
 
-                // Chỉ thêm vào changedValues nếu giá trị thực sự thay đổi
+                // Only add to changedValues if value has actually changed
                 if (originalValue !== newValue) {
                     changedValues[field] = newValue
                 }
             })
 
-            // Chỉ gọi API nếu có thay đổi thực sự
+            // Only call API if there are actual changes
             if (Object.keys(changedValues).length > 0) {
                 const response = await patchData<UserProfile>(URL_USER_PROFILE, changedValues)
                 setProfile(response.data)
             } else {
-                // Không có thay đổi thực sự, chỉ cập nhật UI
+                // No actual changes, just update UI
                 console.log("No actual changes to save")
             }
 
@@ -274,9 +278,9 @@ const Personal = () => {
         }
     }
 
-    // Hàm xử lý thay đổi giá trị
+    // Handle field value changes
     const handleChange = (field: keyof UserProfile | keyof UserProfileUpdate, value: any) => {
-        // Xóa lỗi xác thực cho trường này
+        // Clear validation error for this field
         if (field in validationErrors) {
             setValidationErrors((prev) => {
                 const newErrors = { ...prev }
@@ -285,11 +289,11 @@ const Personal = () => {
             })
         }
 
-        // Xác định giá trị ban đầu
+        // Determine original value
         let originalValue: any
         let editedField: string = field as string
 
-        // Xử lý các trường đặc biệt
+        // Handle special fields
         if (field === "lengthReferencePoint") {
             originalValue = profile?.lengthReferencePoint
             editedField = "lengthReferencePointCustom"
@@ -300,19 +304,19 @@ const Personal = () => {
             originalValue = profile?.[field as keyof UserProfile]
         }
 
-        // Cập nhật editedProfile
+        // Update editedProfile
         setEditedProfile((prev) => {
             const newEdited = { ...prev }
 
-            // Sử dụng strict equality để so sánh
+            // Use strict equality for comparison
             if (value === originalValue) {
-                // Nếu giá trị quay lại giá trị ban đầu, xóa trường khỏi editedProfile
+                // If value reverts to original, remove field from editedProfile
                 const typedField = editedField as keyof typeof newEdited
                 if (typedField in newEdited) {
                     delete newEdited[typedField]
                 }
             } else {
-                // Ép kiểu để tránh lỗi TypeScript
+                // Type casting to avoid TypeScript errors
                 ; (newEdited as any)[editedField] = value
             }
 
@@ -320,7 +324,7 @@ const Personal = () => {
         })
     }
 
-    // Lấy giá trị hiện tại (từ editedProfile nếu có, nếu không thì từ profile)
+    // Get current value (from editedProfile if available, otherwise from profile)
     const getValue = (field: keyof UserProfile) => {
         if (field === "lengthReferencePoint" && "lengthReferencePointCustom" in editedProfile) {
             return editedProfile.lengthReferencePointCustom
@@ -331,25 +335,25 @@ const Personal = () => {
         return field in editedProfile ? editedProfile[field as keyof typeof editedProfile] : profile?.[field]
     }
 
-    // Tính toán diện tích tham chiếu
+    // Calculate reference area
     const calculateAreaReferencePoint = () => {
         const length = (getValue("lengthReferencePoint") as number) || 0
         const width = (getValue("widthReferencePoint") as number) || 0
         return length * width
     }
 
-    // Kiểm tra xem autoSetCalorieLimit có được bật không
+    // Check if autoSetCalorieLimit is enabled
     const isAutoSetCalorieLimit = () => {
         return getValue("autoSetCalorieLimit") === true
     }
 
-    // Lấy nhãn chu kỳ giới hạn calo
+    // Get period label for calorie limit
     const getPeriodLabel = (value: string) => {
         const option = PERIOD_OPTIONS.find((opt) => opt.value === value)
-        return option ? option.label : "Ngày"
+        return option ? option.label : "Day"
     }
 
-    // Tính toán phần trăm calo đã sử dụng
+    // Calculate percentage of calories consumed
     const calculateCaloriePercentage = () => {
         if (!profile?.totalCalories || !profile?.calorieLimit || profile.calorieLimit === 0) {
             return 0
@@ -358,20 +362,20 @@ const Personal = () => {
         return Math.round(percentage)
     }
 
-    // Xác định màu sắc cho thanh progress dựa trên phần trăm
+    // Determine progress bar color based on percentage
     const getProgressColor = () => {
         const percentage = calculateCaloriePercentage()
-        if (percentage < 70) return "#4caf50" // Xanh lá - tốt
-        if (percentage < 90) return "#ff9800" // Cam - cảnh báo
-        return "#f44336" // Đỏ - vượt quá
+        if (percentage < 70) return "#4caf50" // Green - good
+        if (percentage < 90) return "#ff9800" // Orange - warning
+        return "#f44336" // Red - exceeded
     }
 
-    // Hiển thị loading khi đang tải dữ liệu
+    // Show loading indicator while fetching data
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#0066cc" />
-                <Text style={styles.loadingText}>Đang tải thông tin...</Text>
+                <Text style={styles.loadingText}>Loading information...</Text>
             </View>
         )
     }
@@ -386,25 +390,25 @@ const Personal = () => {
                 contentContainerStyle={{ flex: 1 }}
             >
                 <View style={styles.header}>
-                    <Text style={styles.title}>Hồ Sơ Người Dùng</Text>
+                    <Text style={styles.title}>User Profile</Text>
                     <TouchableOpacity style={styles.cancelButton} onPress={toggleEditMode} activeOpacity={0.7}>
-                        <Text style={styles.cancelButtonText}>{isEditing ? "Hủy" : "Chỉnh sửa"}</Text>
+                        <Text style={styles.cancelButtonText}>{isEditing ? "Cancel" : "Edit"}</Text>
                     </TouchableOpacity>
                 </View>
 
                 <View style={styles.formContainer}>
-                    {/* Hiển thị tổng calo và thanh progress */}
+                    {/* Display total calories and progress bar */}
                     {!isEditing && profile?.totalCalories !== undefined && (
                         <View style={styles.calorieProgressContainer}>
                             <View style={styles.calorieInfoRow}>
-                                <Text style={styles.calorieTitle}>Calo đã tiêu thụ</Text>
+                                <Text style={styles.calorieTitle}>Calories Consumed</Text>
                                 <Text style={styles.calorieValue}>
                                     {profile.totalCalories.toFixed(0)} / {profile.calorieLimit}
                                 </Text>
                             </View>
 
                             <View style={styles.caloriePeriodRow}>
-                                <Text style={styles.periodText}>Chu kỳ: {getPeriodLabel(profile.calorieLimitPeriod)}</Text>
+                                <Text style={styles.periodText}>Period: {getPeriodLabel(profile.calorieLimitPeriod)}</Text>
                             </View>
 
                             <View style={styles.progressBarContainer}>
@@ -424,19 +428,19 @@ const Personal = () => {
 
                             {calculateCaloriePercentage() > 100 && (
                                 <View style={styles.warningContainer}>
-                                    <Text style={styles.warningText}>⚠️ Đã vượt quá giới hạn calo!</Text>
+                                    <Text style={styles.warningText}>⚠️ Calorie limit exceeded!</Text>
                                 </View>
                             )}
                         </View>
                     )}
 
-                    {/* Giới tính và Tuổi trên cùng một dòng */}
+                    {/* Gender and Age in one row */}
                     <View style={styles.rowContainer}>
                         <View style={[styles.columnContainer, { marginRight: 8 }]}>
-                            <Text style={styles.fieldLabel}>Giới tính:</Text>
+                            <Text style={styles.fieldLabel}>Gender:</Text>
                             {isEditing ? (
                                 <View style={styles.switchContainer}>
-                                    <Text style={styles.switchLabel}>{getValue("gender") ? "Nam" : "Nữ"}</Text>
+                                    <Text style={styles.switchLabel}>{getValue("gender") ? "Male" : "Female"}</Text>
                                     <Switch
                                         value={getValue("gender") === true}
                                         onValueChange={(value) => handleChange("gender", value)}
@@ -445,12 +449,12 @@ const Personal = () => {
                                     />
                                 </View>
                             ) : (
-                                <Text style={styles.fieldValue}>{profile?.gender ? "Nam" : "Nữ"}</Text>
+                                <Text style={styles.fieldValue}>{profile?.gender ? "Male" : "Female"}</Text>
                             )}
                         </View>
 
                         <View style={styles.columnContainer}>
-                            <Text style={styles.fieldLabel}>Tuổi:</Text>
+                            <Text style={styles.fieldLabel}>Age:</Text>
                             {isEditing ? (
                                 <>
                                     <TextInput
@@ -468,10 +472,10 @@ const Personal = () => {
                         </View>
                     </View>
 
-                    {/* Chiều cao và Cân nặng trên cùng một dòng */}
+                    {/* Height and Weight in one row */}
                     <View style={styles.rowContainer}>
                         <View style={[styles.columnContainer, { marginRight: 8 }]}>
-                            <Text style={styles.fieldLabel}>Chiều cao (cm):</Text>
+                            <Text style={styles.fieldLabel}>Height (cm):</Text>
                             {isEditing ? (
                                 <>
                                     <TextInput
@@ -489,7 +493,7 @@ const Personal = () => {
                         </View>
 
                         <View style={styles.columnContainer}>
-                            <Text style={styles.fieldLabel}>Cân nặng (kg):</Text>
+                            <Text style={styles.fieldLabel}>Weight (kg):</Text>
                             {isEditing ? (
                                 <>
                                     <TextInput
@@ -507,12 +511,12 @@ const Personal = () => {
                         </View>
                     </View>
 
-                    {/* Tự động tính giới hạn calo */}
+                    {/* Auto-calculate calorie limit */}
                     {isEditing && (
                         <View style={styles.fieldRow}>
-                            <Text style={styles.fieldLabel}>Tự động tính giới hạn calo:</Text>
+                            <Text style={styles.fieldLabel}>Auto-calculate calorie limit:</Text>
                             <View style={styles.switchContainer}>
-                                <Text style={styles.switchLabel}>{isAutoSetCalorieLimit() ? "Bật" : "Tắt"}</Text>
+                                <Text style={styles.switchLabel}>{isAutoSetCalorieLimit() ? "On" : "Off"}</Text>
                                 <Switch
                                     value={isAutoSetCalorieLimit()}
                                     onValueChange={(value) => handleChange("autoSetCalorieLimit", value)}
@@ -523,10 +527,10 @@ const Personal = () => {
                         </View>
                     )}
 
-                    {/* Giới hạn calo và Chu kỳ trên cùng một dòng */}
+                    {/* Calorie Limit and Period in one row */}
                     <View style={styles.rowContainer}>
                         <View style={[styles.columnContainer, { marginRight: 8 }]}>
-                            <Text style={styles.fieldLabel}>Giới hạn calo:</Text>
+                            <Text style={styles.fieldLabel}>Calorie Limit:</Text>
                             {isEditing ? (
                                 <>
                                     <TextInput
@@ -550,7 +554,7 @@ const Personal = () => {
                         </View>
 
                         <View style={styles.columnContainer}>
-                            <Text style={styles.fieldLabel}>Chu kỳ giới hạn calo:</Text>
+                            <Text style={styles.fieldLabel}>Calorie Limit Period:</Text>
                             {isEditing ? (
                                 <View>
                                     <TouchableOpacity
@@ -608,10 +612,10 @@ const Personal = () => {
                         </View>
                     </View>
 
-                    {/* Điểm tham chiếu chiều dài và chiều rộng trên cùng một dòng */}
+                    {/* Length and Width Reference Points in one row */}
                     <View style={styles.rowContainer}>
                         <View style={[styles.columnContainer, { marginRight: 8 }]}>
-                            <Text style={styles.fieldLabel}>Điểm tham chiếu dài (cm):</Text>
+                            <Text style={styles.fieldLabel}>Length Reference Point (cm):</Text>
                             {isEditing ? (
                                 <>
                                     <TextInput
@@ -631,7 +635,7 @@ const Personal = () => {
                         </View>
 
                         <View style={styles.columnContainer}>
-                            <Text style={styles.fieldLabel}>Điểm tham chiếu rộng (cm):</Text>
+                            <Text style={styles.fieldLabel}>Width Reference Point (cm):</Text>
                             {isEditing ? (
                                 <>
                                     <TextInput
@@ -651,12 +655,12 @@ const Personal = () => {
                         </View>
                     </View>
 
-                    {/* Điểm tham chiếu diện tích */}
+                    {/* Area Reference Point */}
                     <View style={styles.fieldRow}>
-                        <Text style={styles.fieldLabel}>Điểm tham chiếu diện tích (cm²):</Text>
+                        <Text style={styles.fieldLabel}>Area Reference Point (cm²):</Text>
                         <Text style={styles.fieldValue}>
                             {isEditing ? calculateAreaReferencePoint() : profile?.areaReferencePoint}
-                            {isEditing && <Text style={styles.calculatedText}> (dài × rộng)</Text>}
+                            {isEditing && <Text style={styles.calculatedText}> (length × width)</Text>}
                         </Text>
                     </View>
                 </View>
@@ -673,7 +677,7 @@ const Personal = () => {
                                 {resetting ? (
                                     <ActivityIndicator size="small" color="#fff" />
                                 ) : (
-                                    <Text style={styles.buttonText}>Đặt lại</Text>
+                                    <Text style={styles.buttonText}>Reset</Text>
                                 )}
                             </Pressable>
                         </Animated.View>
@@ -692,7 +696,7 @@ const Personal = () => {
                                 {saving ? (
                                     <ActivityIndicator size="small" color="#fff" />
                                 ) : (
-                                    <Text style={styles.buttonText}>Lưu thay đổi</Text>
+                                    <Text style={styles.buttonText}>Save Changes</Text>
                                 )}
                             </Pressable>
                         </Animated.View>
@@ -813,7 +817,7 @@ const styles = StyleSheet.create({
         top: 0,
         height: "100%",
         borderRadius: 12,
-        minWidth: 2, // Đảm bảo thanh progress có độ rộng tối thiểu
+        minWidth: 2, // Ensure progress bar has minimum width
     },
     progressTextContainer: {
         position: "absolute",

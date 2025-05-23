@@ -1,99 +1,121 @@
+"use client"
+
 // app/signin.tsx
-import { FORGOT_PASSWORD_ROUTE, SIGNUP_ROUTE } from '@/constants/router_constants';
-import { ACCESS_TOKEN, REFRESH_TOKEN, USER_EMAIL } from '@/constants/token_constants';
-import { AuthContext } from '@/context/AuthContext';
-import { postData } from '@/context/request_context';
-import { showMessage } from '@/utils/showMessage';
-import { getEmailErrorMessage, getPasswordErrorMessage } from '@/utils/validation';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
-import React, { useContext, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { URL_SIGN_IN } from '../../constants/url_constants';
+import { FORGOT_PASSWORD_ROUTE, SIGNUP_ROUTE } from "@/constants/router_constants"
+import { ACCESS_TOKEN, REFRESH_TOKEN, USER_EMAIL } from "@/constants/token_constants"
+import { AuthContext } from "@/context/AuthContext"
+import { postData } from "@/context/request_context"
+import { showMessage } from "@/utils/showMessage"
+import { getEmailErrorMessage, getPasswordErrorMessage } from "@/utils/validation"
+import AsyncStorage from "@react-native-async-storage/async-storage"
+import { useRouter } from "expo-router"
+import { useContext, useState } from "react"
+import {
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native"
+import { URL_SIGN_IN } from "../../constants/url_constants"
 
+/**
+ * SignIn screen component
+ * Allows users to login with email and password
+ */
 export default function SignIn() {
-    const [username, setUsername] = useState("");
-    const [password, setPassword] = useState("");
-    const [emailError, setEmailError] = useState("");
-    const [passwordError, setPasswordError] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
-    const { setToken, setEmail } = useContext(AuthContext);
-    const router = useRouter();
+    const [username, setUsername] = useState("")
+    const [password, setPassword] = useState("")
+    const [emailError, setEmailError] = useState("")
+    const [passwordError, setPasswordError] = useState("")
+    const [isLoading, setIsLoading] = useState(false)
+    const { setToken, setEmail } = useContext(AuthContext)
+    const router = useRouter()
 
-    // Hàm xác thực đầu vào
+    /**
+     * Validates all input fields
+     * @returns {boolean} True if all inputs are valid, false otherwise
+     */
     const validateInputs = () => {
-        let isValid = true;
+        let isValid = true
 
-        // Kiểm tra email
-        const emailErrorMsg = getEmailErrorMessage(username);
+        // Check email
+        const emailErrorMsg = getEmailErrorMessage(username)
         if (emailErrorMsg) {
-            setEmailError(emailErrorMsg);
-            isValid = false;
+            setEmailError(emailErrorMsg)
+            isValid = false
         } else {
-            setEmailError("");
+            setEmailError("")
         }
 
-        // Kiểm tra mật khẩu
-        const passwordErrorMsg = getPasswordErrorMessage(password);
+        // Check password
+        const passwordErrorMsg = getPasswordErrorMessage(password)
         if (passwordErrorMsg) {
-            setPasswordError(passwordErrorMsg);
-            isValid = false;
+            setPasswordError(passwordErrorMsg)
+            isValid = false
         } else {
-            setPasswordError("");
+            setPasswordError("")
         }
 
-        return isValid;
-    };
+        return isValid
+    }
 
+    /**
+     * Handles the sign in process
+     * Validates inputs and authenticates the user
+     */
     const handleSignIn = async () => {
-        // Xóa lỗi cũ
-        setEmailError("");
-        setPasswordError("");
+        // Clear previous errors
+        setEmailError("")
+        setPasswordError("")
 
-        // Kiểm tra đầu vào
+        // Validate inputs
         if (!validateInputs()) {
-            return;
+            return
         }
 
-        setIsLoading(true);
+        setIsLoading(true)
 
         try {
             const { data } = await postData(URL_SIGN_IN, {
                 username,
                 password,
-            });
+            })
 
-            await AsyncStorage.setItem(ACCESS_TOKEN, data.access);
-            await AsyncStorage.setItem(REFRESH_TOKEN, data.refresh);
-            await AsyncStorage.setItem(USER_EMAIL, username);
+            // Type assertion for data
+            const { access, refresh } = data as { access: string; refresh: string }
 
-            setToken(data.access);
-            setEmail(username);
+            await AsyncStorage.setItem(ACCESS_TOKEN, access)
+            await AsyncStorage.setItem(REFRESH_TOKEN, refresh)
+            await AsyncStorage.setItem(USER_EMAIL, username)
+
+            setToken(access)
+            setEmail(username)
         } catch (e: any) {
-            showMessage(e);
+            showMessage(e)
         } finally {
-            setIsLoading(false);
+            setIsLoading(false)
         }
-    };
+    }
 
     return (
-        <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            style={styles.keyboardAvoid}
-        >
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.keyboardAvoid}>
             <ScrollView contentContainerStyle={styles.scrollContainer}>
                 <View style={styles.container}>
-                    <Text style={styles.title}>Đăng nhập</Text>
-                    <Text style={styles.subtitle}>Vui lòng đăng nhập để tiếp tục</Text>
+                    <Text style={styles.title}>Sign In</Text>
+                    <Text style={styles.subtitle}>Please sign in to continue</Text>
 
                     <View style={styles.formGroup}>
                         <Text style={styles.label}>Email</Text>
                         <TextInput
-                            placeholder="Nhập địa chỉ email của bạn"
+                            placeholder="Enter your email address"
                             value={username}
                             onChangeText={(text) => {
-                                setUsername(text);
-                                if (emailError) setEmailError("");
+                                setUsername(text)
+                                if (emailError) setEmailError("")
                             }}
                             style={[styles.input, emailError ? styles.inputError : null]}
                             autoCapitalize="none"
@@ -105,13 +127,13 @@ export default function SignIn() {
                     </View>
 
                     <View style={styles.formGroup}>
-                        <Text style={styles.label}>Mật khẩu</Text>
+                        <Text style={styles.label}>Password</Text>
                         <TextInput
-                            placeholder="Nhập mật khẩu của bạn"
+                            placeholder="Enter your password"
                             value={password}
                             onChangeText={(text) => {
-                                setPassword(text);
-                                if (passwordError) setPasswordError("");
+                                setPassword(text)
+                                if (passwordError) setPasswordError("")
                             }}
                             secureTextEntry
                             style={[styles.input, passwordError ? styles.inputError : null]}
@@ -120,7 +142,7 @@ export default function SignIn() {
                         />
                         {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
                         <Text style={styles.passwordHint}>
-                            Mật khẩu phải có ít nhất 8 ký tự, bao gồm cả chữ và số
+                            Password must be at least 8 characters, including letters and numbers
                         </Text>
                     </View>
 
@@ -129,9 +151,7 @@ export default function SignIn() {
                         onPress={handleSignIn}
                         disabled={isLoading}
                     >
-                        <Text style={styles.signInButtonText}>
-                            {isLoading ? "Đang đăng nhập..." : "Đăng nhập"}
-                        </Text>
+                        <Text style={styles.signInButtonText}>{isLoading ? "Signing in..." : "Sign In"}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -139,30 +159,25 @@ export default function SignIn() {
                         style={styles.forgotPasswordButton}
                         disabled={isLoading}
                     >
-                        <Text style={styles.linkText}>Quên mật khẩu?</Text>
+                        <Text style={styles.linkText}>Forgot Password?</Text>
                     </TouchableOpacity>
 
                     <View style={styles.divider}>
                         <View style={styles.dividerLine} />
-                        <Text style={styles.dividerText}>hoặc</Text>
+                        <Text style={styles.dividerText}>or</Text>
                         <View style={styles.dividerLine} />
                     </View>
 
-                    <TouchableOpacity
-                        onPress={() => router.push(SIGNUP_ROUTE)}
-                        style={styles.signUpButton}
-                        disabled={isLoading}
-                    >
-                        <Text style={styles.signUpButtonText}>Chưa có tài khoản? Đăng ký ngay</Text>
+                    <TouchableOpacity onPress={() => router.push(SIGNUP_ROUTE)} style={styles.signUpButton} disabled={isLoading}>
+                        <Text style={styles.signUpButtonText}>Don't have an account? Sign Up</Text>
                     </TouchableOpacity>
                 </View>
             </ScrollView>
         </KeyboardAvoidingView>
-    );
+    )
 }
 
 const styles = StyleSheet.create({
-    // Các style giữ nguyên như trước
     keyboardAvoid: {
         flex: 1,
     },
@@ -171,20 +186,20 @@ const styles = StyleSheet.create({
     },
     container: {
         flex: 1,
-        justifyContent: 'center',
-        padding: 20
+        justifyContent: "center",
+        padding: 20,
     },
     title: {
         fontSize: 24,
-        fontWeight: 'bold',
+        fontWeight: "bold",
         marginBottom: 8,
-        textAlign: 'center',
+        textAlign: "center",
     },
     subtitle: {
         fontSize: 16,
-        color: '#666',
+        color: "#666",
         marginBottom: 24,
-        textAlign: 'center',
+        textAlign: "center",
     },
     formGroup: {
         marginBottom: 16,
@@ -192,72 +207,72 @@ const styles = StyleSheet.create({
     label: {
         fontSize: 16,
         marginBottom: 8,
-        fontWeight: '500',
+        fontWeight: "500",
     },
     input: {
         height: 50,
         borderWidth: 1,
-        borderColor: '#ddd',
+        borderColor: "#ddd",
         borderRadius: 8,
         paddingHorizontal: 12,
         fontSize: 16,
     },
     inputError: {
-        borderColor: 'red',
+        borderColor: "red",
     },
     errorText: {
-        color: 'red',
+        color: "red",
         fontSize: 14,
         marginTop: 4,
     },
     passwordHint: {
         fontSize: 12,
-        color: '#666',
+        color: "#666",
         marginTop: 4,
     },
     signInButton: {
-        backgroundColor: '#007AFF',
+        backgroundColor: "#007AFF",
         height: 50,
         borderRadius: 8,
-        justifyContent: 'center',
-        alignItems: 'center',
+        justifyContent: "center",
+        alignItems: "center",
         marginTop: 16,
     },
     signInButtonDisabled: {
-        backgroundColor: '#007AFF80',
+        backgroundColor: "#007AFF80",
     },
     signInButtonText: {
-        color: 'white',
+        color: "white",
         fontSize: 16,
-        fontWeight: '600',
+        fontWeight: "600",
     },
     forgotPasswordButton: {
         marginTop: 16,
-        alignItems: 'center',
+        alignItems: "center",
     },
     divider: {
-        flexDirection: 'row',
-        alignItems: 'center',
+        flexDirection: "row",
+        alignItems: "center",
         marginVertical: 24,
     },
     dividerLine: {
         flex: 1,
         height: 1,
-        backgroundColor: '#ddd',
+        backgroundColor: "#ddd",
     },
     dividerText: {
         paddingHorizontal: 16,
-        color: '#666',
+        color: "#666",
     },
     signUpButton: {
-        alignItems: 'center',
+        alignItems: "center",
     },
     signUpButtonText: {
-        color: '#007AFF',
+        color: "#007AFF",
         fontSize: 16,
     },
     linkText: {
-        color: '#007AFF',
+        color: "#007AFF",
         fontSize: 16,
     },
-});
+})

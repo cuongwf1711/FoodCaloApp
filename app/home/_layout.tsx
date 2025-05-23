@@ -1,41 +1,36 @@
-// app/_layout.tsx
-import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Tabs, usePathname, useRouter } from 'expo-router';
-import React, { useContext } from 'react';
-import { StyleSheet, Text, TouchableOpacity } from 'react-native';
+"use client"
 
-import {
-    CHANGE_PASSWORD_ROUTE,
-    HOME_ROUTE,
-    SIGNIN_ROUTE,
-} from '@/constants/router_constants';
-import {
-    ACCESS_TOKEN,
-    REFRESH_TOKEN,
-    USER_EMAIL,
-} from '@/constants/token_constants';
-import { AuthContext } from '@/context/AuthContext';
+// App layout with tab navigation
+import { Ionicons } from "@expo/vector-icons"
+import AsyncStorage from "@react-native-async-storage/async-storage"
+import { Tabs, usePathname, useRouter } from "expo-router"
+import { useContext } from "react"
+import { StyleSheet, Text, TouchableOpacity } from "react-native"
+
+import { CHANGE_PASSWORD_ROUTE, HOME_ROUTE, SIGNIN_ROUTE } from "@/constants/router_constants"
+import { ACCESS_TOKEN, REFRESH_TOKEN, USER_EMAIL } from "@/constants/token_constants"
+import { AuthContext } from "@/context/AuthContext"
 
 export default function RootLayout() {
-    const { email, setToken, setEmail } = useContext(AuthContext);
-    const router = useRouter();
-    const pathname = usePathname();
+    const { email, setToken, setEmail } = useContext(AuthContext)
+    const router = useRouter()
+    const pathname = usePathname()
 
-    // Kiểm tra trang change-password để ẩn/hiện nút và tab
-    const isChangePasswordScreen = pathname.includes('change-password');
+    // Check if current page is change-password to show/hide buttons and tabs
+    const isChangePasswordScreen = pathname.includes("change-password")
 
+    // Handle sign out and clear tokens
     const handleSignOut = async () => {
-        // Đăng xuất và clear token
-        await AsyncStorage.multiRemove([ACCESS_TOKEN, REFRESH_TOKEN, USER_EMAIL]);
-        setToken(null);
-        setEmail(null);
-        router.replace(SIGNIN_ROUTE);
-    };
+        await AsyncStorage.multiRemove([ACCESS_TOKEN, REFRESH_TOKEN, USER_EMAIL])
+        setToken(null)
+        setEmail(null)
+        router.replace(SIGNIN_ROUTE)
+    }
 
+    // Navigate to home screen
     const navigateToHome = () => {
-        router.push(HOME_ROUTE);
-    };
+        router.push(HOME_ROUTE)
+    }
 
     return (
         <Tabs
@@ -46,7 +41,7 @@ export default function RootLayout() {
                         <Ionicons name="home-outline" size={18} color="#007AFF" style={styles.homeIcon} />
                     </TouchableOpacity>
                 ),
-                headerTitleAlign: 'center',
+                headerTitleAlign: "center",
                 headerLeft: () =>
                     !isChangePasswordScreen ? (
                         <TouchableOpacity style={styles.leftIconButton} onPress={handleSignOut}>
@@ -59,34 +54,38 @@ export default function RootLayout() {
                             <Ionicons name="key-outline" size={22} color="#007AFF" />
                         </TouchableOpacity>
                     ) : null,
-                tabBarActiveTintColor: '#007AFF',
-                tabBarShowLabel: false, // Ẩn tất cả text label trên tab bar
-                // Ẩn tabBar khi ở trang đổi mật khẩu
-                tabBarStyle: isChangePasswordScreen ? { display: 'none' } : undefined,
+                tabBarActiveTintColor: "#007AFF",
+                // Hide all text labels on tab bar
+                tabBarShowLabel: false,
+                // Hide tabBar when on change password page
+                tabBarStyle: isChangePasswordScreen ? { display: "none" } : undefined,
             }}
         >
             <Tabs.Screen
                 name="index"
                 options={{
-                    title: 'Main',
+                    title: "Main",
                     tabBarIcon: ({ color, size }) => <Ionicons name="add-circle-outline" size={size} color={color} />,
-                    tabBarShowLabel: false, // Ẩn text label
+                    // Hide text label
+                    tabBarShowLabel: false,
                 }}
             />
             <Tabs.Screen
                 name="history"
                 options={{
-                    title: 'History',
+                    title: "History",
                     tabBarIcon: ({ color, size }) => <Ionicons name="calendar-outline" size={size} color={color} />,
-                    tabBarShowLabel: false, // Ẩn text label
+                    // Hide text label
+                    tabBarShowLabel: false,
                 }}
             />
             <Tabs.Screen
                 name="personal"
                 options={{
-                    title: 'Personal',
+                    title: "Personal",
                     tabBarIcon: ({ color, size }) => <Ionicons name="accessibility-outline" size={size} color={color} />,
-                    tabBarShowLabel: false, // Ẩn text label
+                    // Hide text label
+                    tabBarShowLabel: false,
                 }}
             />
             <Tabs.Screen
@@ -108,18 +107,18 @@ export default function RootLayout() {
                 }}
             />
         </Tabs>
-    );
+    )
 }
 
 const styles = StyleSheet.create({
     headerTitleContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "center",
     },
     emailText: {
         fontSize: 14,
-        color: '#333',
+        color: "#333",
         marginRight: 5,
     },
     homeIcon: {
@@ -131,4 +130,4 @@ const styles = StyleSheet.create({
     rightIconButton: {
         padding: 8,
     },
-});
+})

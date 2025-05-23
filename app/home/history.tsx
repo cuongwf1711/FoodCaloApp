@@ -21,6 +21,10 @@ import {
 import FoodHistoryAllView from "./food-history-all"
 import FoodHistoryDateView from "./food-history-date"
 
+/**
+ * Food History Screen - Main container for food history views
+ * Manages filtering, sorting, and view transitions
+ */
 const FoodHistoryScreen: React.FC = () => {
     const [timeFilter, setTimeFilter] = useState<TimeFilter>("all")
     const [fadeAnim] = useState(new Animated.Value(1))

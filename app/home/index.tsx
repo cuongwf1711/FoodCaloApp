@@ -33,12 +33,12 @@ type PredictionResult = {
     calo: number
 }
 
-// Cross-platform modules
+// Platform-specific module imports
 let ImagePicker: any
 let AsyncStorage: any
 
 if (Platform.OS === "web") {
-    // Web implementations
+    // Web-specific implementations
     ImagePicker = {
         requestMediaLibraryPermissionsAsync: async () => ({ status: "granted" }),
         launchImageLibraryAsync: async () => {
@@ -90,7 +90,10 @@ type ImagePickerResult = {
     assets: ImageAsset[]
 }
 
-// Enhanced Animated Button Component
+/**
+ * Animated button with press effects for both platforms
+ * Provides visual feedback when pressed
+ */
 const AnimatedButton: React.FC<{
     style: any
     onPress: () => void
@@ -208,6 +211,10 @@ const AnimatedButton: React.FC<{
     )
 }
 
+/**
+ * Main screen component for food calorie prediction
+ * Allows users to select an image and get calorie estimates
+ */
 const Index: React.FC = () => {
     const [selectedImage, setSelectedImage] = useState<ImageAsset | null>(null)
     const [isProcessing, setIsProcessing] = useState(false)
@@ -220,11 +227,12 @@ const Index: React.FC = () => {
     const resultCardAnim = useRef(new Animated.Value(0)).current
     const resultOpacityAnim = useRef(new Animated.Value(0)).current
 
+    // Select image from device gallery
     const pickImage = async () => {
         try {
             const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
             if (status !== "granted" && Platform.OS !== "web") {
-                Alert.alert("Cần quyền truy cập", "Vui lòng cho phép ứng dụng truy cập thư viện ảnh")
+                Alert.alert("Permission required", "Please allow the app to access your photo library")
                 return
             }
 
@@ -245,10 +253,11 @@ const Index: React.FC = () => {
             }
         } catch (error) {
             console.error("Error picking image:", error)
-            showMessage({ message: "Lỗi khi chọn ảnh" })
+            showMessage({ message: "Error selecting image" })
         }
     }
 
+    // Process the selected image for calorie prediction
     const processImage = async () => {
         if (!selectedImage) return
 
@@ -302,6 +311,7 @@ const Index: React.FC = () => {
         }
     }
 
+    // Reset the form and clear results
     const reset = () => {
         setSelectedImage(null)
         setResult(null)
@@ -309,25 +319,29 @@ const Index: React.FC = () => {
         resultOpacityAnim.setValue(0)
     }
 
+    // Open image modal to view full-size image
     const openImageModal = (uri: string) => {
         setModalImageUri(uri)
         setModalVisible(true)
     }
 
+    // Close image modal
     const closeImageModal = () => {
         setModalVisible(false)
     }
 
+    // Start editing an item
     const startEditing = () => {
         setIsEditing(true)
     }
 
-    const saveEditedItem = async (calo: string, comment: string) => {
+    // Save edited item details
+    const saveEditedItem = async (calories: string, comment: string) => {
         if (!result) return
 
         try {
             const updatedData = {
-                calo: Number(calo),
+                calo: Number(calories),
                 comment: comment,
             }
 
@@ -340,10 +354,11 @@ const Index: React.FC = () => {
             setIsEditing(false)
         } catch (error) {
             console.error("Error updating food item:", error)
-            showMessage({ message: "Lỗi khi cập nhật thông tin" })
+            showMessage({ message: "Error updating information" })
         }
     }
 
+    // Cancel editing
     const cancelEditing = () => {
         setIsEditing(false)
     }
@@ -351,13 +366,13 @@ const Index: React.FC = () => {
     return (
         <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Dự đoán Calories từ hình ảnh</Text>
-                <Text style={styles.headerSubtitle}>Chụp hoặc tải lên ảnh món ăn để phân tích</Text>
+                <Text style={styles.headerTitle}>Predict Calories from Image</Text>
+                <Text style={styles.headerSubtitle}>Take or upload a food photo for analysis</Text>
             </View>
 
             {/* Image Selection Card */}
             <View style={styles.card}>
-                <Text style={styles.cardTitle}>Chọn hình ảnh</Text>
+                <Text style={styles.cardTitle}>Select Image</Text>
 
                 {selectedImage ? (
                     <TouchableOpacity
@@ -367,20 +382,20 @@ const Index: React.FC = () => {
                     >
                         <Image source={{ uri: selectedImage.uri }} style={styles.selectedImage} resizeMode="contain" />
                         <View style={styles.imageOverlay}>
-                            <Text style={styles.tapHint}>Nhấn để xem đầy đủ</Text>
+                            <Text style={styles.tapHint}>Tap to view full image</Text>
                         </View>
                     </TouchableOpacity>
                 ) : (
                     <View style={styles.imagePlaceholder}>
                         <Text style={styles.placeholderIcon}>📷</Text>
-                        <Text style={styles.placeholderText}>Chưa có ảnh</Text>
+                        <Text style={styles.placeholderText}>No image selected</Text>
                     </View>
                 )}
 
                 {/* Enhanced Button Row with better spacing */}
                 <View style={styles.buttonRow}>
                     <AnimatedButton style={[styles.button, styles.primaryButton]} onPress={pickImage} buttonType="primary">
-                        <Text style={styles.buttonText}>Chọn ảnh</Text>
+                        <Text style={styles.buttonText}>Select Image</Text>
                     </AnimatedButton>
 
                     <AnimatedButton
@@ -389,7 +404,7 @@ const Index: React.FC = () => {
                         onPress={processImage}
                         buttonType="success"
                     >
-                        <Text style={styles.buttonText}>{isProcessing ? "Đang xử lý..." : "Phân tích"}</Text>
+                        <Text style={styles.buttonText}>{isProcessing ? "Processing..." : "Analyze"}</Text>
                     </AnimatedButton>
 
                     <AnimatedButton
@@ -398,7 +413,7 @@ const Index: React.FC = () => {
                         onPress={reset}
                         buttonType="danger"
                     >
-                        <Text style={styles.buttonText}>Đặt lại</Text>
+                        <Text style={styles.buttonText}>Reset</Text>
                     </AnimatedButton>
                 </View>
             </View>
@@ -428,7 +443,7 @@ const Index: React.FC = () => {
                     ]}
                 >
                     <View style={styles.resultHeader}>
-                        <Text style={styles.cardTitle}>Kết quả phân tích</Text>
+                        <Text style={styles.cardTitle}>Analysis Results</Text>
                         <Text style={styles.resultTimestamp}>{formatDate(result.createdAt)}</Text>
                     </View>
 
@@ -437,12 +452,12 @@ const Index: React.FC = () => {
                         <Text style={styles.foodNameResult}>{result.predictName}</Text>
                         <Text style={styles.caloriesResult}>{result.calo} calories</Text>
                         <View style={styles.confidenceBadge}>
-                            <Text style={styles.confidenceText}>Độ tin cậy: {result.confidencePercentage}</Text>
+                            <Text style={styles.confidenceText}>Confidence: {result.confidencePercentage}</Text>
                         </View>
                     </View>
 
                     <AnimatedButton style={styles.editButton} onPress={startEditing}>
-                        <Text style={styles.editButtonText}>✎ Chỉnh sửa</Text>
+                        <Text style={styles.editButtonText}>✎ Edit</Text>
                     </AnimatedButton>
 
                     {/* Result Images */}
@@ -454,7 +469,7 @@ const Index: React.FC = () => {
                         >
                             <Image source={{ uri: result.publicUrl.originImage }} style={styles.resultImage} resizeMode="contain" />
                             <View style={styles.imageLabel}>
-                                <Text style={styles.imageLabelText}>Ảnh gốc</Text>
+                                <Text style={styles.imageLabelText}>Original Image</Text>
                             </View>
                         </TouchableOpacity>
 
@@ -469,7 +484,7 @@ const Index: React.FC = () => {
                                 resizeMode="contain"
                             />
                             <View style={styles.imageLabel}>
-                                <Text style={styles.imageLabelText}>Ảnh phân đoạn</Text>
+                                <Text style={styles.imageLabelText}>Segmented Image</Text>
                             </View>
                         </TouchableOpacity>
                     </View>
@@ -477,7 +492,7 @@ const Index: React.FC = () => {
                     {/* Additional Details */}
                     {result.comment && (
                         <View style={[sharedStyles.commentContainer, styles.commentContainer]}>
-                            <Text style={[sharedStyles.commentLabel, styles.commentLabel]}>Ghi chú:</Text>
+                            <Text style={[sharedStyles.commentLabel, styles.commentLabel]}>Notes:</Text>
                             <Text style={[sharedStyles.foodComment, styles.commentText]}>{result.comment}</Text>
                         </View>
                     )}
@@ -501,12 +516,15 @@ const Index: React.FC = () => {
     )
 }
 
+import type { ViewStyle } from "react-native"
+
 const styles = StyleSheet.create({
     container: {
         padding: 16,
         backgroundColor: "#f8f9fa",
-        minHeight: Platform.OS === "web" ? "100vh" : undefined,
-    },
+        minHeight: Platform.OS === "web" ? 0 : undefined, // fallback to number for native
+        ...(Platform.OS === "web" ? { minHeight: "100vh" as unknown as number } : {}), // workaround for web
+    } as ViewStyle,
     header: {
         marginBottom: 20,
         alignItems: "center",
