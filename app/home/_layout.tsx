@@ -95,6 +95,30 @@ export default function RootLayout() {
                     href: null,
                 }}
             />
+            <Tabs.Screen
+                name="food-history-day"
+                options={{
+                    href: null,
+                }}
+            />
+            <Tabs.Screen
+                name="food-history-week"
+                options={{
+                    href: null,
+                }}
+            />
+            <Tabs.Screen
+                name="food-history-month"
+                options={{
+                    href: null,
+                }}
+            />
+            <Tabs.Screen
+                name="food-history-none"
+                options={{
+                    href: null,
+                }}
+            />
         </Tabs>
     );
 }
