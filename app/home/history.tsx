@@ -35,6 +35,10 @@ const FoodHistoryScreen: React.FC = () => {
     const [totalCalories, setTotalCalories] = useState(0)
     const [sortOption, setSortOption] = useState<SortOption>("newest")
 
+    // Add these to the existing state declarations
+    const [sortAnim] = useState(new Animated.Value(1))
+    const [sortRotateAnim] = useState(new Animated.Value(0))
+
     // Use shared hook for user profile
     const { userProfile, fetchUserProfile } = useUserProfile()
 
@@ -43,8 +47,30 @@ const FoodHistoryScreen: React.FC = () => {
         setTotalCalories(calories)
     }, [])
 
-    // Handle sort change
+    // Replace the handleSortChange function with this animated version
     const handleSortChange = useCallback((newSortOption: SortOption) => {
+        // Start animation
+        Animated.sequence([
+            Animated.parallel([
+                Animated.timing(sortAnim, {
+                    toValue: 0.9,
+                    duration: 150,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(sortRotateAnim, {
+                    toValue: 1,
+                    duration: 300,
+                    useNativeDriver: true,
+                }),
+            ]),
+            Animated.timing(sortAnim, {
+                toValue: 1,
+                duration: 150,
+                useNativeDriver: true,
+            }),
+        ]).start()
+
+        // Update sort option
         setSortOption(newSortOption)
     }, [])
 

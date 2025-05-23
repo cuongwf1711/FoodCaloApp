@@ -41,6 +41,7 @@ if (Platform.OS === "web") {
     // Web-specific implementations
     ImagePicker = {
         requestMediaLibraryPermissionsAsync: async () => ({ status: "granted" }),
+        requestCameraPermissionsAsync: async () => ({ status: "granted" }),
         launchImageLibraryAsync: async () => {
             return new Promise<ImagePickerResult>((resolve) => {
                 const input = document.createElement("input")
@@ -73,6 +74,12 @@ if (Platform.OS === "web") {
                 }
                 input.click()
             })
+        },
+        launchCameraAsync: async () => {
+            // Web doesn't support direct camera access through this API
+            // We'll show an alert instead
+            alert("Camera capture is not supported in web browsers. Please use the file picker instead.")
+            return { canceled: true, assets: [] }
         },
     }
 
@@ -227,33 +234,122 @@ const Index: React.FC = () => {
     const resultCardAnim = useRef(new Animated.Value(0)).current
     const resultOpacityAnim = useRef(new Animated.Value(0)).current
 
-    // Select image from device gallery
+    // Select image from device gallery or camera
     const pickImage = async () => {
         try {
-            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
-            if (status !== "granted" && Platform.OS !== "web") {
-                Alert.alert("Permission required", "Please allow the app to access your photo library")
-                return
-            }
+            if (Platform.OS === "web") {
+                // Web doesn't support action sheet, directly open file picker
+                const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+                if (status !== "granted") {
+                    showMessage({ message: "Permission required to access photos" })
+                    return
+                }
 
-            const result = await ImagePicker.launchImageLibraryAsync({
-                mediaTypes: Platform.OS === "web" ? "Images" : ["Images"],
-                allowsEditing: true,
-                aspect: [4, 3],
-                quality: 1,
-            })
+                const result = await ImagePicker.launchImageLibraryAsync({
+                    mediaTypes: "Images",
+                    allowsEditing: true,
+                    aspect: [4, 3],
+                    quality: 1,
+                })
 
-            if (!result.canceled && result.assets?.[0]) {
-                setSelectedImage(result.assets[0])
-                setResult(null) // Reset previous result
+                if (!result.canceled && result.assets?.[0]) {
+                    setSelectedImage(result.assets[0])
+                    setResult(null) // Reset previous result
 
-                // Reset result animations
-                resultCardAnim.setValue(0)
-                resultOpacityAnim.setValue(0)
+                    // Reset result animations
+                    resultCardAnim.setValue(0)
+                    resultOpacityAnim.setValue(0)
+                }
+            } else {
+                // On mobile, show action sheet with options
+                if (Platform.OS === "ios") {
+                    // For iOS, we can use ActionSheetIOS
+                    const ActionSheetIOS = require("react-native").ActionSheetIOS
+
+                    ActionSheetIOS.showActionSheetWithOptions(
+                        {
+                            options: ["Cancel", "Take Photo", "Choose from Library"],
+                            cancelButtonIndex: 0,
+                        },
+                        async (buttonIndex) => {
+                            if (buttonIndex === 0) {
+                                // Cancel
+                                return
+                            } else if (buttonIndex === 1) {
+                                // Camera
+                                await launchCamera()
+                            } else if (buttonIndex === 2) {
+                                // Photo Library
+                                await launchImageLibrary()
+                            }
+                        },
+                    )
+                } else {
+                    // For Android, we'll use a simple Alert
+                    Alert.alert(
+                        "Select Image",
+                        "Choose an option",
+                        [
+                            { text: "Cancel", style: "cancel" },
+                            { text: "Take Photo", onPress: launchCamera },
+                            { text: "Choose from Library", onPress: launchImageLibrary },
+                        ],
+                        { cancelable: true },
+                    )
+                }
             }
         } catch (error) {
             console.error("Error picking image:", error)
             showMessage({ message: "Error selecting image" })
+        }
+    }
+
+    // Launch camera to take a photo
+    const launchCamera = async () => {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync()
+        if (status !== "granted") {
+            Alert.alert("Permission required", "Please allow the app to access your camera")
+            return
+        }
+
+        const result = await ImagePicker.launchCameraAsync({
+            allowsEditing: true,
+            aspect: [4, 3],
+            quality: 1,
+        })
+
+        if (!result.canceled && result.assets?.[0]) {
+            setSelectedImage(result.assets[0])
+            setResult(null) // Reset previous result
+
+            // Reset result animations
+            resultCardAnim.setValue(0)
+            resultOpacityAnim.setValue(0)
+        }
+    }
+
+    // Launch image library to select a photo
+    const launchImageLibrary = async () => {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+        if (status !== "granted") {
+            Alert.alert("Permission required", "Please allow the app to access your photo library")
+            return
+        }
+
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: "Images",
+            allowsEditing: true,
+            aspect: [4, 3],
+            quality: 1,
+        })
+
+        if (!result.canceled && result.assets?.[0]) {
+            setSelectedImage(result.assets[0])
+            setResult(null) // Reset previous result
+
+            // Reset result animations
+            resultCardAnim.setValue(0)
+            resultOpacityAnim.setValue(0)
         }
     }
 
@@ -386,10 +482,11 @@ const Index: React.FC = () => {
                         </View>
                     </TouchableOpacity>
                 ) : (
-                    <View style={styles.imagePlaceholder}>
+                    <TouchableOpacity style={styles.imagePlaceholder} onPress={pickImage} activeOpacity={0.7}>
                         <Text style={styles.placeholderIcon}>📷</Text>
                         <Text style={styles.placeholderText}>No image selected</Text>
-                    </View>
+                        <Text style={styles.placeholderHint}>Tap to select an image</Text>
+                    </TouchableOpacity>
                 )}
 
                 {/* Enhanced Button Row with better spacing */}
@@ -516,15 +613,12 @@ const Index: React.FC = () => {
     )
 }
 
-import type { ViewStyle } from "react-native"
-
 const styles = StyleSheet.create({
     container: {
         padding: 16,
         backgroundColor: "#f8f9fa",
-        minHeight: Platform.OS === "web" ? 0 : undefined, // fallback to number for native
-        ...(Platform.OS === "web" ? { minHeight: "100vh" as unknown as number } : {}), // workaround for web
-    } as ViewStyle,
+        minHeight: Platform.OS === "web" ? 0 : undefined, // Use a number for minHeight
+    },
     header: {
         marginBottom: 20,
         alignItems: "center",
@@ -607,6 +701,11 @@ const styles = StyleSheet.create({
         color: "#6c757d",
         fontSize: 16,
         fontWeight: "500",
+    },
+    placeholderHint: {
+        color: "#3498db",
+        fontSize: 14,
+        marginTop: 8,
     },
     buttonRow: {
         flexDirection: "row",
