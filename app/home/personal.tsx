@@ -17,10 +17,10 @@ import {
     StyleSheet,
     Switch,
     Text,
+    TextInput,
     TouchableOpacity,
     View,
 } from "react-native"
-import { TextInput } from "react-native-gesture-handler"
 
 // Get screen dimensions
 const { width, height } = Dimensions.get("window")
@@ -37,7 +37,7 @@ interface UserProfile {
     widthReferencePoint: number
     areaReferencePoint: number
     autoSetCalorieLimit?: boolean
-    totalCalories?: number // Added field for total calories
+    totalCalories?: number
 }
 
 // Interface for profile update data
@@ -85,6 +85,11 @@ const Personal = () => {
     const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
     const [showPeriodDropdown, setShowPeriodDropdown] = useState(false)
 
+    // Text input states for decimal fields to handle display properly
+    const [lengthInputText, setLengthInputText] = useState("")
+    const [widthInputText, setWidthInputText] = useState("")
+    const [calorieInputText, setCalorieInputText] = useState("")
+
     // Animated values for button effects
     const saveButtonScale = useRef(new Animated.Value(1)).current
     const resetButtonScale = useRef(new Animated.Value(1)).current
@@ -111,6 +116,15 @@ const Personal = () => {
             // If currently in edit mode, cancel changes
             setEditedProfile({})
             setValidationErrors({})
+            // Reset input text states
+            setLengthInputText("")
+            setWidthInputText("")
+            setCalorieInputText("")
+        } else {
+            // Initialize input text states when entering edit mode
+            setLengthInputText(formatNumberForInput(profile?.lengthReferencePoint || 0))
+            setWidthInputText(formatNumberForInput(profile?.widthReferencePoint || 0))
+            setCalorieInputText(formatNumberForInput(profile?.calorieLimit || 0))
         }
         setIsEditing(!isEditing)
     }
@@ -139,6 +153,10 @@ const Personal = () => {
             setProfile(response.data)
             setEditedProfile({})
             setValidationErrors({})
+            // Reset input text states
+            setLengthInputText("")
+            setWidthInputText("")
+            setCalorieInputText("")
         } catch (error) {
             showMessage(error)
         } finally {
@@ -168,19 +186,19 @@ const Personal = () => {
             errors.weight = "Weight must be between 0 and 999"
         }
 
-        // Validate length reference point (0-20)
+        // Validate length reference point (0-20) - now supports decimals
         const lengthRef = getValue("lengthReferencePoint") as number
         if (lengthRef < 0 || lengthRef > 20) {
             errors.lengthReferencePoint = "Length reference point must be between 0 and 20"
         }
 
-        // Validate width reference point (0-10)
+        // Validate width reference point (0-10) - now supports decimals
         const widthRef = getValue("widthReferencePoint") as number
         if (widthRef < 0 || widthRef > 10) {
             errors.widthReferencePoint = "Width reference point must be between 0 and 10"
         }
 
-        // Validate calorie limit (only when not auto-calculated)
+        // Validate calorie limit (only when not auto-calculated) - no upper limit, supports decimals
         if (!isAutoSetCalorieLimit()) {
             const calorieLimit = getValue("calorieLimit") as number
             if (calorieLimit < 0) {
@@ -271,6 +289,10 @@ const Personal = () => {
             setEditedProfile({})
             setValidationErrors({})
             setIsEditing(false)
+            // Reset input text states
+            setLengthInputText("")
+            setWidthInputText("")
+            setCalorieInputText("")
         } catch (error) {
             showMessage(error)
         } finally {
@@ -278,7 +300,7 @@ const Personal = () => {
         }
     }
 
-    // Handle field value changes
+    // Handle field value changes with decimal support
     const handleChange = (field: keyof UserProfile | keyof UserProfileUpdate, value: any) => {
         // Clear validation error for this field
         if (field in validationErrors) {
@@ -335,11 +357,13 @@ const Personal = () => {
         return field in editedProfile ? editedProfile[field as keyof typeof editedProfile] : profile?.[field]
     }
 
-    // Calculate reference area
+    // Calculate reference area with decimal precision
     const calculateAreaReferencePoint = () => {
         const length = (getValue("lengthReferencePoint") as number) || 0
         const width = (getValue("widthReferencePoint") as number) || 0
-        return length * width
+        const area = length * width
+        // Round to 4 decimal places for display
+        return Math.round(area * 10000) / 10000
     }
 
     // Check if autoSetCalorieLimit is enabled
@@ -368,6 +392,101 @@ const Personal = () => {
         if (percentage < 70) return "#4caf50" // Green - good
         if (percentage < 90) return "#ff9800" // Orange - warning
         return "#f44336" // Red - exceeded
+    }
+
+    // Helper function to parse decimal input - STRICT validation for numbers only
+    const parseDecimalInput = (text: string): number => {
+        // Only allow digits, decimal point, and minus sign at the beginning
+        const cleanText = text.replace(/[^0-9.-]/g, '')
+
+        // Handle multiple decimal points - keep only the first one
+        const parts = cleanText.split('.')
+        let result = parts[0]
+        if (parts.length > 1) {
+            result = parts[0] + '.' + parts.slice(1).join('').replace(/\./g, '')
+        }
+
+        // Handle multiple minus signs - keep only the first one if at the beginning
+        if (result.includes('-')) {
+            const minusCount = (result.match(/-/g) || []).length
+            if (minusCount > 1 || (result.indexOf('-') !== 0 && result.includes('-'))) {
+                result = result.replace(/-/g, '')
+                if (text.startsWith('-')) {
+                    result = '-' + result
+                }
+            }
+        }
+
+        return parseFloat(result) || 0
+    }
+
+    // Validate input text to only allow numbers and decimal point
+    const validateNumericInput = (text: string): string => {
+        // Only allow digits, one decimal point, and minus sign at the beginning
+        let cleanText = text.replace(/[^0-9.-]/g, '')
+
+        // Handle decimal points
+        const decimalCount = (cleanText.match(/\./g) || []).length
+        if (decimalCount > 1) {
+            const firstDecimalIndex = cleanText.indexOf('.')
+            cleanText = cleanText.substring(0, firstDecimalIndex + 1) +
+                cleanText.substring(firstDecimalIndex + 1).replace(/\./g, '')
+        }
+
+        // Handle minus signs - only allow at the beginning
+        if (cleanText.includes('-')) {
+            const minusPositions = []
+            for (let i = 0; i < cleanText.length; i++) {
+                if (cleanText[i] === '-') {
+                    minusPositions.push(i)
+                }
+            }
+
+            if (minusPositions.length > 1 || (minusPositions.length === 1 && minusPositions[0] !== 0)) {
+                cleanText = cleanText.replace(/-/g, '')
+                if (text.startsWith('-')) {
+                    cleanText = '-' + cleanText
+                }
+            }
+        }
+
+        return cleanText
+    }
+
+    // Format number for input field
+    const formatNumberForInput = (value: number): string => {
+        return value.toString()
+    }
+
+    // Format decimal number for display - truncate if too long
+    const formatDecimalDisplay = (value: number): string => {
+        const str = value.toString()
+        // If number is too long, show with limited decimal places
+        if (str.length > 10) {
+            if (value >= 1000000) {
+                return value.toExponential(2)
+            } else {
+                return value.toFixed(2)
+            }
+        }
+        return str
+    }
+
+    // Handle decimal input changes with text state management and strict validation
+    const handleDecimalInputChange = (
+        field: keyof UserProfile,
+        text: string,
+        setInputText: (text: string) => void
+    ) => {
+        // Validate and clean the input
+        const validatedText = validateNumericInput(text)
+
+        // Update the text input state with validated text
+        setInputText(validatedText)
+
+        // Parse and update the actual value
+        const numericValue = parseDecimalInput(validatedText)
+        handleChange(field, numericValue)
     }
 
     // Show loading indicator while fetching data
@@ -402,8 +521,8 @@ const Personal = () => {
                         <View style={styles.calorieProgressContainer}>
                             <View style={styles.calorieInfoRow}>
                                 <Text style={styles.calorieTitle}>Calories Consumed</Text>
-                                <Text style={styles.calorieValue}>
-                                    {profile.totalCalories.toFixed(0)} / {profile.calorieLimit}
+                                <Text style={styles.calorieValue} numberOfLines={1} adjustsFontSizeToFit>
+                                    {profile.totalCalories.toFixed(0)} / {formatDecimalDisplay(profile.calorieLimit)}
                                 </Text>
                             </View>
 
@@ -527,7 +646,7 @@ const Personal = () => {
                         </View>
                     )}
 
-                    {/* Calorie Limit and Period in one row */}
+                    {/* Calorie Limit and Period in one row - Now supports decimals */}
                     <View style={styles.rowContainer}>
                         <View style={[styles.columnContainer, { marginRight: 8 }]}>
                             <Text style={styles.fieldLabel}>Calorie Limit:</Text>
@@ -539,17 +658,21 @@ const Personal = () => {
                                             isAutoSetCalorieLimit() && styles.disabledInput,
                                             validationErrors.calorieLimit && styles.inputError,
                                         ]}
-                                        value={getValue("calorieLimit")?.toString()}
-                                        onChangeText={(text) => handleChange("calorieLimit", Number.parseFloat(text) || 0)}
-                                        keyboardType="number-pad"
+                                        value={calorieInputText || getValue("calorieLimit")?.toString()}
+                                        onChangeText={(text) => handleDecimalInputChange("calorieLimit", text, setCalorieInputText)}
+                                        keyboardType="decimal-pad"
                                         editable={!isAutoSetCalorieLimit()}
+                                        placeholder="e.g. 2000.5"
+                                        maxLength={15}
                                     />
                                     {validationErrors.calorieLimit && (
                                         <Text style={styles.errorText}>{validationErrors.calorieLimit}</Text>
                                     )}
                                 </>
                             ) : (
-                                <Text style={styles.fieldValue}>{profile?.calorieLimit}</Text>
+                                <Text style={styles.fieldValue} numberOfLines={1} adjustsFontSizeToFit>
+                                    {formatDecimalDisplay(profile?.calorieLimit || 0)}
+                                </Text>
                             )}
                         </View>
 
@@ -612,7 +735,7 @@ const Personal = () => {
                         </View>
                     </View>
 
-                    {/* Length and Width Reference Points in one row */}
+                    {/* Length and Width Reference Points in one row - Now supports decimals */}
                     <View style={styles.rowContainer}>
                         <View style={[styles.columnContainer, { marginRight: 8 }]}>
                             <Text style={styles.fieldLabel}>Length Reference Point (cm):</Text>
@@ -620,17 +743,20 @@ const Personal = () => {
                                 <>
                                     <TextInput
                                         style={[styles.input, validationErrors.lengthReferencePoint && styles.inputError]}
-                                        value={getValue("lengthReferencePoint")?.toString()}
-                                        onChangeText={(text) => handleChange("lengthReferencePoint", Number.parseFloat(text) || 0)}
+                                        value={lengthInputText || getValue("lengthReferencePoint")?.toString()}
+                                        onChangeText={(text) => handleDecimalInputChange("lengthReferencePoint", text, setLengthInputText)}
                                         keyboardType="decimal-pad"
-                                        placeholder="0-20"
+                                        placeholder="e.g. 15.5"
+                                        maxLength={10}
                                     />
                                     {validationErrors.lengthReferencePoint && (
                                         <Text style={styles.errorText}>{validationErrors.lengthReferencePoint}</Text>
                                     )}
                                 </>
                             ) : (
-                                <Text style={styles.fieldValue}>{profile?.lengthReferencePoint}</Text>
+                                <Text style={styles.fieldValue} numberOfLines={1} adjustsFontSizeToFit>
+                                    {formatDecimalDisplay(profile?.lengthReferencePoint || 0)}
+                                </Text>
                             )}
                         </View>
 
@@ -640,26 +766,29 @@ const Personal = () => {
                                 <>
                                     <TextInput
                                         style={[styles.input, validationErrors.widthReferencePoint && styles.inputError]}
-                                        value={getValue("widthReferencePoint")?.toString()}
-                                        onChangeText={(text) => handleChange("widthReferencePoint", Number.parseFloat(text) || 0)}
+                                        value={widthInputText || getValue("widthReferencePoint")?.toString()}
+                                        onChangeText={(text) => handleDecimalInputChange("widthReferencePoint", text, setWidthInputText)}
                                         keyboardType="decimal-pad"
-                                        placeholder="0-10"
+                                        placeholder="e.g. 7.25"
+                                        maxLength={10}
                                     />
                                     {validationErrors.widthReferencePoint && (
                                         <Text style={styles.errorText}>{validationErrors.widthReferencePoint}</Text>
                                     )}
                                 </>
                             ) : (
-                                <Text style={styles.fieldValue}>{profile?.widthReferencePoint}</Text>
+                                <Text style={styles.fieldValue} numberOfLines={1} adjustsFontSizeToFit>
+                                    {formatDecimalDisplay(profile?.widthReferencePoint || 0)}
+                                </Text>
                             )}
                         </View>
                     </View>
 
-                    {/* Area Reference Point */}
+                    {/* Area Reference Point - Now shows decimal precision */}
                     <View style={styles.fieldRow}>
                         <Text style={styles.fieldLabel}>Area Reference Point (cm²):</Text>
-                        <Text style={styles.fieldValue}>
-                            {isEditing ? calculateAreaReferencePoint() : profile?.areaReferencePoint}
+                        <Text style={styles.fieldValue} numberOfLines={1} adjustsFontSizeToFit>
+                            {isEditing ? formatDecimalDisplay(calculateAreaReferencePoint()) : formatDecimalDisplay(profile?.areaReferencePoint || 0)}
                             {isEditing && <Text style={styles.calculatedText}> (length × width)</Text>}
                         </Text>
                     </View>
@@ -788,11 +917,14 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "600",
         color: "#333",
+        flex: 1,
     },
     calorieValue: {
-        fontSize: 18,
+        fontSize: 16,
         fontWeight: "bold",
         color: "#0066cc",
+        flex: 1,
+        textAlign: "right",
     },
     caloriePeriodRow: {
         marginBottom: 12,
@@ -817,7 +949,7 @@ const styles = StyleSheet.create({
         top: 0,
         height: "100%",
         borderRadius: 12,
-        minWidth: 2, // Ensure progress bar has minimum width
+        minWidth: 2,
     },
     progressTextContainer: {
         position: "absolute",
@@ -991,7 +1123,7 @@ const styles = StyleSheet.create({
         }),
     },
     resetButton: {
-        backgroundColor: "#1a8676", // Darker teal color
+        backgroundColor: "#1a8676",
         padding: 14,
         borderRadius: 8,
         alignItems: "center",
