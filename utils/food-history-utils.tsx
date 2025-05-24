@@ -1575,20 +1575,24 @@ export const styles = StyleSheet.create({
     actionButtons: {
         flexDirection: "row",
         alignItems: "center",
+        justifyContent: "flex-end",
     },
     editButton: {
-        marginRight: 10,
+        marginRight: 8,
+        padding: 4,
     },
     deleteButton: {
-        // No specific styles needed
+        padding: 4,
     },
     editButtonText: {
         fontSize: 18,
         color: "#3498db",
+        fontWeight: "bold",
     },
     deleteButtonText: {
         fontSize: 18,
         color: "#e74c3c",
+        fontWeight: "bold",
     },
     editModalContent: {
         backgroundColor: "#fff",
