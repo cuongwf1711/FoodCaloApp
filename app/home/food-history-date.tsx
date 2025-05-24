@@ -21,8 +21,8 @@ import {
     useFoodHistory,
 } from "@/utils/food-history-utils"
 
-// Add CSS animation for web spinning effect
-if (Platform.OS === "web") {
+// Add CSS animation for web spinning effect - only on client side
+if (typeof window !== "undefined" && Platform.OS === "web") {
     const style = document.createElement("style")
     style.textContent = `
     @keyframes spin {

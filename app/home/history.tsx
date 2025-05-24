@@ -145,10 +145,6 @@ const FoodHistoryScreen: React.FC = () => {
 
       {/* Fixed header section with better layout and higher z-index */}
       <View style={styles.headerContainer}>
-        {/* Title row */}
-        <View style={styles.titleRow}>
-          <Text style={styles.headerTitle}>Food History</Text>
-        </View>
 
         {/* Info and controls row */}
         <View style={styles.controlsContainer}>

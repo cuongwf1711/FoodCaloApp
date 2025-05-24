@@ -26,18 +26,6 @@ import {
     useFoodHistory,
 } from "@/utils/food-history-utils"
 
-// Add CSS animation for web spinning effect
-if (Platform.OS === "web") {
-    const style = document.createElement("style")
-    style.textContent = `
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
-  `
-    document.head.appendChild(style)
-}
-
 interface FoodHistoryAllViewProps {
     sortOption: SortOption
     onSortChange: (sortOption: SortOption) => void
@@ -50,6 +38,25 @@ const ImageModal: React.FC<{
     imageUri: string
     onClose: () => void
 }> = ({ visible, imageUri, onClose }) => {
+    // Add CSS animation for web spinning effect inside useEffect
+    useEffect(() => {
+        if (Platform.OS === "web" && typeof document !== "undefined") {
+            // Check if style already exists
+            const existingStyle = document.getElementById("spin-animation")
+            if (!existingStyle) {
+                const style = document.createElement("style")
+                style.id = "spin-animation"
+                style.textContent = `
+                    @keyframes spin {
+                        from { transform: rotate(0deg); }
+                        to { transform: rotate(360deg); }
+                    }
+                `
+                document.head.appendChild(style)
+            }
+        }
+    }, [])
+
     if (!visible) return null
 
     if (Platform.OS === "web") {
