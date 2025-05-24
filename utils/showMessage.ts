@@ -20,7 +20,7 @@ export function showMessage(data: any, success: boolean = false) {
         message = firstErrorValue || 'Something went wrong';
     }
     else {
-        title = "Success";
+        title = "Message";
         message = data.message || 'Operation completed successfully';
     }
     if (Platform.OS === 'web') window.alert(`${title}\n${message}`);

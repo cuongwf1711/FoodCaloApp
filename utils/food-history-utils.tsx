@@ -4,9 +4,11 @@ import type React from "react"
 
 import { URL_FOOD_CALO_ESTIMATOR, URL_USER_PROFILE } from "@/constants/url_constants"
 import { deleteData, getData, patchData } from "@/context/request_context"
+import { showMessage } from "@/utils/showMessage"
 import { useCallback, useEffect, useState } from "react"
 import {
     ActivityIndicator,
+    Alert,
     Dimensions,
     Image,
     Modal,
@@ -15,6 +17,7 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
+    TouchableWithoutFeedback,
     View,
 } from "react-native"
 
@@ -181,24 +184,43 @@ export const useFoodHistory = (
         [sortOption],
     )
 
-    // Delete food item
+    // Delete food item with confirmation
     const handleDeleteItem = useCallback(
         async (id: string) => {
-            try {
-                const response = await deleteData(URL_FOOD_CALO_ESTIMATOR, id)
-                if (response.status === 204) {
-                    // Remove the item from the list
-                    setFoodItems((prev) => prev.filter((item) => item.id !== id))
-                    // Update total calories
-                    setTotalCalories((prev) => {
-                        const deletedItem = foodItems.find((item) => item.id === id)
-                        return deletedItem ? prev - deletedItem.calo : prev
-                    })
-                }
-            } catch (error) {
-                console.error("Error deleting food item:", error)
-                setError("Failed to delete food item. Please try again.")
-            }
+            // Show confirmation dialog
+            Alert.alert(
+                "Delete Item",
+                "Are you sure you want to delete this food item?",
+                [
+                    {
+                        text: "Cancel",
+                        style: "cancel",
+                    },
+                    {
+                        text: "Delete",
+                        style: "destructive",
+                        onPress: async () => {
+                            try {
+                                const response = await deleteData(URL_FOOD_CALO_ESTIMATOR, id)
+                                if (response.status === 204) {
+                                    // Remove the item from the list
+                                    setFoodItems((prev) => prev.filter((item) => item.id !== id))
+                                    // Update total calories
+                                    setTotalCalories((prev) => {
+                                        const deletedItem = foodItems.find((item) => item.id === id)
+                                        return deletedItem ? prev - deletedItem.calo : prev
+                                    })
+                                    showMessage({ message: "Item deleted successfully" })
+                                }
+                            } catch (error) {
+                                console.error("Error deleting food item:", error)
+                                showMessage({ message: "Failed to delete food item. Please try again." })
+                            }
+                        },
+                    },
+                ],
+                { cancelable: true },
+            )
         },
         [foodItems],
     )
@@ -295,7 +317,7 @@ export const useUserProfile = () => {
     return { userProfile, fetchUserProfile }
 }
 
-// Shared Components
+// Enhanced ImageModal Component with better Android support
 export const ImageModal: React.FC<{
     visible: boolean
     imageUri: string
@@ -316,20 +338,49 @@ export const ImageModal: React.FC<{
     }
 
     const { width, height } = Dimensions.get("window")
+
     return (
-        <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-            <TouchableOpacity style={styles.modalOverlay} onPress={onClose} activeOpacity={1}>
-                <View style={styles.modalContent}>
-                    <Image
-                        source={{ uri: imageUri }}
-                        style={[styles.fullImage, { maxWidth: width - 40, maxHeight: height - 100 }]}
-                        resizeMode="contain"
-                    />
-                    <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+        <Modal
+            visible={visible}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={onClose}
+            statusBarTranslucent={true}
+        >
+            <View style={styles.modalOverlay}>
+                <TouchableWithoutFeedback onPress={onClose}>
+                    <View style={styles.modalBackdrop} />
+                </TouchableWithoutFeedback>
+
+                <View style={styles.modalContent} pointerEvents="box-none">
+                    <TouchableWithoutFeedback>
+                        <View style={styles.imageContainer}>
+                            <Image
+                                source={{ uri: imageUri }}
+                                style={[
+                                    styles.fullImage,
+                                    {
+                                        maxWidth: width - 40,
+                                        maxHeight: height - 100,
+                                    },
+                                ]}
+                                resizeMode="contain"
+                                onError={(error) => {
+                                    console.log("Image load error:", error)
+                                }}
+                            />
+                        </View>
+                    </TouchableWithoutFeedback>
+
+                    <TouchableOpacity
+                        style={styles.closeButton}
+                        onPress={onClose}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
                         <Text style={styles.closeButtonText}>✕</Text>
                     </TouchableOpacity>
                 </View>
-            </TouchableOpacity>
+            </View>
         </Modal>
     )
 }
@@ -693,7 +744,6 @@ export const DatePicker: React.FC<{
         try {
             const date = new Date(dateStr)
             if (isNaN(date.getTime())) {
-                // If date is invalid, return today's formatted date
                 const today = new Date()
                 return `${today.getDate().toString().padStart(2, "0")}/${(today.getMonth() + 1)
                     .toString()
@@ -704,7 +754,6 @@ export const DatePicker: React.FC<{
             const year = date.getFullYear()
             return `${day}/${month}/${year}`
         } catch (error) {
-            // If there's any error, return today's formatted date
             const today = new Date()
             return `${today.getDate().toString().padStart(2, "0")}/${(today.getMonth() + 1)
                 .toString()
@@ -717,7 +766,6 @@ export const DatePicker: React.FC<{
         try {
             const date = new Date(dateStr)
             if (isNaN(date.getTime())) {
-                // If date is invalid, return today's date in UTC format
                 const today = new Date()
                 return `${today.getUTCFullYear()}-${(today.getUTCMonth() + 1).toString().padStart(2, "0")}-${today
                     .getUTCDate()
@@ -729,7 +777,6 @@ export const DatePicker: React.FC<{
                 .toString()
                 .padStart(2, "0")}`
         } catch (error) {
-            // If there's any error, return today's date in UTC format
             const today = new Date()
             return `${today.getUTCFullYear()}-${(today.getUTCMonth() + 1).toString().padStart(2, "0")}-${today
                 .getUTCDate()
@@ -754,7 +801,6 @@ export const DatePicker: React.FC<{
             const utcDate = convertToUTCFormat(inputDate)
             onDateChange(utcDate)
         } else {
-            // If input is cleared, set to today's date
             const today = new Date()
             const utcToday = convertToUTCFormat(today.toISOString())
             onDateChange(utcToday)
@@ -821,7 +867,6 @@ export const DatePicker: React.FC<{
                                     </View>
                                 )}
 
-                                {/* This is a placeholder for the actual DateTimePicker component */}
                                 <View style={styles.datePickerPlaceholder}>
                                     <Text>Date Picker Would Appear Here</Text>
                                     <Text>Selected: {formatDisplayDate(selectedDate)}</Text>
@@ -830,7 +875,6 @@ export const DatePicker: React.FC<{
                                         <TouchableOpacity
                                             style={styles.datePickerActionButton}
                                             onPress={() => {
-                                                // Go to previous day
                                                 const date = new Date(selectedDate)
                                                 date.setDate(date.getDate() - 1)
                                                 const utcDate = convertToUTCFormat(date.toISOString())
@@ -844,7 +888,6 @@ export const DatePicker: React.FC<{
                                         <TouchableOpacity
                                             style={styles.datePickerActionButton}
                                             onPress={() => {
-                                                // Go to next day
                                                 const date = new Date(selectedDate)
                                                 date.setDate(date.getDate() + 1)
                                                 const utcDate = convertToUTCFormat(date.toISOString())
@@ -859,7 +902,6 @@ export const DatePicker: React.FC<{
                                     <TouchableOpacity
                                         style={[styles.datePickerActionButton, styles.datePickerTodayButton]}
                                         onPress={() => {
-                                            // Go to today
                                             const today = new Date()
                                             const utcToday = convertToUTCFormat(today.toISOString())
                                             onDateChange(utcToday)
@@ -890,12 +932,10 @@ export const WeekInput: React.FC<{
         if (!isNaN(numValue) && numValue >= 0) {
             onWeekChange(numValue)
         } else {
-            // Default to current week (0) if invalid
             onWeekChange(0)
         }
     }
 
-    // For web platform
     if (Platform.OS === "web") {
         return (
             <div style={{ display: "flex", alignItems: "center" }}>
@@ -922,7 +962,6 @@ export const WeekInput: React.FC<{
         )
     }
 
-    // For native platforms
     return (
         <View style={styles.weekInputContainer}>
             <TextInput
@@ -940,12 +979,11 @@ export const WeekInput: React.FC<{
 }
 
 export const MonthPicker: React.FC<{
-    selectedMonth: string // Format: YYYY-MM
+    selectedMonth: string
     onMonthChange: (month: string) => void
 }> = ({ selectedMonth, onMonthChange }) => {
     const [showNativePicker, setShowNativePicker] = useState(false)
 
-    // Format month for display
     const formatDisplayMonth = (monthStr: string) => {
         try {
             const [year, month] = monthStr.split("-")
@@ -965,7 +1003,6 @@ export const MonthPicker: React.FC<{
             ]
             return `${monthNames[Number.parseInt(month, 10) - 1]} ${year}`
         } catch (error) {
-            // If there's any error, return current month and year
             const today = new Date()
             const monthNames = [
                 "January",
@@ -985,20 +1022,17 @@ export const MonthPicker: React.FC<{
         }
     }
 
-    // Handle month change for web
     const handleWebMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const inputMonth = e.target.value
         if (inputMonth) {
             onMonthChange(inputMonth)
         } else {
-            // If input is cleared, set to current month
             const today = new Date()
             const currentMonth = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, "0")}`
             onMonthChange(currentMonth)
         }
     }
 
-    // For web platform
     if (Platform.OS === "web") {
         return (
             <div style={{ position: "relative" }}>
@@ -1021,7 +1055,6 @@ export const MonthPicker: React.FC<{
         )
     }
 
-    // For native platforms
     return (
         <View style={styles.monthPickerContainer}>
             <TouchableOpacity style={styles.monthPickerButton} onPress={() => setShowNativePicker(true)}>
@@ -1058,7 +1091,6 @@ export const MonthPicker: React.FC<{
                                     </View>
                                 )}
 
-                                {/* This is a placeholder for the actual month picker */}
                                 <View style={styles.monthPickerPlaceholder}>
                                     <Text>Month Picker Would Appear Here</Text>
                                     <Text>Selected: {formatDisplayMonth(selectedMonth)}</Text>
@@ -1067,7 +1099,6 @@ export const MonthPicker: React.FC<{
                                         <TouchableOpacity
                                             style={styles.monthPickerActionButton}
                                             onPress={() => {
-                                                // Go to previous month
                                                 const [year, month] = selectedMonth.split("-")
                                                 let newMonth = Number.parseInt(month, 10) - 1
                                                 let newYear = Number.parseInt(year, 10)
@@ -1086,7 +1117,6 @@ export const MonthPicker: React.FC<{
                                         <TouchableOpacity
                                             style={styles.monthPickerActionButton}
                                             onPress={() => {
-                                                // Go to next month
                                                 const [year, month] = selectedMonth.split("-")
                                                 let newMonth = Number.parseInt(month, 10) + 1
                                                 let newYear = Number.parseInt(year, 10)
@@ -1106,7 +1136,6 @@ export const MonthPicker: React.FC<{
                                     <TouchableOpacity
                                         style={[styles.monthPickerActionButton, styles.monthPickerCurrentButton]}
                                         onPress={() => {
-                                            // Go to current month
                                             const today = new Date()
                                             const currentMonth = `${today.getFullYear()}-${(today.getMonth() + 1)
                                                 .toString()
@@ -1231,7 +1260,7 @@ export const webDropdownStyles = {
 
 const isWeb = Platform.OS === "web"
 
-// Shared styles
+// Updated styles with fixes for ImageModal
 export const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -1427,12 +1456,12 @@ export const styles = StyleSheet.create({
         width: "48%",
         borderRadius: 8,
         overflow: "hidden",
-        height: undefined, // Let height be determined by the image
+        height: undefined,
     },
     thumbnailImage: {
         width: "100%",
-        height: undefined, // Let height be determined by the image
-        aspectRatio: 1.33, // This is a common aspect ratio (4:3) but will be overridden by the actual image
+        height: undefined,
+        aspectRatio: 1.33,
     },
     foodDate: {
         fontSize: 14,
@@ -1462,27 +1491,38 @@ export const styles = StyleSheet.create({
         color: "#666",
         fontStyle: "italic",
     },
+    // Enhanced modal styles for better Android support
     modalOverlay: {
         flex: 1,
         backgroundColor: "rgba(0, 0, 0, 0.9)",
         justifyContent: "center",
         alignItems: "center",
     },
+    modalBackdrop: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+    },
     modalContent: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
         position: "relative",
-        maxWidth: "90%",
-        maxHeight: "90%",
+    },
+    imageContainer: {
+        justifyContent: "center",
+        alignItems: "center",
     },
     fullImage: {
         borderRadius: 8,
-        width: "100%",
-        height: "100%",
         resizeMode: "contain",
     },
     closeButton: {
         position: "absolute",
-        top: -10,
-        right: -10,
+        top: 50,
+        right: 20,
         backgroundColor: "#fff",
         borderRadius: 20,
         width: 40,
@@ -1493,6 +1533,7 @@ export const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 5,
         elevation: 5,
+        zIndex: 1000,
     },
     closeButtonText: {
         fontSize: 18,
@@ -1949,34 +1990,3 @@ export const styles = StyleSheet.create({
         textAlign: "center",
     },
 })
-
-// Add compact layout styles
-export const compactStyles = StyleSheet.create({
-    compactRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        backgroundColor: "#fff",
-        padding: 8,
-        marginHorizontal: 10,
-        marginTop: 8,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: "#e5e5e5",
-    },
-    compactSection: {
-        flex: 1,
-        marginRight: 10,
-    },
-    compactLabel: {
-        fontSize: 12,
-        color: "#666666",
-        marginRight: 8,
-        fontWeight: "500",
-    },
-    compactDropdownWrapper: {
-        minWidth: 100,
-    },
-})
-
-// Add to exports at the end of the file

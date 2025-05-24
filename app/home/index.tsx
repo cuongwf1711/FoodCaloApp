@@ -1,14 +1,14 @@
 "use client"
 
 import { URL_FOOD_CALO_ESTIMATOR } from "@/constants/url_constants"
-import { patchData, postData } from "@/context/request_context"
+import { deleteData, patchData, postData } from "@/context/request_context"
 import { showMessage } from "@/utils/showMessage"
 import type React from "react"
 import { useRef, useState } from "react"
 import { Alert, Animated, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native"
 
 // Import shared utilities
-import { EditModal, formatDate, ImageModal, styles as sharedStyles } from "@/utils/food-history-utils"
+import { EditModal, formatDate, styles as sharedStyles } from "@/utils/food-history-utils"
 
 // Simplified type definitions
 type ImageAsset = {
@@ -97,9 +97,96 @@ type ImagePickerResult = {
     assets: ImageAsset[]
 }
 
+// Enhanced ImageModal for better Android compatibility
+const ImageModal: React.FC<{
+    visible: boolean
+    imageUri: string
+    onClose: () => void
+}> = ({ visible, imageUri, onClose }) => {
+    if (!visible) return null
+
+    if (Platform.OS === "web") {
+        return (
+            <div
+                style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: "rgba(0, 0, 0, 0.9)",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    zIndex: 1000,
+                }}
+                onClick={onClose}
+            >
+                <div style={{ position: "relative", maxWidth: "90%", maxHeight: "90%" }} onClick={(e) => e.stopPropagation()}>
+                    <img
+                        src={imageUri || "/placeholder.svg"}
+                        alt="Full size"
+                        style={{
+                            maxWidth: "100%",
+                            maxHeight: "90vh",
+                            borderRadius: "8px",
+                            objectFit: "contain",
+                        }}
+                    />
+                    <button
+                        onClick={onClose}
+                        style={{
+                            position: "absolute",
+                            top: "-10px",
+                            right: "-10px",
+                            backgroundColor: "#fff",
+                            border: "none",
+                            borderRadius: "20px",
+                            width: "40px",
+                            height: "40px",
+                            fontSize: "18px",
+                            fontWeight: "bold",
+                            color: "#333",
+                            cursor: "pointer",
+                            boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
+                        }}
+                    >
+                        ✕
+                    </button>
+                </div>
+            </div>
+        )
+    }
+
+    // Native implementation with better Android support
+    return (
+        <View style={modalStyles.overlay}>
+            <TouchableOpacity style={modalStyles.backdrop} onPress={onClose} activeOpacity={1} />
+            <View style={modalStyles.container}>
+                <View style={modalStyles.imageContainer}>
+                    <Image
+                        source={{ uri: imageUri }}
+                        style={modalStyles.image}
+                        resizeMode="contain"
+                        onError={(error) => {
+                            console.log("Image load error:", error)
+                        }}
+                    />
+                </View>
+                <TouchableOpacity
+                    style={modalStyles.closeButton}
+                    onPress={onClose}
+                    hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+                >
+                    <Text style={modalStyles.closeButtonText}>✕</Text>
+                </TouchableOpacity>
+            </View>
+        </View>
+    )
+}
+
 /**
  * Animated button with press effects for both platforms
- * Fixed animation conflicts by using consistent useNativeDriver settings
  */
 const AnimatedButton: React.FC<{
     style: any
@@ -151,16 +238,6 @@ const AnimatedButton: React.FC<{
                 }),
             ]).start()
 
-            // Add haptic feedback for mobile
-            if (Platform.OS !== "web") {
-                try {
-                    // For Expo, you would use Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-                    // For now, we'll just call the function
-                } catch (error) {
-                    // Haptic feedback not available
-                }
-            }
-
             setTimeout(onPress, 50)
         }
     }
@@ -190,7 +267,6 @@ const AnimatedButton: React.FC<{
 
 /**
  * Main screen component for food calorie prediction
- * Allows users to select an image and get calorie estimates
  */
 const Index: React.FC = () => {
     const [selectedImage, setSelectedImage] = useState<ImageAsset | null>(null)
@@ -199,40 +275,127 @@ const Index: React.FC = () => {
     const [modalVisible, setModalVisible] = useState(false)
     const [modalImageUri, setModalImageUri] = useState("")
     const [isEditing, setIsEditing] = useState(false)
+    const [isDeleting, setIsDeleting] = useState(false)
 
     // Animation values for result card
     const resultCardAnim = useRef(new Animated.Value(0)).current
     const resultOpacityAnim = useRef(new Animated.Value(0)).current
+    const deleteAnim = useRef(new Animated.Value(1)).current
+
+    // Delete result with confirmation and spin animation
+    const handleDeleteResult = () => {
+        if (!result) return
+
+        if (Platform.OS === "web") {
+            const confirmed = window.confirm("Are you sure you want to delete this analysis result?")
+            if (!confirmed) return
+        } else {
+            Alert.alert(
+                "Delete Result",
+                "Are you sure you want to delete this analysis result?",
+                [
+                    {
+                        text: "Cancel",
+                        style: "cancel",
+                    },
+                    {
+                        text: "Delete",
+                        style: "destructive",
+                        onPress: () => performDelete(),
+                    },
+                ],
+                { cancelable: true },
+            )
+            return
+        }
+
+        performDelete()
+    }
+
+    const performDelete = async () => {
+        try {
+            setIsDeleting(true)
+
+            // Start spin animation
+            const spinAnimation = Animated.loop(
+                Animated.timing(deleteAnim, {
+                    toValue: 1,
+                    duration: 1000,
+                    useNativeDriver: true,
+                }),
+                { iterations: -1 },
+            )
+
+            // Reset deleteAnim to 0 first, then start spinning
+            deleteAnim.setValue(0)
+            spinAnimation.start()
+
+            const response = await deleteData(URL_FOOD_CALO_ESTIMATOR, result!.id)
+
+            // Stop spin animation
+            spinAnimation.stop()
+
+            if (response.status === 204) {
+                // Fade out and clear everything like reset
+                Animated.parallel([
+                    Animated.timing(deleteAnim, {
+                        toValue: 0,
+                        duration: 250,
+                        useNativeDriver: true,
+                    }),
+                    Animated.timing(resultOpacityAnim, {
+                        toValue: 0,
+                        duration: 250,
+                        useNativeDriver: true,
+                    }),
+                ]).start(() => {
+                    // Clear everything like reset
+                    setSelectedImage(null)
+                    setResult(null)
+                    resultCardAnim.setValue(0)
+                    resultOpacityAnim.setValue(0)
+                    deleteAnim.setValue(1)
+                    setIsDeleting(false)
+                })
+            } else {
+                // Reset animation if delete failed
+                deleteAnim.setValue(1)
+                setIsDeleting(false)
+                showMessage({ message: "Failed to delete result" }, true)
+            }
+        } catch (error) {
+            console.error("Error deleting result:", error)
+            // Reset animation if error occurred
+            deleteAnim.setValue(1)
+            setIsDeleting(false)
+            showMessage({ message: "Error deleting result" }, true)
+        }
+    }
 
     // Select image from device gallery or camera
     const pickImage = async () => {
         try {
             if (Platform.OS === "web") {
-                // Web doesn't support action sheet, directly open file picker
                 const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
                 if (status !== "granted") {
-                    showMessage({ message: "Permission required to access photos" })
+                    showMessage({ message: "Permission required to access photos" }, true)
                     return
                 }
 
                 const result = await ImagePicker.launchImageLibraryAsync({
                     mediaTypes: "Images",
-                    allowsEditing: false, // Không cho phép cắt ảnh
-                    quality: 1, // Chất lượng cao nhất
+                    allowsEditing: false,
+                    quality: 1,
                 })
 
                 if (!result.canceled && result.assets?.[0]) {
                     setSelectedImage(result.assets[0])
-                    setResult(null) // Reset previous result
-
-                    // Reset result animations
+                    setResult(null)
                     resultCardAnim.setValue(0)
                     resultOpacityAnim.setValue(0)
                 }
             } else {
-                // On mobile, show action sheet with options
                 if (Platform.OS === "ios") {
-                    // For iOS, we can use ActionSheetIOS
                     const ActionSheetIOS = require("react-native").ActionSheetIOS
 
                     ActionSheetIOS.showActionSheetWithOptions(
@@ -242,19 +405,15 @@ const Index: React.FC = () => {
                         },
                         async (buttonIndex: number) => {
                             if (buttonIndex === 0) {
-                                // Cancel
                                 return
                             } else if (buttonIndex === 1) {
-                                // Camera
                                 await launchCamera()
                             } else if (buttonIndex === 2) {
-                                // Photo Library
                                 await launchImageLibrary()
                             }
                         },
                     )
                 } else {
-                    // For Android, we'll use a simple Alert
                     Alert.alert(
                         "Select Image",
                         "Choose an option",
@@ -269,11 +428,10 @@ const Index: React.FC = () => {
             }
         } catch (error) {
             console.error("Error picking image:", error)
-            showMessage({ message: "Error selecting image" })
+            showMessage({ message: "Error selecting image" }, true)
         }
     }
 
-    // Launch camera to take a photo
     const launchCamera = async () => {
         try {
             const { status } = await ImagePicker.requestCameraPermissionsAsync()
@@ -283,25 +441,22 @@ const Index: React.FC = () => {
             }
 
             const result = await ImagePicker.launchCameraAsync({
-                allowsEditing: false, // Không cho phép cắt ảnh
-                quality: 1, // Chất lượng cao nhất
+                allowsEditing: false,
+                quality: 1,
             })
 
             if (!result.canceled && result.assets?.[0]) {
                 setSelectedImage(result.assets[0])
-                setResult(null) // Reset previous result
-
-                // Reset result animations
+                setResult(null)
                 resultCardAnim.setValue(0)
                 resultOpacityAnim.setValue(0)
             }
         } catch (error) {
             console.error("Error launching camera:", error)
-            showMessage({ message: "Error accessing camera" })
+            showMessage({ message: "Error accessing camera" }, true)
         }
     }
 
-    // Launch image library to select a photo
     const launchImageLibrary = async () => {
         try {
             const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
@@ -312,25 +467,22 @@ const Index: React.FC = () => {
 
             const result = await ImagePicker.launchImageLibraryAsync({
                 mediaTypes: "Images",
-                allowsEditing: false, // Không cho phép cắt ảnh
-                quality: 1, // Chất lượng cao nhất
+                allowsEditing: false,
+                quality: 1,
             })
 
             if (!result.canceled && result.assets?.[0]) {
                 setSelectedImage(result.assets[0])
-                setResult(null) // Reset previous result
-
-                // Reset result animations
+                setResult(null)
                 resultCardAnim.setValue(0)
                 resultOpacityAnim.setValue(0)
             }
         } catch (error) {
             console.error("Error launching image library:", error)
-            showMessage({ message: "Error accessing photo library" })
+            showMessage({ message: "Error accessing photo library" }, true)
         }
     }
 
-    // Process the selected image for calorie prediction
     const processImage = async () => {
         if (!selectedImage) return
 
@@ -362,7 +514,6 @@ const Index: React.FC = () => {
 
             setResult(response.data)
 
-            // Animate result card appearance
             Animated.parallel([
                 Animated.spring(resultCardAnim, {
                     toValue: 1,
@@ -384,31 +535,51 @@ const Index: React.FC = () => {
         }
     }
 
-    // Reset the form and clear results
     const reset = () => {
-        setSelectedImage(null)
-        setResult(null)
-        resultCardAnim.setValue(0)
-        resultOpacityAnim.setValue(0)
+        if (result) {
+            Animated.parallel([
+                Animated.timing(deleteAnim, {
+                    toValue: 0,
+                    duration: 250,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(resultOpacityAnim, {
+                    toValue: 0,
+                    duration: 250,
+                    useNativeDriver: true,
+                }),
+            ]).start(() => {
+                setSelectedImage(null)
+                setResult(null)
+                resultCardAnim.setValue(0)
+                resultOpacityAnim.setValue(0)
+                deleteAnim.setValue(1)
+            })
+        } else {
+            setSelectedImage(null)
+            setResult(null)
+            resultCardAnim.setValue(0)
+            resultOpacityAnim.setValue(0)
+            deleteAnim.setValue(1)
+        }
     }
 
-    // Open image modal to view full-size image
     const openImageModal = (uri: string) => {
+        console.log("Opening image modal with URI:", uri)
         setModalImageUri(uri)
         setModalVisible(true)
     }
 
-    // Close image modal
     const closeImageModal = () => {
+        console.log("Closing image modal")
         setModalVisible(false)
+        setModalImageUri("")
     }
 
-    // Start editing an item
     const startEditing = () => {
         setIsEditing(true)
     }
 
-    // Save edited item details
     const saveEditedItem = async (calories: string, comment: string) => {
         if (!result) return
 
@@ -422,16 +593,16 @@ const Index: React.FC = () => {
 
             if (response.status === 200) {
                 setResult(response.data)
+                showMessage({ message: "Updated successfully" }, true)
             }
 
             setIsEditing(false)
         } catch (error) {
             console.error("Error updating food item:", error)
-            showMessage({ message: "Error updating information" })
+            showMessage({ message: "Error updating information" }, true)
         }
     }
 
-    // Cancel editing
     const cancelEditing = () => {
         setIsEditing(false)
     }
@@ -451,12 +622,9 @@ const Index: React.FC = () => {
                     <TouchableOpacity
                         onPress={() => openImageModal(selectedImage.uri)}
                         style={styles.selectedImageContainer}
-                        activeOpacity={0.9}
+                        activeOpacity={0.8}
                     >
                         <Image source={{ uri: selectedImage.uri }} style={styles.selectedImage} resizeMode="contain" />
-                        <View style={styles.imageOverlay}>
-                            <Text style={styles.tapHint}>Tap to view full image</Text>
-                        </View>
                     </TouchableOpacity>
                 ) : (
                     <TouchableOpacity style={styles.imagePlaceholder} onPress={pickImage} activeOpacity={0.7}>
@@ -466,7 +634,6 @@ const Index: React.FC = () => {
                     </TouchableOpacity>
                 )}
 
-                {/* Enhanced Button Row with better spacing */}
                 <View style={styles.buttonRow}>
                     <AnimatedButton style={[styles.button, styles.primaryButton]} onPress={pickImage} buttonType="primary">
                         <Text style={styles.buttonText}>Select Image</Text>
@@ -492,11 +659,11 @@ const Index: React.FC = () => {
                 </View>
             </View>
 
-            {/* Results Card with Animation */}
+            {/* Results Card - Now matches history style */}
             {result && !isProcessing && (
                 <Animated.View
                     style={[
-                        styles.card,
+                        sharedStyles.foodCard,
                         {
                             opacity: resultOpacityAnim,
                             transform: [
@@ -507,76 +674,112 @@ const Index: React.FC = () => {
                                     }),
                                 },
                                 {
-                                    scale: resultCardAnim.interpolate({
+                                    scale: deleteAnim.interpolate({
                                         inputRange: [0, 1],
-                                        outputRange: [0.9, 1],
+                                        outputRange: [0.8, 1],
                                     }),
+                                },
+                                // Add rotation for spin effect when deleting
+                                {
+                                    rotate: isDeleting
+                                        ? deleteAnim.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: ["0deg", "360deg"],
+                                        })
+                                        : "0deg",
                                 },
                             ],
                         },
                     ]}
                 >
-                    <View style={styles.resultHeader}>
-                        <Text style={styles.cardTitle}>Analysis Results</Text>
-                        <Text style={styles.resultTimestamp}>{formatDate(result.createdAt)}</Text>
-                    </View>
-
-                    {/* Highlight Result */}
-                    <View style={styles.highlightResult}>
-                        <Text style={styles.foodNameResult}>{result.predictName}</Text>
-                        <Text style={styles.caloriesResult}>{result.calo} calories</Text>
-                        <View style={styles.confidenceBadge}>
-                            <Text style={styles.confidenceText}>Confidence: {result.confidencePercentage}</Text>
+                    <View style={sharedStyles.foodCardHeader}>
+                        <Text style={sharedStyles.foodName}>{result.predictName}</Text>
+                        <View style={sharedStyles.actionButtons}>
+                            <TouchableOpacity style={sharedStyles.editButton} onPress={startEditing} disabled={isDeleting}>
+                                {Platform.OS === "web" ? (
+                                    <div style={{ color: "#3498db", cursor: "pointer", fontSize: "18px" }}>✎</div>
+                                ) : (
+                                    <Text style={sharedStyles.editButtonText}>✎</Text>
+                                )}
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[sharedStyles.deleteButton, isDeleting && { opacity: 0.5 }]}
+                                onPress={handleDeleteResult}
+                                disabled={isDeleting}
+                            >
+                                {Platform.OS === "web" ? (
+                                    <div
+                                        style={{
+                                            color: "#e74c3c",
+                                            cursor: isDeleting ? "not-allowed" : "pointer",
+                                            fontSize: "18px",
+                                            transform: isDeleting ? "rotate(180deg)" : "rotate(0deg)",
+                                            transition: "transform 0.3s ease",
+                                            userSelect: "none",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            width: "100%",
+                                            height: "100%",
+                                        }}
+                                        onClick={(e) => {
+                                            e.preventDefault()
+                                            e.stopPropagation()
+                                            if (!isDeleting) {
+                                                handleDeleteResult()
+                                            }
+                                        }}
+                                    >
+                                        🗑
+                                    </div>
+                                ) : (
+                                    <Text style={sharedStyles.deleteButtonText}>🗑</Text>
+                                )}
+                            </TouchableOpacity>
                         </View>
                     </View>
+                    <Text style={sharedStyles.foodCalories}>{result.calo} calories</Text>
 
-                    <AnimatedButton style={styles.editButton} onPress={startEditing}>
-                        <Text style={styles.editButtonText}>✎ Edit</Text>
-                    </AnimatedButton>
-
-                    {/* Result Images */}
-                    <View style={styles.resultImagesRow}>
+                    <View style={sharedStyles.imagesContainer}>
                         <TouchableOpacity
-                            style={styles.resultImageContainer}
+                            style={sharedStyles.imageWrapper}
                             onPress={() => openImageModal(result.publicUrl.originImage)}
-                            activeOpacity={0.9}
+                            activeOpacity={0.8}
+                            disabled={isDeleting}
                         >
-                            <Image source={{ uri: result.publicUrl.originImage }} style={styles.resultImage} resizeMode="contain" />
-                            <View style={styles.imageLabel}>
-                                <Text style={styles.imageLabelText}>Original Image</Text>
-                            </View>
+                            <Image
+                                source={{ uri: result.publicUrl.originImage }}
+                                style={sharedStyles.thumbnailImage}
+                                resizeMode="contain"
+                            />
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                            style={styles.resultImageContainer}
+                            style={sharedStyles.imageWrapper}
                             onPress={() => openImageModal(result.publicUrl.segmentationImage)}
-                            activeOpacity={0.9}
+                            activeOpacity={0.8}
+                            disabled={isDeleting}
                         >
                             <Image
                                 source={{ uri: result.publicUrl.segmentationImage }}
-                                style={styles.resultImage}
+                                style={sharedStyles.thumbnailImage}
                                 resizeMode="contain"
                             />
-                            <View style={styles.imageLabel}>
-                                <Text style={styles.imageLabelText}>Segmented Image</Text>
-                            </View>
                         </TouchableOpacity>
                     </View>
 
-                    {/* Additional Details */}
-                    {result.comment && (
-                        <View style={[sharedStyles.commentContainer, styles.commentContainer]}>
-                            <Text style={[sharedStyles.commentLabel, styles.commentLabel]}>Notes:</Text>
-                            <Text style={[sharedStyles.foodComment, styles.commentText]}>{result.comment}</Text>
-                        </View>
-                    )}
+                    <Text style={sharedStyles.foodDate}>{formatDate(result.createdAt)}</Text>
+                    <Text style={sharedStyles.confidenceText}>Confidence: {result.confidencePercentage}</Text>
+
+                    <View style={sharedStyles.commentContainer}>
+                        <Text style={sharedStyles.commentLabel}>Notes:</Text>
+                        <Text style={sharedStyles.foodComment}>{result.comment ? result.comment : "No notes"}</Text>
+                    </View>
                 </Animated.View>
             )}
 
-            {/* Image Modal - Using shared component */}
             <ImageModal visible={modalVisible} imageUri={modalImageUri} onClose={closeImageModal} />
 
-            {/* Edit Modal - Using shared component */}
             {result && (
                 <EditModal
                     visible={isEditing}
@@ -589,6 +792,65 @@ const Index: React.FC = () => {
         </ScrollView>
     )
 }
+const modalStyles = StyleSheet.create({
+    overlay: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: "rgba(0, 0, 0, 0.9)",
+        zIndex: 1000,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    backdrop: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+    },
+    container: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        padding: 20,
+    },
+    imageContainer: {
+        maxWidth: "90%",
+        maxHeight: "80%",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    image: {
+        width: 350,
+        height: 350,
+        maxWidth: "100%",
+        maxHeight: "100%",
+    },
+    closeButton: {
+        position: "absolute",
+        top: 40,
+        right: 20,
+        backgroundColor: "#fff",
+        borderRadius: 25,
+        width: 50,
+        height: 50,
+        justifyContent: "center",
+        alignItems: "center",
+        shadowColor: "#000",
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
+        elevation: 8,
+        zIndex: 1001,
+    },
+    closeButtonText: {
+        fontSize: 20,
+        fontWeight: "bold",
+        color: "#333",
+    },
+})
 
 const styles = StyleSheet.create({
     container: {
@@ -632,7 +894,6 @@ const styles = StyleSheet.create({
         color: "#34495e",
     },
     selectedImageContainer: {
-        position: "relative",
         borderRadius: 12,
         overflow: "hidden",
         backgroundColor: "#f8f9fa",
@@ -643,20 +904,6 @@ const styles = StyleSheet.create({
         width: "100%",
         height: "100%",
         resizeMode: "contain",
-    },
-    imageOverlay: {
-        position: "absolute",
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: "rgba(0, 0, 0, 0.6)",
-        padding: 12,
-        alignItems: "center",
-    },
-    tapHint: {
-        color: "#fff",
-        fontSize: 14,
-        fontWeight: "500",
     },
     imagePlaceholder: {
         height: 200,
@@ -732,105 +979,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: "600",
         textAlign: "center",
-    },
-    resultHeader: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: 16,
-    },
-    resultTimestamp: {
-        fontSize: 12,
-        color: "#6c757d",
-    },
-    highlightResult: {
-        backgroundColor: "#f8f9fa",
-        borderRadius: 12,
-        padding: 20,
-        marginBottom: 16,
-        alignItems: "center",
-    },
-    foodNameResult: {
-        fontSize: 20,
-        fontWeight: "700",
-        color: "#2c3e50",
-        textAlign: "center",
-        marginBottom: 8,
-        textTransform: "capitalize",
-    },
-    caloriesResult: {
-        fontSize: 28,
-        fontWeight: "700",
-        color: "#e74c3c",
-        marginBottom: 8,
-    },
-    confidenceBadge: {
-        backgroundColor: "#e1f5fe",
-        paddingVertical: 6,
-        paddingHorizontal: 12,
-        borderRadius: 20,
-    },
-    confidenceText: {
-        color: "#0288d1",
-        fontSize: 12,
-        fontWeight: "600",
-    },
-    editButton: {
-        backgroundColor: "#3498db",
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        borderRadius: 25,
-        alignSelf: "center",
-        marginBottom: 16,
-        shadowColor: Platform.OS === "web" ? "transparent" : "#3498db",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-        elevation: 4,
-    },
-    editButtonText: {
-        color: "#fff",
-        fontSize: 14,
-        fontWeight: "600",
-    },
-    resultImagesRow: {
-        flexDirection: "row",
-        gap: 12,
-    },
-    resultImageContainer: {
-        flex: 1,
-        borderRadius: 12,
-        overflow: "hidden",
-        height: 120,
-        backgroundColor: "#f8f9fa",
-    },
-    resultImage: {
-        width: "100%",
-        height: "100%",
-        resizeMode: "contain",
-    },
-    imageLabel: {
-        position: "absolute",
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: "rgba(0, 0, 0, 0.7)",
-        padding: 8,
-        alignItems: "center",
-    },
-    imageLabelText: {
-        color: "#fff",
-        fontSize: 12,
-        fontWeight: "600",
-    },
-    commentContainer: {
-        marginTop: 16,
-    },
-    commentLabel: {
-        fontSize: 14,
-    },
-    commentText: {
-        fontSize: 13,
     },
 })
 
