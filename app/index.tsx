@@ -1,10 +1,21 @@
 import { HOME_ROUTE, SIGNIN_ROUTE } from '@/constants/router_constants';
 import { AuthContext } from '@/context/AuthContext';
-import { Redirect } from 'expo-router';
-import { useContext } from 'react';
+import { useRouter } from 'expo-router';
+import { useContext, useEffect } from 'react';
 
 export default function Index() {
     const { token } = useContext(AuthContext);
+    const router = useRouter();
 
-    return <Redirect href={token ? HOME_ROUTE : SIGNIN_ROUTE} />;
+    useEffect(() => {
+        // Replace the current route depending on auth state
+        if (token) {
+            router.replace(HOME_ROUTE);
+        } else {
+            router.replace(SIGNIN_ROUTE);
+        }
+    }, [token, router]);
+
+    // Optionally render nothing or a loading indicator
+    return null;
 }
