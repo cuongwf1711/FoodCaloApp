@@ -34,7 +34,7 @@ export interface FoodItem {
     predictName: string
     comment: string
     calo: number
-    isDeleting?: boolean // Add this optional property
+    isDeleting?: boolean
 }
 
 export interface ApiResponse {
@@ -50,16 +50,10 @@ export interface UserProfile {
     calorieLimitPeriod: string
 }
 
-// Type for sorting options
 export type SortOption = "newest" | "oldest" | "highest-calories" | "lowest-calories"
-
-// Type for time filter
 export type TimeFilter = "all" | "date"
-
-// Type for time unit
 export type TimeUnit = "day" | "week" | "month"
 
-// Add new props for parent-controlled state
 export interface FoodHistoryProps {
     sortOption?: SortOption
     onSortChange?: (sortOption: SortOption) => void
@@ -83,21 +77,18 @@ export const useFoodHistory = (
     const [sortOption, setSortOption] = useState<SortOption>(externalSortOption || initialSortOption)
     const [isSortChanging, setIsSortChanging] = useState(false)
 
-    // Update sortOption when external prop changes
     useEffect(() => {
         if (externalSortOption && externalSortOption !== sortOption) {
             setSortOption(externalSortOption)
         }
     }, [externalSortOption, sortOption])
 
-    // Notify parent of data changes
     useEffect(() => {
         if (onDataChange) {
             onDataChange(totalCalories)
         }
     }, [totalCalories, onDataChange])
 
-    // Fetch data with time filter
     const fetchFoodHistory = useCallback(
         async (
             pageNum = 1,
@@ -119,10 +110,8 @@ export const useFoodHistory = (
 
                 setError(null)
 
-                // Use the provided sortOpt if available, otherwise use the state value
                 const currentSortOption = sortOpt || sortOption
 
-                // Determine ordering parameter based on sort option
                 let orderingParam = ""
                 switch (currentSortOption) {
                     case "newest":
@@ -139,7 +128,6 @@ export const useFoodHistory = (
                         break
                 }
 
-                // Build API URL based on time unit
                 let apiUrl = URL_FOOD_CALO_ESTIMATOR + "?"
 
                 if (timeUnit) {
@@ -158,9 +146,7 @@ export const useFoodHistory = (
                     apiUrl += `page=${pageNum}${orderingParam}`
                 }
 
-                // Fetch data using the utility function from request_context
                 const response = await getData<ApiResponse>(apiUrl)
-
                 const newItems = response.data.results
 
                 if (shouldRefresh || pageNum === 1) {
@@ -185,7 +171,6 @@ export const useFoodHistory = (
         [sortOption],
     )
 
-    // Delete food item with confirmation and loading animation
     const handleDeleteItem = useCallback(async (id: string) => {
         if (Platform.OS === "web") {
             const confirmed = window.confirm("Are you sure you want to delete this food item?")
@@ -217,33 +202,26 @@ export const useFoodHistory = (
 
     const performActualDelete = async (id: string) => {
         try {
-            // Find the item to show loading state
             const itemToDelete = foodItems.find((item) => item.id === id)
             if (!itemToDelete) return
 
-            // Update the item to show loading state
             setFoodItems((prev) => prev.map((item) => (item.id === id ? { ...item, isDeleting: true } : item)))
 
             const response = await deleteData(URL_FOOD_CALO_ESTIMATOR, id)
             if (response.status === 204) {
-                // Remove the item from the list
                 setFoodItems((prev) => prev.filter((item) => item.id !== id))
-                // Update total calories
                 setTotalCalories((prev) => {
                     const deletedItem = foodItems.find((item) => item.id === id)
                     return deletedItem ? prev - deletedItem.calo : prev
                 })
-                // No success message needed
             }
         } catch (error) {
             console.error("Error deleting food item:", error)
-            // Remove loading state on error
             setFoodItems((prev) => prev.map((item) => (item.id === id ? { ...item, isDeleting: false } : item)))
             showMessage(error)
         }
     }
 
-    // Save edited item
     const saveEditedItem = useCallback(async (editingItem: FoodItem, calo: string, comment: string) => {
         if (!editingItem) return
 
@@ -256,12 +234,9 @@ export const useFoodHistory = (
             const response = await patchData<FoodItem>(`${URL_FOOD_CALO_ESTIMATOR}/${editingItem.id}`, updatedData)
 
             if (response.status === 200) {
-                // Update the item in the list with the response data
                 const updatedItem = response.data
 
                 setFoodItems((prev) => prev.map((item) => (item.id === editingItem.id ? updatedItem : item)))
-
-                // Update total calories
                 setTotalCalories((prev) => prev - editingItem.calo + updatedItem.calo)
 
                 return true
@@ -274,20 +249,14 @@ export const useFoodHistory = (
         }
     }, [])
 
-    // Handle sort option change
     const handleSortChange = useCallback(
         (newSortOption: SortOption, callback?: (sortOpt: SortOption) => void) => {
-            // Skip if already sorting or if the option is the same
             if (isSortChanging || newSortOption === sortOption) return
 
-            // Set loading states
             setIsSortChanging(true)
             setIsLoading(true)
-
-            // Change the sort option
             setSortOption(newSortOption)
 
-            // Call the callback if provided
             if (callback) {
                 setTimeout(() => {
                     callback(newSortOption)
@@ -322,7 +291,6 @@ export const useFoodHistory = (
 export const useUserProfile = () => {
     const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
 
-    // Fetch user profile data
     const fetchUserProfile = useCallback(async () => {
         try {
             const response = await getData<UserProfile>(URL_USER_PROFILE)
@@ -335,7 +303,7 @@ export const useUserProfile = () => {
     return { userProfile, fetchUserProfile }
 }
 
-// Enhanced ImageModal Component with better Android support
+// Enhanced ImageModal Component
 export const ImageModal: React.FC<{
     visible: boolean
     imageUri: string
@@ -495,43 +463,46 @@ export const EditModal: React.FC<{
     return (
         <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
             <TouchableOpacity style={styles.modalOverlay} onPress={onCancel} activeOpacity={1}>
-                <View style={styles.editModalContent}>
-                    <Text style={styles.editModalTitle}>Edit Food Item</Text>
+                <TouchableWithoutFeedback>
+                    <View style={styles.editModalContent}>
+                        <Text style={styles.editModalTitle}>Edit Food Item</Text>
 
-                    <View style={styles.editInputGroup}>
-                        <Text style={styles.editInputLabel}>Calories:</Text>
-                        <TextInput
-                            style={styles.editInput}
-                            value={editedCalo}
-                            onChangeText={setEditedCalo}
-                            keyboardType="numeric"
-                        />
-                    </View>
+                        <View style={styles.editInputGroup}>
+                            <Text style={styles.editInputLabel}>Calories:</Text>
+                            <TextInput
+                                style={styles.editInput}
+                                value={editedCalo}
+                                onChangeText={setEditedCalo}
+                                keyboardType="numeric"
+                            />
+                        </View>
 
-                    <View style={styles.editInputGroup}>
-                        <Text style={styles.editInputLabel}>Comment:</Text>
-                        <TextInput
-                            style={[styles.editInput, styles.editTextarea]}
-                            value={editedComment}
-                            onChangeText={setEditedComment}
-                            multiline
-                        />
-                    </View>
+                        <View style={styles.editInputGroup}>
+                            <Text style={styles.editInputLabel}>Comment:</Text>
+                            <TextInput
+                                style={[styles.editInput, styles.editTextarea]}
+                                value={editedComment}
+                                onChangeText={setEditedComment}
+                                multiline
+                            />
+                        </View>
 
-                    <View style={styles.editButtonGroup}>
-                        <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
-                            <Text style={styles.cancelButtonText}>Cancel</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-                            <Text style={styles.saveButtonText}>Save</Text>
-                        </TouchableOpacity>
+                        <View style={styles.editButtonGroup}>
+                            <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
+                                <Text style={styles.cancelButtonText}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+                                <Text style={styles.saveButtonText}>Save</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
-                </View>
+                </TouchableWithoutFeedback>
             </TouchableOpacity>
         </Modal>
     )
 }
 
+// Fixed SortingDropdown with better Android support
 export const SortingDropdown: React.FC<{
     value: SortOption
     onChange: (value: SortOption) => void
@@ -549,13 +520,7 @@ export const SortingDropdown: React.FC<{
 
     if (Platform.OS === "web") {
         return (
-            <div
-                style={{
-                    position: "relative",
-                    minWidth: "120px",
-                    zIndex: 1000, // Added z-index for web
-                }}
-            >
+            <div style={{ position: "relative", minWidth: "120px" }}>
                 <select
                     value={value}
                     onChange={(e) => onChange(e.target.value as SortOption)}
@@ -574,7 +539,6 @@ export const SortingDropdown: React.FC<{
                         backgroundRepeat: "no-repeat",
                         backgroundPosition: "right 8px center",
                         paddingRight: "30px",
-                        zIndex: 1001, // High z-index for select element
                     }}
                 >
                     {options.map((option) => (
@@ -588,34 +552,50 @@ export const SortingDropdown: React.FC<{
     }
 
     return (
-        <View style={[styles.dropdownContainer, { zIndex: isOpen ? 1001 : 1000 }]}>
-            <TouchableOpacity style={styles.dropdownButton} onPress={() => setIsOpen(!isOpen)}>
+        <View style={styles.dropdownContainer}>
+            <TouchableOpacity
+                style={styles.dropdownButton}
+                onPress={() => setIsOpen(!isOpen)}
+                activeOpacity={0.7}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
                 <Text style={styles.dropdownButtonText}>{selectedLabel}</Text>
                 <Text style={styles.dropdownIcon}>{isOpen ? "▲" : "▼"}</Text>
             </TouchableOpacity>
 
-            {isOpen && (
-                <View style={[styles.dropdownOptions, { zIndex: 1002 }]}>
-                    {options.map((option) => (
-                        <TouchableOpacity
-                            key={option.value}
-                            style={[styles.dropdownOption, value === option.value && styles.dropdownOptionSelected]}
-                            onPress={() => {
-                                onChange(option.value)
-                                setIsOpen(false)
-                            }}
-                        >
-                            <Text style={[styles.dropdownOptionText, value === option.value && styles.dropdownOptionTextSelected]}>
-                                {option.label}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-            )}
+            <Modal visible={isOpen} transparent={true} animationType="fade" onRequestClose={() => setIsOpen(false)}>
+                <TouchableOpacity style={styles.dropdownModalOverlay} activeOpacity={1} onPress={() => setIsOpen(false)}>
+                    <View style={styles.dropdownModalContent}>
+                        <Text style={styles.dropdownModalTitle}>Sort by</Text>
+                        {options.map((option) => (
+                            <TouchableOpacity
+                                key={option.value}
+                                style={[styles.dropdownModalOption, value === option.value && styles.dropdownModalOptionSelected]}
+                                onPress={() => {
+                                    onChange(option.value)
+                                    setIsOpen(false)
+                                }}
+                                activeOpacity={0.7}
+                            >
+                                <Text
+                                    style={[
+                                        styles.dropdownModalOptionText,
+                                        value === option.value && styles.dropdownModalOptionTextSelected,
+                                    ]}
+                                >
+                                    {option.label}
+                                </Text>
+                                {value === option.value && <Text style={styles.dropdownModalCheckmark}>✓</Text>}
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </TouchableOpacity>
+            </Modal>
         </View>
     )
 }
 
+// Fixed FilterDropdown with better Android support
 export const FilterDropdown: React.FC<{
     value: TimeFilter
     onChange: (value: TimeFilter) => void
@@ -631,18 +611,25 @@ export const FilterDropdown: React.FC<{
 
     if (Platform.OS === "web") {
         return (
-            <div
-                style={{
-                    ...webDropdownStyles.container,
-                    zIndex: 1000, // Added z-index for web
-                }}
-            >
+            <div style={{ position: "relative", minWidth: "120px" }}>
                 <select
                     value={value}
                     onChange={(e) => onChange(e.target.value as TimeFilter)}
                     style={{
-                        ...webDropdownStyles.select,
-                        zIndex: 1001, // High z-index for select element
+                        width: "100%",
+                        padding: "8px 12px",
+                        borderRadius: "8px",
+                        backgroundColor: "#fff",
+                        border: "1px solid #e1e1e1",
+                        fontSize: "14px",
+                        color: "#333",
+                        cursor: "pointer",
+                        appearance: "none",
+                        backgroundImage:
+                            'url(\'data:image/svg+xml;utf8,<svg fill="%23333" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>\')',
+                        backgroundRepeat: "no-repeat",
+                        backgroundPosition: "right 8px center",
+                        paddingRight: "30px",
                     }}
                 >
                     {options.map((option) => (
@@ -656,34 +643,50 @@ export const FilterDropdown: React.FC<{
     }
 
     return (
-        <View style={[styles.dropdownContainer, { zIndex: isOpen ? 1002 : 1001 }]}>
-            <TouchableOpacity style={styles.dropdownButton} onPress={() => setIsOpen(!isOpen)}>
+        <View style={styles.dropdownContainer}>
+            <TouchableOpacity
+                style={styles.dropdownButton}
+                onPress={() => setIsOpen(!isOpen)}
+                activeOpacity={0.7}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
                 <Text style={styles.dropdownButtonText}>{selectedLabel}</Text>
                 <Text style={styles.dropdownIcon}>{isOpen ? "▲" : "▼"}</Text>
             </TouchableOpacity>
 
-            {isOpen && (
-                <View style={[styles.dropdownOptions, { zIndex: 1003 }]}>
-                    {options.map((option) => (
-                        <TouchableOpacity
-                            key={option.value}
-                            style={[styles.dropdownOption, value === option.value && styles.dropdownOptionSelected]}
-                            onPress={() => {
-                                onChange(option.value)
-                                setIsOpen(false)
-                            }}
-                        >
-                            <Text style={[styles.dropdownOptionText, value === option.value && styles.dropdownOptionTextSelected]}>
-                                {option.label}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-            )}
+            <Modal visible={isOpen} transparent={true} animationType="fade" onRequestClose={() => setIsOpen(false)}>
+                <TouchableOpacity style={styles.dropdownModalOverlay} activeOpacity={1} onPress={() => setIsOpen(false)}>
+                    <View style={styles.dropdownModalContent}>
+                        <Text style={styles.dropdownModalTitle}>Filter by</Text>
+                        {options.map((option) => (
+                            <TouchableOpacity
+                                key={option.value}
+                                style={[styles.dropdownModalOption, value === option.value && styles.dropdownModalOptionSelected]}
+                                onPress={() => {
+                                    onChange(option.value)
+                                    setIsOpen(false)
+                                }}
+                                activeOpacity={0.7}
+                            >
+                                <Text
+                                    style={[
+                                        styles.dropdownModalOptionText,
+                                        value === option.value && styles.dropdownModalOptionTextSelected,
+                                    ]}
+                                >
+                                    {option.label}
+                                </Text>
+                                {value === option.value && <Text style={styles.dropdownModalCheckmark}>✓</Text>}
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </TouchableOpacity>
+            </Modal>
         </View>
     )
 }
 
+// Fixed UnitDropdown with better Android support
 export const UnitDropdown: React.FC<{
     value: TimeUnit
     onChange: (value: TimeUnit) => void
@@ -700,12 +703,7 @@ export const UnitDropdown: React.FC<{
 
     if (Platform.OS === "web") {
         return (
-            <div
-                style={{
-                    position: "relative",
-                    minWidth: "120px",
-                }}
-            >
+            <div style={{ position: "relative", minWidth: "120px" }}>
                 <select
                     value={value}
                     onChange={(e) => onChange(e.target.value as TimeUnit)}
@@ -738,40 +736,59 @@ export const UnitDropdown: React.FC<{
 
     return (
         <View style={styles.dropdownContainer}>
-            <TouchableOpacity style={styles.dropdownButton} onPress={() => setIsOpen(!isOpen)}>
+            <TouchableOpacity
+                style={styles.dropdownButton}
+                onPress={() => setIsOpen(!isOpen)}
+                activeOpacity={0.7}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
                 <Text style={styles.dropdownButtonText}>{selectedLabel}</Text>
                 <Text style={styles.dropdownIcon}>{isOpen ? "▲" : "▼"}</Text>
             </TouchableOpacity>
 
-            {isOpen && (
-                <View style={styles.dropdownOptions}>
-                    {options.map((option) => (
-                        <TouchableOpacity
-                            key={option.value}
-                            style={[styles.dropdownOption, value === option.value && styles.dropdownOptionSelected]}
-                            onPress={() => {
-                                onChange(option.value)
-                                setIsOpen(false)
-                            }}
-                        >
-                            <Text style={[styles.dropdownOptionText, value === option.value && styles.dropdownOptionTextSelected]}>
-                                {option.label}
-                            </Text>
-                        </TouchableOpacity>
-                    ))}
-                </View>
-            )}
+            <Modal visible={isOpen} transparent={true} animationType="fade" onRequestClose={() => setIsOpen(false)}>
+                <TouchableOpacity style={styles.dropdownModalOverlay} activeOpacity={1} onPress={() => setIsOpen(false)}>
+                    <View style={styles.dropdownModalContent}>
+                        <Text style={styles.dropdownModalTitle}>Select Unit</Text>
+                        {options.map((option) => (
+                            <TouchableOpacity
+                                key={option.value}
+                                style={[styles.dropdownModalOption, value === option.value && styles.dropdownModalOptionSelected]}
+                                onPress={() => {
+                                    onChange(option.value)
+                                    setIsOpen(false)
+                                }}
+                                activeOpacity={0.7}
+                            >
+                                <Text
+                                    style={[
+                                        styles.dropdownModalOptionText,
+                                        value === option.value && styles.dropdownModalOptionTextSelected,
+                                    ]}
+                                >
+                                    {option.label}
+                                </Text>
+                                {value === option.value && <Text style={styles.dropdownModalCheckmark}>✓</Text>}
+                            </TouchableOpacity>
+                        ))}
+                    </View>
+                </TouchableOpacity>
+            </Modal>
         </View>
     )
 }
 
+// Enhanced DatePicker with better Android support
 export const DatePicker: React.FC<{
     selectedDate: string
     onDateChange: (date: string) => void
 }> = ({ selectedDate, onDateChange }) => {
-    const [showNativePicker, setShowNativePicker] = useState(false)
+    const [showPicker, setShowPicker] = useState(false)
+    const [currentMonth, setCurrentMonth] = useState(() => {
+        const date = new Date(selectedDate)
+        return new Date(date.getFullYear(), date.getMonth(), 1)
+    })
 
-    // Format date for display
     const formatDisplayDate = (dateStr: string) => {
         try {
             const date = new Date(dateStr)
@@ -793,53 +810,62 @@ export const DatePicker: React.FC<{
         }
     }
 
-    // Convert date to UTC format for API
-    const convertToUTCFormat = (dateStr: string) => {
-        try {
-            const date = new Date(dateStr)
-            if (isNaN(date.getTime())) {
-                const today = new Date()
-                return `${today.getUTCFullYear()}-${(today.getUTCMonth() + 1).toString().padStart(2, "0")}-${today
-                    .getUTCDate()
-                    .toString()
-                    .padStart(2, "0")}`
-            }
-            return `${date.getUTCFullYear()}-${(date.getUTCMonth() + 1).toString().padStart(2, "0")}-${date
-                .getUTCDate()
-                .toString()
-                .padStart(2, "0")}`
-        } catch (error) {
-            const today = new Date()
-            return `${today.getUTCFullYear()}-${(today.getUTCMonth() + 1).toString().padStart(2, "0")}-${today
-                .getUTCDate()
-                .toString()
-                .padStart(2, "0")}`
-        }
+    const convertToUTCFormat = (date: Date) => {
+        // Use local date instead of UTC to avoid timezone issues
+        const year = date.getFullYear()
+        const month = (date.getMonth() + 1).toString().padStart(2, "0")
+        const day = date.getDate().toString().padStart(2, "0")
+        return `${year}-${month}-${day}`
     }
 
-    // Handle date change
-    const handleDateChange = (event: any, date?: Date) => {
-        setShowNativePicker(false)
-        if (date) {
-            const utcDate = convertToUTCFormat(date.toISOString())
-            onDateChange(utcDate)
+    const getDaysInMonth = (date: Date) => {
+        const year = date.getFullYear()
+        const month = date.getMonth()
+        const firstDay = new Date(year, month, 1)
+        const lastDay = new Date(year, month + 1, 0)
+        const daysInMonth = lastDay.getDate()
+        const startingDayOfWeek = firstDay.getDay()
+
+        const days = []
+
+        // Add empty cells for days before the first day of the month
+        for (let i = 0; i < startingDayOfWeek; i++) {
+            days.push(null)
         }
+
+        // Add all days of the month
+        for (let day = 1; day <= daysInMonth; day++) {
+            days.push(new Date(year, month, day))
+        }
+
+        return days
     }
 
-    // Handle web date input change
+    const isSelectedDate = (date: Date) => {
+        const selected = new Date(selectedDate)
+        return (
+            date.getDate() === selected.getDate() &&
+            date.getMonth() === selected.getMonth() &&
+            date.getFullYear() === selected.getFullYear()
+        )
+    }
+
+    const isToday = (date: Date) => {
+        const today = new Date()
+        return (
+            date.getDate() === today.getDate() &&
+            date.getMonth() === today.getMonth() &&
+            date.getFullYear() === today.getFullYear()
+        )
+    }
+
     const handleWebDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const inputDate = e.target.value
         if (inputDate) {
-            const utcDate = convertToUTCFormat(inputDate)
-            onDateChange(utcDate)
-        } else {
-            const today = new Date()
-            const utcToday = convertToUTCFormat(today.toISOString())
-            onDateChange(utcToday)
+            onDateChange(inputDate)
         }
     }
 
-    // For web platform
     if (Platform.OS === "web") {
         return (
             <div style={{ position: "relative" }}>
@@ -862,132 +888,210 @@ export const DatePicker: React.FC<{
         )
     }
 
-    // For native platforms
+    const monthNames = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+    ]
+
+    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+
     return (
         <View style={styles.datePickerContainer}>
-            <TouchableOpacity style={styles.datePickerButton} onPress={() => setShowNativePicker(true)}>
+            <TouchableOpacity
+                style={styles.datePickerButton}
+                onPress={() => setShowPicker(true)}
+                activeOpacity={0.7}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
                 <Text style={styles.datePickerButtonText}>{formatDisplayDate(selectedDate)}</Text>
                 <Text style={styles.datePickerIcon}>📅</Text>
             </TouchableOpacity>
 
-            {Platform.OS === "ios" || Platform.OS === "android"
-                ? showNativePicker && (
-                    <Modal
-                        transparent={true}
-                        animationType="slide"
-                        visible={showNativePicker}
-                        onRequestClose={() => setShowNativePicker(false)}
-                    >
-                        <TouchableOpacity
-                            style={styles.datePickerModalOverlay}
-                            activeOpacity={1}
-                            onPress={() => setShowNativePicker(false)}
-                        >
-                            <View style={styles.datePickerModalContent}>
-                                {Platform.OS === "ios" && (
-                                    <View style={styles.datePickerHeader}>
-                                        <TouchableOpacity onPress={() => setShowNativePicker(false)}>
-                                            <Text style={styles.datePickerCancel}>Cancel</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity
-                                            onPress={() => {
-                                                setShowNativePicker(false)
-                                            }}
-                                        >
-                                            <Text style={styles.datePickerDone}>Done</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                )}
+            <Modal visible={showPicker} transparent={true} animationType="slide" onRequestClose={() => setShowPicker(false)}>
+                <TouchableOpacity style={styles.datePickerModalOverlay} activeOpacity={1} onPress={() => setShowPicker(false)}>
+                    <TouchableWithoutFeedback>
+                        <View style={styles.datePickerModalContent}>
+                            <View style={styles.datePickerHeader}>
+                                <TouchableOpacity onPress={() => setShowPicker(false)}>
+                                    <Text style={styles.datePickerCancel}>Cancel</Text>
+                                </TouchableOpacity>
+                                <Text style={styles.datePickerTitle}>Select Date</Text>
+                                <TouchableOpacity onPress={() => setShowPicker(false)}>
+                                    <Text style={styles.datePickerDone}>Done</Text>
+                                </TouchableOpacity>
+                            </View>
 
-                                <View style={styles.datePickerPlaceholder}>
-                                    <Text>Date Picker Would Appear Here</Text>
-                                    <Text>Selected: {formatDisplayDate(selectedDate)}</Text>
+                            <View style={styles.calendarContainer}>
+                                {/* Month navigation */}
+                                <View style={styles.monthNavigation}>
+                                    <TouchableOpacity
+                                        onPress={() =>
+                                            setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))
+                                        }
+                                        style={styles.monthNavButton}
+                                    >
+                                        <Text style={styles.monthNavButtonText}>‹</Text>
+                                    </TouchableOpacity>
 
-                                    <View style={styles.datePickerButtonRow}>
-                                        <TouchableOpacity
-                                            style={styles.datePickerActionButton}
-                                            onPress={() => {
-                                                const date = new Date(selectedDate)
-                                                date.setDate(date.getDate() - 1)
-                                                const utcDate = convertToUTCFormat(date.toISOString())
-                                                onDateChange(utcDate)
-                                                setShowNativePicker(false)
-                                            }}
-                                        >
-                                            <Text style={styles.datePickerActionButtonText}>Previous Day</Text>
-                                        </TouchableOpacity>
-
-                                        <TouchableOpacity
-                                            style={styles.datePickerActionButton}
-                                            onPress={() => {
-                                                const date = new Date(selectedDate)
-                                                date.setDate(date.getDate() + 1)
-                                                const utcDate = convertToUTCFormat(date.toISOString())
-                                                onDateChange(utcDate)
-                                                setShowNativePicker(false)
-                                            }}
-                                        >
-                                            <Text style={styles.datePickerActionButtonText}>Next Day</Text>
-                                        </TouchableOpacity>
-                                    </View>
+                                    <Text style={styles.monthYearText}>
+                                        {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+                                    </Text>
 
                                     <TouchableOpacity
-                                        style={[styles.datePickerActionButton, styles.datePickerTodayButton]}
-                                        onPress={() => {
-                                            const today = new Date()
-                                            const utcToday = convertToUTCFormat(today.toISOString())
-                                            onDateChange(utcToday)
-                                            setShowNativePicker(false)
-                                        }}
+                                        onPress={() =>
+                                            setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))
+                                        }
+                                        style={styles.monthNavButton}
                                     >
-                                        <Text style={styles.datePickerActionButtonText}>Today</Text>
+                                        <Text style={styles.monthNavButtonText}>›</Text>
                                     </TouchableOpacity>
                                 </View>
+
+                                {/* Day names header */}
+                                <View style={styles.dayNamesRow}>
+                                    {dayNames.map((dayName) => (
+                                        <Text key={dayName} style={styles.dayNameText}>
+                                            {dayName}
+                                        </Text>
+                                    ))}
+                                </View>
+
+                                {/* Calendar grid */}
+                                <View style={styles.calendarGrid}>
+                                    {getDaysInMonth(currentMonth).map((date, index) => (
+                                        <TouchableOpacity
+                                            key={index}
+                                            style={[
+                                                styles.calendarDay,
+                                                date && isSelectedDate(date) && styles.calendarDaySelected,
+                                                date && isToday(date) && !isSelectedDate(date) && styles.calendarDayToday,
+                                            ]}
+                                            onPress={() => {
+                                                if (date) {
+                                                    const utcDate = convertToUTCFormat(date)
+                                                    onDateChange(utcDate)
+                                                    setShowPicker(false)
+                                                }
+                                            }}
+                                            disabled={!date}
+                                            activeOpacity={0.7}
+                                        >
+                                            <Text
+                                                style={[
+                                                    styles.calendarDayText,
+                                                    date && isSelectedDate(date) && styles.calendarDayTextSelected,
+                                                    date && isToday(date) && !isSelectedDate(date) && styles.calendarDayTextToday,
+                                                    !date && styles.calendarDayTextEmpty,
+                                                ]}
+                                            >
+                                                {date ? date.getDate() : ""}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+
+                                {/* Quick actions */}
+                                <TouchableOpacity
+                                    style={styles.todayButton}
+                                    onPress={() => {
+                                        const today = new Date()
+                                        const utcToday = convertToUTCFormat(today)
+                                        onDateChange(utcToday)
+                                        setShowPicker(false)
+                                    }}
+                                    activeOpacity={0.7}
+                                >
+                                    <Text style={styles.todayButtonText}>Today</Text>
+                                </TouchableOpacity>
                             </View>
-                        </TouchableOpacity>
-                    </Modal>
-                )
-                : null}
+                        </View>
+                    </TouchableWithoutFeedback>
+                </TouchableOpacity>
+            </Modal>
         </View>
     )
 }
 
+// Enhanced WeekInput with stepper controls
 export const WeekInput: React.FC<{
     weeksAgo: number
     onWeekChange: (weeks: number) => void
 }> = ({ weeksAgo, onWeekChange }) => {
-    const [inputValue, setInputValue] = useState(weeksAgo.toString())
+    const handleDecrease = () => {
+        if (weeksAgo > 0) {
+            onWeekChange(weeksAgo - 1)
+        }
+    }
 
-    const handleChange = (value: string) => {
-        setInputValue(value)
+    const handleIncrease = () => {
+        onWeekChange(weeksAgo + 1)
+    }
+
+    const handleDirectInput = (value: string) => {
         const numValue = Number.parseInt(value, 10)
         if (!isNaN(numValue) && numValue >= 0) {
             onWeekChange(numValue)
-        } else {
-            onWeekChange(0)
         }
     }
 
     if (Platform.OS === "web") {
         return (
-            <div style={{ display: "flex", alignItems: "center" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <button
+                    onClick={handleDecrease}
+                    disabled={weeksAgo <= 0}
+                    style={{
+                        padding: "6px 10px",
+                        borderRadius: "6px",
+                        border: "1px solid #e1e1e1",
+                        backgroundColor: weeksAgo <= 0 ? "#f5f5f5" : "#fff",
+                        cursor: weeksAgo <= 0 ? "not-allowed" : "pointer",
+                        fontSize: "14px",
+                        color: weeksAgo <= 0 ? "#ccc" : "#333",
+                    }}
+                >
+                    −
+                </button>
                 <input
                     type="number"
                     min="0"
-                    value={inputValue}
-                    onChange={(e) => handleChange(e.target.value)}
+                    value={weeksAgo.toString()}
+                    onChange={(e) => handleDirectInput(e.target.value)}
                     style={{
-                        padding: "8px 12px",
-                        borderRadius: "8px",
-                        backgroundColor: "#fff",
+                        padding: "6px 8px",
+                        borderRadius: "6px",
                         border: "1px solid #e1e1e1",
                         fontSize: "14px",
                         color: "#333",
-                        width: "80px",
-                        marginRight: "8px",
+                        width: "60px",
+                        textAlign: "center",
                     }}
                 />
-                <span style={{ fontSize: "14px", color: "#666" }}>
+                <button
+                    onClick={handleIncrease}
+                    style={{
+                        padding: "6px 10px",
+                        borderRadius: "6px",
+                        border: "1px solid #e1e1e1",
+                        backgroundColor: "#fff",
+                        cursor: "pointer",
+                        fontSize: "14px",
+                        color: "#333",
+                    }}
+                >
+                    +
+                </button>
+                <span style={{ fontSize: "13px", color: "#666", marginLeft: "8px" }}>
                     {weeksAgo === 0 ? "Current week" : weeksAgo === 1 ? "Last week" : `${weeksAgo} weeks ago`}
                 </span>
             </div>
@@ -995,74 +1099,80 @@ export const WeekInput: React.FC<{
     }
 
     return (
-        <View style={styles.weekInputContainer}>
+        <View style={styles.weekStepperContainer}>
+            <TouchableOpacity
+                style={[styles.weekStepperButton, weeksAgo <= 0 && styles.weekStepperButtonDisabled]}
+                onPress={handleDecrease}
+                disabled={weeksAgo <= 0}
+                activeOpacity={0.7}
+            >
+                <Text style={[styles.weekStepperButtonText, weeksAgo <= 0 && styles.weekStepperButtonTextDisabled]}>−</Text>
+            </TouchableOpacity>
+
             <TextInput
-                style={styles.weekInput}
-                value={inputValue}
-                onChangeText={handleChange}
+                style={styles.weekStepperInput}
+                value={weeksAgo.toString()}
+                onChangeText={handleDirectInput}
                 keyboardType="numeric"
-                placeholder="0"
+                textAlign="center"
             />
-            <Text style={styles.weekInputLabel}>
+
+            <TouchableOpacity style={styles.weekStepperButton} onPress={handleIncrease} activeOpacity={0.7}>
+                <Text style={styles.weekStepperButtonText}>+</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.weekStepperLabel}>
                 {weeksAgo === 0 ? "Current week" : weeksAgo === 1 ? "Last week" : `${weeksAgo} weeks ago`}
             </Text>
         </View>
     )
 }
 
+// FIXED MonthPicker with proper header layout
 export const MonthPicker: React.FC<{
     selectedMonth: string
     onMonthChange: (month: string) => void
 }> = ({ selectedMonth, onMonthChange }) => {
-    const [showNativePicker, setShowNativePicker] = useState(false)
+    const [showPicker, setShowPicker] = useState(false)
+    const [currentYear, setCurrentYear] = useState(() => {
+        const [year] = selectedMonth.split("-")
+        return Number.parseInt(year, 10)
+    })
+
+    const monthNames = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+    ]
 
     const formatDisplayMonth = (monthStr: string) => {
         try {
             const [year, month] = monthStr.split("-")
-            const monthNames = [
-                "January",
-                "February",
-                "March",
-                "April",
-                "May",
-                "June",
-                "July",
-                "August",
-                "September",
-                "October",
-                "November",
-                "December",
-            ]
             return `${monthNames[Number.parseInt(month, 10) - 1]} ${year}`
         } catch (error) {
             const today = new Date()
-            const monthNames = [
-                "January",
-                "February",
-                "March",
-                "April",
-                "May",
-                "June",
-                "July",
-                "August",
-                "September",
-                "October",
-                "November",
-                "December",
-            ]
             return `${monthNames[today.getMonth()]} ${today.getFullYear()}`
         }
     }
 
-    const handleWebMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const inputMonth = e.target.value
-        if (inputMonth) {
-            onMonthChange(inputMonth)
-        } else {
-            const today = new Date()
-            const currentMonth = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, "0")}`
-            onMonthChange(currentMonth)
-        }
+    const isSelectedMonth = (monthIndex: number, year: number) => {
+        const [selectedYear, selectedMonthNum] = selectedMonth.split("-")
+        return Number.parseInt(selectedYear, 10) === year && Number.parseInt(selectedMonthNum, 10) === monthIndex + 1
+    }
+
+    const handleMonthSelect = (monthIndex: number, year: number) => {
+        const monthStr = `${year}-${(monthIndex + 1).toString().padStart(2, "0")}`
+        onMonthChange(monthStr)
+        setShowPicker(false)
     }
 
     if (Platform.OS === "web") {
@@ -1071,7 +1181,7 @@ export const MonthPicker: React.FC<{
                 <input
                     type="month"
                     value={selectedMonth}
-                    onChange={handleWebMonthChange}
+                    onChange={(e) => onMonthChange(e.target.value)}
                     style={{
                         padding: "8px 12px",
                         borderRadius: "8px",
@@ -1089,101 +1199,85 @@ export const MonthPicker: React.FC<{
 
     return (
         <View style={styles.monthPickerContainer}>
-            <TouchableOpacity style={styles.monthPickerButton} onPress={() => setShowNativePicker(true)}>
+            <TouchableOpacity
+                style={styles.monthPickerButton}
+                onPress={() => setShowPicker(true)}
+                activeOpacity={0.7}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
                 <Text style={styles.monthPickerButtonText}>{formatDisplayMonth(selectedMonth)}</Text>
                 <Text style={styles.monthPickerIcon}>📅</Text>
             </TouchableOpacity>
 
-            {Platform.OS === "ios" || Platform.OS === "android"
-                ? showNativePicker && (
-                    <Modal
-                        transparent={true}
-                        animationType="slide"
-                        visible={showNativePicker}
-                        onRequestClose={() => setShowNativePicker(false)}
-                    >
-                        <TouchableOpacity
-                            style={styles.monthPickerModalOverlay}
-                            activeOpacity={1}
-                            onPress={() => setShowNativePicker(false)}
-                        >
-                            <View style={styles.monthPickerModalContent}>
-                                {Platform.OS === "ios" && (
-                                    <View style={styles.monthPickerHeader}>
-                                        <TouchableOpacity onPress={() => setShowNativePicker(false)}>
-                                            <Text style={styles.monthPickerCancel}>Cancel</Text>
-                                        </TouchableOpacity>
-                                        <TouchableOpacity
-                                            onPress={() => {
-                                                setShowNativePicker(false)
-                                            }}
-                                        >
-                                            <Text style={styles.monthPickerDone}>Done</Text>
-                                        </TouchableOpacity>
-                                    </View>
-                                )}
+            <Modal visible={showPicker} transparent={true} animationType="slide" onRequestClose={() => setShowPicker(false)}>
+                <TouchableOpacity style={styles.monthPickerModalOverlay} activeOpacity={1} onPress={() => setShowPicker(false)}>
+                    <TouchableWithoutFeedback>
+                        <View style={styles.monthPickerModalContent}>
+                            {/* FIXED HEADER - Properly contained */}
+                            <View style={styles.monthPickerHeader}>
+                                <TouchableOpacity onPress={() => setShowPicker(false)} style={styles.monthPickerHeaderButton}>
+                                    <Text style={styles.monthPickerCancel}>Cancel</Text>
+                                </TouchableOpacity>
+                                <Text style={styles.monthPickerTitle}>Select Month</Text>
+                                <TouchableOpacity onPress={() => setShowPicker(false)} style={styles.monthPickerHeaderButton}>
+                                    <Text style={styles.monthPickerDone}>Done</Text>
+                                </TouchableOpacity>
+                            </View>
 
-                                <View style={styles.monthPickerPlaceholder}>
-                                    <Text>Month Picker Would Appear Here</Text>
-                                    <Text>Selected: {formatDisplayMonth(selectedMonth)}</Text>
-
-                                    <View style={styles.monthPickerButtonRow}>
-                                        <TouchableOpacity
-                                            style={styles.monthPickerActionButton}
-                                            onPress={() => {
-                                                const [year, month] = selectedMonth.split("-")
-                                                let newMonth = Number.parseInt(month, 10) - 1
-                                                let newYear = Number.parseInt(year, 10)
-                                                if (newMonth < 1) {
-                                                    newMonth = 12
-                                                    newYear--
-                                                }
-                                                const newMonthStr = `${newYear}-${newMonth.toString().padStart(2, "0")}`
-                                                onMonthChange(newMonthStr)
-                                                setShowNativePicker(false)
-                                            }}
-                                        >
-                                            <Text style={styles.monthPickerActionButtonText}>Previous Month</Text>
-                                        </TouchableOpacity>
-
-                                        <TouchableOpacity
-                                            style={styles.monthPickerActionButton}
-                                            onPress={() => {
-                                                const [year, month] = selectedMonth.split("-")
-                                                let newMonth = Number.parseInt(month, 10) + 1
-                                                let newYear = Number.parseInt(year, 10)
-                                                if (newMonth > 12) {
-                                                    newMonth = 1
-                                                    newYear++
-                                                }
-                                                const newMonthStr = `${newYear}-${newMonth.toString().padStart(2, "0")}`
-                                                onMonthChange(newMonthStr)
-                                                setShowNativePicker(false)
-                                            }}
-                                        >
-                                            <Text style={styles.monthPickerActionButtonText}>Next Month</Text>
-                                        </TouchableOpacity>
-                                    </View>
-
-                                    <TouchableOpacity
-                                        style={[styles.monthPickerActionButton, styles.monthPickerCurrentButton]}
-                                        onPress={() => {
-                                            const today = new Date()
-                                            const currentMonth = `${today.getFullYear()}-${(today.getMonth() + 1)
-                                                .toString()
-                                                .padStart(2, "0")}`
-                                            onMonthChange(currentMonth)
-                                            setShowNativePicker(false)
-                                        }}
-                                    >
-                                        <Text style={styles.monthPickerActionButtonText}>Current Month</Text>
+                            <View style={styles.monthCalendarContainer}>
+                                {/* Year navigation */}
+                                <View style={styles.yearNavigation}>
+                                    <TouchableOpacity onPress={() => setCurrentYear(currentYear - 1)} style={styles.yearNavButton}>
+                                        <Text style={styles.yearNavButtonText}>‹</Text>
+                                    </TouchableOpacity>
+                                    <Text style={styles.yearText}>{currentYear}</Text>
+                                    <TouchableOpacity onPress={() => setCurrentYear(currentYear + 1)} style={styles.yearNavButton}>
+                                        <Text style={styles.yearNavButtonText}>›</Text>
                                     </TouchableOpacity>
                                 </View>
+
+                                {/* Month grid */}
+                                <View style={styles.monthGrid}>
+                                    {monthNames.map((monthName, index) => (
+                                        <TouchableOpacity
+                                            key={index}
+                                            style={[
+                                                styles.monthGridItem,
+                                                isSelectedMonth(index, currentYear) && styles.monthGridItemSelected,
+                                            ]}
+                                            onPress={() => handleMonthSelect(index, currentYear)}
+                                            activeOpacity={0.7}
+                                        >
+                                            <Text
+                                                style={[
+                                                    styles.monthGridItemText,
+                                                    isSelectedMonth(index, currentYear) && styles.monthGridItemTextSelected,
+                                                ]}
+                                            >
+                                                {monthName.substring(0, 3)}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+
+                                {/* Current month button */}
+                                <TouchableOpacity
+                                    style={styles.currentMonthButton}
+                                    onPress={() => {
+                                        const today = new Date()
+                                        const currentMonth = `${today.getFullYear()}-${(today.getMonth() + 1).toString().padStart(2, "0")}`
+                                        onMonthChange(currentMonth)
+                                        setShowPicker(false)
+                                    }}
+                                    activeOpacity={0.7}
+                                >
+                                    <Text style={styles.currentMonthButtonText}>Current Month</Text>
+                                </TouchableOpacity>
                             </View>
-                        </TouchableOpacity>
-                    </Modal>
-                )
-                : null}
+                        </View>
+                    </TouchableWithoutFeedback>
+                </TouchableOpacity>
+            </Modal>
         </View>
     )
 }
@@ -1194,6 +1288,108 @@ export const LoadingOverlay = () => {
             <View style={styles.loadingCard}>
                 <ActivityIndicator size="large" color="#3498db" />
                 <Text style={styles.loadingOverlayText}>Loading data...</Text>
+            </View>
+        </View>
+    )
+}
+
+// SHARED RENDER FOOD ITEM FUNCTION - Used by both All and Date views
+export const renderSharedFoodItem = (
+    item: FoodItem,
+    openImageModal: (uri: string) => void,
+    handleDeleteItem: (id: string) => void,
+    startEditing: (item: FoodItem) => void,
+) => {
+    const formattedDate = formatDate(item.createdAt)
+    const isDeleting = item.isDeleting || false
+
+    return (
+        <View style={[styles.foodCard, isDeleting && { opacity: 0.7 }]}>
+            <View style={styles.foodCardHeader}>
+                <Text style={styles.foodName}>{item.predictName}</Text>
+                <View style={styles.actionButtons}>
+                    <TouchableOpacity
+                        style={styles.editButton}
+                        onPress={() => startEditing(item)}
+                        disabled={isDeleting}
+                    >
+                        {Platform.OS === "web" ? (
+                            <div
+                                style={{
+                                    color: isDeleting ? "#ccc" : "#3498db",
+                                    cursor: isDeleting ? "not-allowed" : "pointer",
+                                    fontSize: "18px",
+                                }}
+                            >
+                                ✎
+                            </div>
+                        ) : (
+                            <Text style={[styles.editButtonText, { color: isDeleting ? "#ccc" : "#3498db" }]}>✎</Text>
+                        )}
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[styles.deleteButton, isDeleting && { opacity: 0.5 }]}
+                        onPress={() => handleDeleteItem(item.id)}
+                        disabled={isDeleting}
+                    >
+                        {isDeleting ? (
+                            Platform.OS === "web" ? (
+                                <div
+                                    style={{
+                                        fontSize: "18px",
+                                        animation: "spin 1s linear infinite",
+                                        display: "inline-block",
+                                    }}
+                                >
+                                    ⟳
+                                </div>
+                            ) : (
+                                <Text style={[styles.deleteButtonText, { fontSize: 18 }]}>⟳</Text>
+                            )
+                        ) : Platform.OS === "web" ? (
+                            <div style={{ color: "#e74c3c", cursor: "pointer", fontSize: "18px" }}>🗑</div>
+                        ) : (
+                            <Text style={styles.deleteButtonText}>🗑</Text>
+                        )}
+                    </TouchableOpacity>
+                </View>
+            </View>
+            <Text style={styles.foodCalories}>{item.calo} calories</Text>
+
+            <View style={styles.imagesContainer}>
+                <TouchableOpacity
+                    style={styles.imageWrapper}
+                    onPress={() => openImageModal(item.publicUrl.originImage)}
+                    activeOpacity={0.9}
+                    disabled={isDeleting}
+                >
+                    <Image
+                        source={{ uri: item.publicUrl.originImage }}
+                        style={styles.thumbnailImage}
+                        resizeMode="contain"
+                    />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={styles.imageWrapper}
+                    onPress={() => openImageModal(item.publicUrl.segmentationImage)}
+                    activeOpacity={0.9}
+                    disabled={isDeleting}
+                >
+                    <Image
+                        source={{ uri: item.publicUrl.segmentationImage }}
+                        style={styles.thumbnailImage}
+                        resizeMode="contain"
+                    />
+                </TouchableOpacity>
+            </View>
+
+            <Text style={styles.foodDate}>{formattedDate}</Text>
+            <Text style={styles.confidenceText}>Confidence: {item.confidencePercentage}</Text>
+
+            <View style={styles.commentContainer}>
+                <Text style={styles.commentLabel}>Notes:</Text>
+                <Text style={styles.foodComment}>{item.comment ? item.comment : "No notes"}</Text>
             </View>
         </View>
     )
@@ -1274,25 +1470,9 @@ export const webModalStyles = {
     },
 }
 
-export const webDropdownStyles = {
-    container: {
-        position: "relative" as const,
-    },
-    select: {
-        padding: "8px 12px",
-        borderRadius: "8px",
-        backgroundColor: "#fff",
-        border: "1px solid #e1e1e1",
-        fontSize: "14px",
-        color: "#333",
-        cursor: "pointer",
-        minWidth: "120px",
-    },
-}
-
 const isWeb = Platform.OS === "web"
 
-// Updated styles with fixes for ImageModal
+// Updated styles with fixes for Android dropdowns
 export const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -1387,7 +1567,6 @@ export const styles = StyleSheet.create({
     },
     dropdownContainer: {
         position: "relative",
-        zIndex: 1000, // Increased z-index
     },
     dropdownButton: {
         flexDirection: "row",
@@ -1397,8 +1576,13 @@ export const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: "#e1e1e1",
         paddingHorizontal: 12,
-        paddingVertical: 8,
+        paddingVertical: 10,
         minWidth: 100,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
     },
     dropdownButtonText: {
         fontSize: 14,
@@ -1410,37 +1594,54 @@ export const styles = StyleSheet.create({
         color: "#666",
         marginLeft: 5,
     },
-    dropdownOptions: {
-        position: "absolute",
-        top: "100%",
-        left: 0,
-        right: 0,
-        backgroundColor: "#fff",
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: "#e1e1e1",
-        marginTop: 4,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 8, // Increased elevation for Android
-        zIndex: 1001, // Higher z-index for dropdown options
+    // New modal-based dropdown styles for Android
+    dropdownModalOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        justifyContent: "center",
+        alignItems: "center",
     },
-    dropdownOption: {
-        paddingVertical: 10,
-        paddingHorizontal: 12,
+    dropdownModalContent: {
+        backgroundColor: "#fff",
+        borderRadius: 12,
+        padding: 20,
+        width: "80%",
+        maxWidth: 300,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 8,
+    },
+    dropdownModalTitle: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: "#333",
+        textAlign: "center",
+        marginBottom: 20,
+    },
+    dropdownModalOption: {
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        paddingVertical: 15,
+        paddingHorizontal: 10,
         borderBottomWidth: 1,
         borderBottomColor: "#f0f0f0",
     },
-    dropdownOptionSelected: {
+    dropdownModalOptionSelected: {
         backgroundColor: "#f0f8ff",
     },
-    dropdownOptionText: {
-        fontSize: 14,
+    dropdownModalOptionText: {
+        fontSize: 16,
         color: "#333",
     },
-    dropdownOptionTextSelected: {
+    dropdownModalOptionTextSelected: {
+        color: "#3498db",
+        fontWeight: "bold",
+    },
+    dropdownModalCheckmark: {
+        fontSize: 16,
         color: "#3498db",
         fontWeight: "bold",
     },
@@ -1523,7 +1724,6 @@ export const styles = StyleSheet.create({
         color: "#666",
         fontStyle: "italic",
     },
-    // Enhanced modal styles for better Android support
     modalOverlay: {
         flex: 1,
         backgroundColor: "rgba(0, 0, 0, 0.9)",
@@ -1795,7 +1995,6 @@ export const styles = StyleSheet.create({
     },
     datePickerContainer: {
         position: "relative",
-        zIndex: 100,
     },
     datePickerButton: {
         flexDirection: "row",
@@ -1805,8 +2004,13 @@ export const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: "#e1e1e1",
         paddingHorizontal: 12,
-        paddingVertical: 8,
+        paddingVertical: 10,
         minWidth: 140,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
     },
     datePickerButtonText: {
         fontSize: 14,
@@ -1827,110 +2031,188 @@ export const styles = StyleSheet.create({
         backgroundColor: "#fff",
         borderTopLeftRadius: 16,
         borderTopRightRadius: 16,
+        paddingBottom: 20,
+        maxHeight: "80%",
+    },
+    calendarContainer: {
         padding: 20,
+    },
+    monthNavigation: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 20,
+    },
+    monthNavButton: {
+        padding: 10,
+        borderRadius: 8,
+        backgroundColor: "#f0f0f0",
+    },
+    monthNavButtonText: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: "#333",
+    },
+    monthYearText: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: "#333",
+    },
+    dayNamesRow: {
+        flexDirection: "row",
+        marginBottom: 10,
+    },
+    dayNameText: {
+        flex: 1,
+        textAlign: "center",
+        fontSize: 12,
+        fontWeight: "bold",
+        color: "#666",
+        paddingVertical: 5,
+    },
+    calendarGrid: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+    },
+    calendarDay: {
+        width: "14.28%",
+        aspectRatio: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        borderRadius: 8,
+        marginBottom: 2,
+    },
+    calendarDaySelected: {
+        backgroundColor: "#3498db",
+    },
+    calendarDayToday: {
+        backgroundColor: "#e8f4fd",
+        borderWidth: 1,
+        borderColor: "#3498db",
+    },
+    calendarDayText: {
+        fontSize: 14,
+        color: "#333",
+    },
+    calendarDayTextSelected: {
+        color: "#fff",
+        fontWeight: "bold",
+    },
+    calendarDayTextToday: {
+        color: "#3498db",
+        fontWeight: "bold",
+    },
+    calendarDayTextEmpty: {
+        color: "transparent",
+    },
+    todayButton: {
+        backgroundColor: "#3498db",
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+        alignItems: "center",
+        marginTop: 20,
+    },
+    todayButtonText: {
+        color: "#fff",
+        fontSize: 16,
+        fontWeight: "bold",
+    },
+    weekStepperContainer: {
+        flexDirection: "row",
+        alignItems: "center",
+        gap: 8,
+    },
+    weekStepperButton: {
+        backgroundColor: "#fff",
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: "#e1e1e1",
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    weekStepperButtonDisabled: {
+        backgroundColor: "#f5f5f5",
+        borderColor: "#ddd",
+    },
+    weekStepperButtonText: {
+        fontSize: 16,
+        fontWeight: "bold",
+        color: "#333",
+    },
+    weekStepperButtonTextDisabled: {
+        color: "#ccc",
+    },
+    weekStepperInput: {
+        backgroundColor: "#fff",
+        borderRadius: 6,
+        borderWidth: 1,
+        borderColor: "#e1e1e1",
+        paddingHorizontal: 8,
+        paddingVertical: 8,
+        width: 60,
+        fontSize: 14,
+        color: "#333",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
+    },
+    weekStepperLabel: {
+        fontSize: 13,
+        color: "#666",
+        marginLeft: 8,
+        flex: 1,
+    },
+    periodHeaderContainer: {
+        backgroundColor: "#e8f4fd",
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        marginHorizontal: 10,
+        marginTop: 10,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: "#c5e1f9",
+    },
+    periodHeaderText: {
+        fontSize: 16,
+        fontWeight: "bold",
+        color: "#2c3e50",
+        textAlign: "center",
     },
     datePickerHeader: {
         flexDirection: "row",
         justifyContent: "space-between",
-        paddingBottom: 15,
+        alignItems: "center",
+        paddingHorizontal: 20,
+        paddingVertical: 15,
         borderBottomWidth: 1,
         borderBottomColor: "#e5e5e5",
+        backgroundColor: "#fff",
     },
     datePickerCancel: {
         color: "#999",
         fontSize: 16,
+    },
+    datePickerTitle: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: "#333",
     },
     datePickerDone: {
         color: "#3498db",
         fontSize: 16,
         fontWeight: "bold",
     },
-    datePickerPlaceholder: {
-        alignItems: "center",
-        justifyContent: "center",
-        paddingVertical: 30,
-    },
-    datePickerButtonRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        marginTop: 20,
-        width: "100%",
-    },
-    datePickerActionButton: {
-        backgroundColor: "#f0f0f0",
-        paddingVertical: 10,
-        paddingHorizontal: 15,
-        borderRadius: 8,
-        marginHorizontal: 5,
-    },
-    datePickerTodayButton: {
-        backgroundColor: "#3498db",
-        marginTop: 15,
-        width: "100%",
-        alignItems: "center",
-    },
-    datePickerActionButtonText: {
-        color: "#333",
-        fontSize: 14,
-        fontWeight: "500",
-    },
-    weekInputRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        backgroundColor: "#fff",
-        padding: 10,
-        marginHorizontal: 10,
-        marginTop: 10,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: "#e5e5e5",
-    },
-    weekLabel: {
-        fontSize: 14,
-        color: "#666666",
-        fontWeight: "500",
-    },
-    weekInputContainer: {
-        flexDirection: "row",
-        alignItems: "center",
-    },
-    weekInput: {
-        backgroundColor: "#fff",
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: "#e1e1e1",
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        width: 80,
-        marginRight: 8,
-        fontSize: 14,
-        color: "#333",
-    },
-    weekInputLabel: {
-        fontSize: 14,
-        color: "#666",
-    },
-    monthPickerRow: {
-        flexDirection: "row",
-        alignItems: "center",
-        justifyContent: "space-between",
-        backgroundColor: "#fff",
-        padding: 10,
-        marginHorizontal: 10,
-        marginTop: 10,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: "#e5e5e5",
-    },
-    monthLabel: {
-        fontSize: 14,
-        color: "#666666",
-        fontWeight: "500",
-    },
+    // FIXED Month Picker Header Styles
     monthPickerContainer: {
         position: "relative",
-        zIndex: 100,
     },
     monthPickerButton: {
         flexDirection: "row",
@@ -1940,8 +2222,13 @@ export const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: "#e1e1e1",
         paddingHorizontal: 12,
-        paddingVertical: 8,
+        paddingVertical: 10,
         minWidth: 140,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
     },
     monthPickerButtonText: {
         fontSize: 14,
@@ -1962,67 +2249,100 @@ export const styles = StyleSheet.create({
         backgroundColor: "#fff",
         borderTopLeftRadius: 16,
         borderTopRightRadius: 16,
-        padding: 20,
+        paddingBottom: 20,
+        maxHeight: "70%",
     },
     monthPickerHeader: {
         flexDirection: "row",
         justifyContent: "space-between",
-        paddingBottom: 15,
+        alignItems: "center",
+        paddingHorizontal: 20,
+        paddingVertical: 15,
         borderBottomWidth: 1,
         borderBottomColor: "#e5e5e5",
+        backgroundColor: "#fff",
+        borderTopLeftRadius: 16,
+        borderTopRightRadius: 16,
+    },
+    monthPickerHeaderButton: {
+        paddingHorizontal: 8,
+        paddingVertical: 4,
     },
     monthPickerCancel: {
         color: "#999",
         fontSize: 16,
+    },
+    monthPickerTitle: {
+        fontSize: 18,
+        fontWeight: "bold",
+        color: "#333",
     },
     monthPickerDone: {
         color: "#3498db",
         fontSize: 16,
         fontWeight: "bold",
     },
-    monthPickerPlaceholder: {
-        alignItems: "center",
-        justifyContent: "center",
-        paddingVertical: 30,
+    monthCalendarContainer: {
+        padding: 20,
     },
-    monthPickerButtonRow: {
+    yearNavigation: {
         flexDirection: "row",
         justifyContent: "space-between",
-        marginTop: 20,
-        width: "100%",
-    },
-    monthPickerActionButton: {
-        backgroundColor: "#f0f0f0",
-        paddingVertical: 10,
-        paddingHorizontal: 15,
-        borderRadius: 8,
-        marginHorizontal: 5,
-    },
-    monthPickerCurrentButton: {
-        backgroundColor: "#3498db",
-        marginTop: 15,
-        width: "100%",
         alignItems: "center",
+        marginBottom: 20,
     },
-    monthPickerActionButtonText: {
+    yearNavButton: {
+        padding: 10,
+        borderRadius: 8,
+        backgroundColor: "#f0f0f0",
+    },
+    yearNavButtonText: {
+        fontSize: 18,
+        fontWeight: "bold",
         color: "#333",
+    },
+    yearText: {
+        fontSize: 20,
+        fontWeight: "bold",
+        color: "#333",
+    },
+    monthGrid: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        justifyContent: "space-between",
+    },
+    monthGridItem: {
+        width: "30%",
+        aspectRatio: 2,
+        justifyContent: "center",
+        alignItems: "center",
+        borderRadius: 8,
+        marginBottom: 10,
+        backgroundColor: "#f8f9fa",
+    },
+    monthGridItemSelected: {
+        backgroundColor: "#3498db",
+    },
+    monthGridItemText: {
         fontSize: 14,
+        color: "#333",
         fontWeight: "500",
     },
-    periodHeaderContainer: {
-        backgroundColor: "#e8f4fd",
-        paddingVertical: 10,
-        paddingHorizontal: 16,
-        marginHorizontal: 10,
-        marginTop: 10,
-        borderRadius: 8,
-        borderWidth: 1,
-        borderColor: "#c5e1f9",
+    monthGridItemTextSelected: {
+        color: "#fff",
+        fontWeight: "bold",
     },
-    periodHeaderText: {
+    currentMonthButton: {
+        backgroundColor: "#3498db",
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 8,
+        alignItems: "center",
+        marginTop: 20,
+    },
+    currentMonthButtonText: {
+        color: "#fff",
         fontSize: 16,
         fontWeight: "bold",
-        color: "#2c3e50",
-        textAlign: "center",
     },
 })

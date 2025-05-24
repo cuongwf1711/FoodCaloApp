@@ -16,7 +16,7 @@ import {
     type TimeUnit,
     UnitDropdown,
     WeekInput,
-    formatDate,
+    renderSharedFoodItem,
     styles as sharedStyles,
     useFoodHistory,
 } from "@/utils/food-history-utils"
@@ -39,7 +39,7 @@ interface FoodHistoryDateViewProps {
     onDataChange: (totalCalories: number) => void
 }
 
-// Enhanced ImageModal matching index implementation
+// Enhanced ImageModal matching all view implementation
 const ImageModal: React.FC<{
     visible: boolean
     imageUri: string
@@ -154,12 +154,9 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({ sortOption, o
     // Time unit state
     const [timeUnit, setTimeUnit] = useState<TimeUnit>("day")
 
-    // Get today's date in YYYY-MM-DD format in UTC
+    // Get today's date in YYYY-MM-DD format
     const today = new Date()
-    const formattedToday = `${today.getUTCFullYear()}-${String(today.getUTCMonth() + 1).padStart(
-        2,
-        "0",
-    )}-${String(today.getUTCDate()).padStart(2, "0")}`
+    const formattedToday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`
 
     // State for selected date (day unit)
     const [selectedDate, setSelectedDate] = useState(formattedToday)
@@ -169,7 +166,7 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({ sortOption, o
 
     // State for selected month (month unit)
     const [selectedMonth, setSelectedMonth] = useState(
-        `${today.getUTCFullYear()}-${String(today.getUTCMonth() + 1).padStart(2, "0")}`,
+        `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`,
     )
 
     // Track if component has been initialized to prevent double API calls
@@ -232,29 +229,7 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({ sortOption, o
 
     // Handle date change (for day unit)
     const handleDateChange = useCallback((date: string) => {
-        try {
-            // Validate the date
-            const dateObj = new Date(date)
-            if (isNaN(dateObj.getTime())) {
-                // If invalid date, use today's date
-                const today = new Date()
-                const utcToday = `${today.getUTCFullYear()}-${String(today.getUTCMonth() + 1).padStart(
-                    2,
-                    "0",
-                )}-${String(today.getUTCDate()).padStart(2, "0")}`
-                setSelectedDate(utcToday)
-            } else {
-                setSelectedDate(date)
-            }
-        } catch (error) {
-            // If any error occurs, default to today's date
-            const today = new Date()
-            const utcToday = `${today.getUTCFullYear()}-${String(today.getUTCMonth() + 1).padStart(
-                2,
-                "0",
-            )}-${String(today.getUTCDate()).padStart(2, "0")}`
-            setSelectedDate(utcToday)
-        }
+        setSelectedDate(date)
     }, [])
 
     // Handle week change (for week unit)
@@ -359,102 +334,10 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({ sortOption, o
         )
     }
 
-    // Render a food item with loading animation
+    // Use SHARED render function - EXACTLY THE SAME AS ALL VIEW
     const renderFoodItem = useCallback(
         ({ item }: { item: FoodItem }) => {
-            const formattedDate = formatDate(item.createdAt)
-            const isDeleting = item.isDeleting || false
-
-            return (
-                <View style={[sharedStyles.foodCard, isDeleting && { opacity: 0.7 }]}>
-                    <View style={sharedStyles.foodCardHeader}>
-                        <Text style={sharedStyles.foodName}>{item.predictName}</Text>
-                        <View style={sharedStyles.actionButtons}>
-                            <TouchableOpacity
-                                style={sharedStyles.editButton}
-                                onPress={() => startEditing(item)}
-                                disabled={isDeleting}
-                            >
-                                {Platform.OS === "web" ? (
-                                    <div
-                                        style={{
-                                            color: isDeleting ? "#ccc" : "#3498db",
-                                            cursor: isDeleting ? "not-allowed" : "pointer",
-                                            fontSize: "18px",
-                                        }}
-                                    >
-                                        ✎
-                                    </div>
-                                ) : (
-                                    <Text style={[sharedStyles.editButtonText, { color: isDeleting ? "#ccc" : "#3498db" }]}>✎</Text>
-                                )}
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[sharedStyles.deleteButton, isDeleting && { opacity: 0.5 }]}
-                                onPress={() => handleDeleteItem(item.id)}
-                                disabled={isDeleting}
-                            >
-                                {isDeleting ? (
-                                    Platform.OS === "web" ? (
-                                        <div
-                                            style={{
-                                                fontSize: "18px",
-                                                animation: "spin 1s linear infinite",
-                                                display: "inline-block",
-                                            }}
-                                        >
-                                            ⟳
-                                        </div>
-                                    ) : (
-                                        <Text style={[sharedStyles.deleteButtonText, { fontSize: 18 }]}>⟳</Text>
-                                    )
-                                ) : Platform.OS === "web" ? (
-                                    <div style={{ color: "#e74c3c", cursor: "pointer", fontSize: "18px" }}>🗑</div>
-                                ) : (
-                                    <Text style={sharedStyles.deleteButtonText}>🗑</Text>
-                                )}
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                    <Text style={sharedStyles.foodCalories}>{item.calo} calories</Text>
-
-                    <View style={sharedStyles.imagesContainer}>
-                        <TouchableOpacity
-                            style={sharedStyles.imageWrapper}
-                            onPress={() => openImageModal(item.publicUrl.originImage)}
-                            activeOpacity={0.9}
-                            disabled={isDeleting}
-                        >
-                            <Image
-                                source={{ uri: item.publicUrl.originImage }}
-                                style={sharedStyles.thumbnailImage}
-                                resizeMode="contain"
-                            />
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={sharedStyles.imageWrapper}
-                            onPress={() => openImageModal(item.publicUrl.segmentationImage)}
-                            activeOpacity={0.9}
-                            disabled={isDeleting}
-                        >
-                            <Image
-                                source={{ uri: item.publicUrl.segmentationImage }}
-                                style={sharedStyles.thumbnailImage}
-                                resizeMode="contain"
-                            />
-                        </TouchableOpacity>
-                    </View>
-
-                    <Text style={sharedStyles.foodDate}>{formattedDate}</Text>
-                    <Text style={sharedStyles.confidenceText}>Confidence: {item.confidencePercentage}</Text>
-
-                    <View style={sharedStyles.commentContainer}>
-                        <Text style={sharedStyles.commentLabel}>Notes:</Text>
-                        <Text style={sharedStyles.foodComment}>{item.comment ? item.comment : "No notes"}</Text>
-                    </View>
-                </View>
-            )
+            return renderSharedFoodItem(item, openImageModal, handleDeleteItem, startEditing)
         },
         [openImageModal, handleDeleteItem, startEditing],
     )
