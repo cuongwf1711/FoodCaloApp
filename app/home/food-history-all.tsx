@@ -9,6 +9,7 @@ import {
     Image,
     Platform,
     RefreshControl,
+    StyleSheet,
     Text,
     TouchableOpacity,
     View,
@@ -18,7 +19,6 @@ import {
 import {
     EditModal,
     type FoodItem,
-    ImageModal,
     LoadingOverlay,
     type SortOption,
     formatDate,
@@ -26,10 +26,109 @@ import {
     useFoodHistory,
 } from "@/utils/food-history-utils"
 
+// Add CSS animation for web spinning effect
+if (Platform.OS === "web") {
+    const style = document.createElement("style")
+    style.textContent = `
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+  `
+    document.head.appendChild(style)
+}
+
 interface FoodHistoryAllViewProps {
     sortOption: SortOption
     onSortChange: (sortOption: SortOption) => void
     onDataChange: (totalCalories: number) => void
+}
+
+// Enhanced ImageModal matching index implementation
+const ImageModal: React.FC<{
+    visible: boolean
+    imageUri: string
+    onClose: () => void
+}> = ({ visible, imageUri, onClose }) => {
+    if (!visible) return null
+
+    if (Platform.OS === "web") {
+        return (
+            <div
+                style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: "rgba(0, 0, 0, 0.9)",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    zIndex: 10000,
+                }}
+                onClick={onClose}
+            >
+                <div style={{ position: "relative", maxWidth: "90%", maxHeight: "90%" }} onClick={(e) => e.stopPropagation()}>
+                    <img
+                        src={imageUri || "/placeholder.svg"}
+                        alt="Full size"
+                        style={{
+                            maxWidth: "100%",
+                            maxHeight: "90vh",
+                            borderRadius: "8px",
+                            objectFit: "contain",
+                        }}
+                    />
+                    <button
+                        onClick={onClose}
+                        style={{
+                            position: "absolute",
+                            top: "-10px",
+                            right: "-10px",
+                            backgroundColor: "#fff",
+                            border: "none",
+                            borderRadius: "20px",
+                            width: "40px",
+                            height: "40px",
+                            fontSize: "18px",
+                            fontWeight: "bold",
+                            color: "#333",
+                            cursor: "pointer",
+                            boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
+                        }}
+                    >
+                        ✕
+                    </button>
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <View style={modalStyles.overlay}>
+            <TouchableOpacity style={modalStyles.backdrop} onPress={onClose} activeOpacity={1} />
+            <View style={modalStyles.container}>
+                <View style={modalStyles.imageContainer}>
+                    <Image
+                        source={{ uri: imageUri }}
+                        style={modalStyles.image}
+                        resizeMode="contain"
+                        onError={(error) => {
+                            console.log("Image load error:", error)
+                        }}
+                    />
+                </View>
+                <TouchableOpacity
+                    style={modalStyles.closeButton}
+                    onPress={onClose}
+                    hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+                >
+                    <Text style={modalStyles.closeButtonText}>✕</Text>
+                </TouchableOpacity>
+            </View>
+        </View>
+    )
 }
 
 /**
@@ -141,25 +240,56 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({ sortOption, onS
         flatListRef.current?.scrollToOffset({ offset: 0, animated: true })
     }, [])
 
-    // Render a food item
+    // Render a food item with loading animation
     const renderFoodItem = useCallback(
         ({ item }: { item: FoodItem }) => {
             const formattedDate = formatDate(item.createdAt)
+            const isDeleting = item.isDeleting || false
 
             return (
-                <View style={sharedStyles.foodCard}>
+                <View style={[sharedStyles.foodCard, isDeleting && { opacity: 0.7 }]}>
                     <View style={sharedStyles.foodCardHeader}>
                         <Text style={sharedStyles.foodName}>{item.predictName}</Text>
                         <View style={sharedStyles.actionButtons}>
-                            <TouchableOpacity style={sharedStyles.editButton} onPress={() => startEditing(item)}>
+                            <TouchableOpacity
+                                style={sharedStyles.editButton}
+                                onPress={() => startEditing(item)}
+                                disabled={isDeleting}
+                            >
                                 {Platform.OS === "web" ? (
-                                    <div style={{ color: "#3498db", cursor: "pointer", fontSize: "18px" }}>✎</div>
+                                    <div
+                                        style={{
+                                            color: isDeleting ? "#ccc" : "#3498db",
+                                            cursor: isDeleting ? "not-allowed" : "pointer",
+                                            fontSize: "18px",
+                                        }}
+                                    >
+                                        ✎
+                                    </div>
                                 ) : (
-                                    <Text style={sharedStyles.editButtonText}>✎</Text>
+                                    <Text style={[sharedStyles.editButtonText, { color: isDeleting ? "#ccc" : "#3498db" }]}>✎</Text>
                                 )}
                             </TouchableOpacity>
-                            <TouchableOpacity style={sharedStyles.deleteButton} onPress={() => handleDeleteItem(item.id)}>
-                                {Platform.OS === "web" ? (
+                            <TouchableOpacity
+                                style={[sharedStyles.deleteButton, isDeleting && { opacity: 0.5 }]}
+                                onPress={() => handleDeleteItem(item.id)}
+                                disabled={isDeleting}
+                            >
+                                {isDeleting ? (
+                                    Platform.OS === "web" ? (
+                                        <div
+                                            style={{
+                                                fontSize: "18px",
+                                                animation: "spin 1s linear infinite",
+                                                display: "inline-block",
+                                            }}
+                                        >
+                                            ⟳
+                                        </div>
+                                    ) : (
+                                        <Text style={[sharedStyles.deleteButtonText, { fontSize: 18 }]}>⟳</Text>
+                                    )
+                                ) : Platform.OS === "web" ? (
                                     <div style={{ color: "#e74c3c", cursor: "pointer", fontSize: "18px" }}>🗑</div>
                                 ) : (
                                     <Text style={sharedStyles.deleteButtonText}>🗑</Text>
@@ -174,6 +304,7 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({ sortOption, onS
                             style={sharedStyles.imageWrapper}
                             onPress={() => openImageModal(item.publicUrl.originImage)}
                             activeOpacity={0.9}
+                            disabled={isDeleting}
                         >
                             <Image
                                 source={{ uri: item.publicUrl.originImage }}
@@ -186,6 +317,7 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({ sortOption, onS
                             style={sharedStyles.imageWrapper}
                             onPress={() => openImageModal(item.publicUrl.segmentationImage)}
                             activeOpacity={0.9}
+                            disabled={isDeleting}
                         >
                             <Image
                                 source={{ uri: item.publicUrl.segmentationImage }}
@@ -318,5 +450,65 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({ sortOption, onS
         </View>
     )
 }
+
+const modalStyles = StyleSheet.create({
+    overlay: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: "rgba(0, 0, 0, 0.9)",
+        zIndex: 10000,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    backdrop: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+    },
+    container: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        padding: 20,
+    },
+    imageContainer: {
+        maxWidth: "90%",
+        maxHeight: "80%",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    image: {
+        width: 350,
+        height: 350,
+        maxWidth: "100%",
+        maxHeight: "100%",
+    },
+    closeButton: {
+        position: "absolute",
+        top: 40,
+        right: 20,
+        backgroundColor: "#fff",
+        borderRadius: 25,
+        width: 50,
+        height: 50,
+        justifyContent: "center",
+        alignItems: "center",
+        shadowColor: "#000",
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
+        elevation: 8,
+        zIndex: 10001,
+    },
+    closeButtonText: {
+        fontSize: 20,
+        fontWeight: "bold",
+        color: "#333",
+    },
+})
 
 export default FoodHistoryAllView

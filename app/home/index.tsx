@@ -368,7 +368,7 @@ const Index: React.FC = () => {
             // Reset animation if error occurred
             deleteAnim.setValue(1)
             setIsDeleting(false)
-            showMessage({ message: "Error deleting result" }, true)
+            showMessage(error)
         }
     }
 
@@ -599,7 +599,7 @@ const Index: React.FC = () => {
             setIsEditing(false)
         } catch (error) {
             console.error("Error updating food item:", error)
-            showMessage({ message: "Error updating information" }, true)
+            showMessage(error)
         }
     }
 

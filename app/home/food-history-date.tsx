@@ -10,7 +10,6 @@ import {
     DatePicker,
     EditModal,
     type FoodItem,
-    ImageModal,
     LoadingOverlay,
     MonthPicker,
     type SortOption,
@@ -22,10 +21,109 @@ import {
     useFoodHistory,
 } from "@/utils/food-history-utils"
 
+// Add CSS animation for web spinning effect
+if (Platform.OS === "web") {
+    const style = document.createElement("style")
+    style.textContent = `
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+  `
+    document.head.appendChild(style)
+}
+
 interface FoodHistoryDateViewProps {
     sortOption: SortOption
     onSortChange: (sortOption: SortOption) => void
     onDataChange: (totalCalories: number) => void
+}
+
+// Enhanced ImageModal matching index implementation
+const ImageModal: React.FC<{
+    visible: boolean
+    imageUri: string
+    onClose: () => void
+}> = ({ visible, imageUri, onClose }) => {
+    if (!visible) return null
+
+    if (Platform.OS === "web") {
+        return (
+            <div
+                style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: "rgba(0, 0, 0, 0.9)",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    zIndex: 10000,
+                }}
+                onClick={onClose}
+            >
+                <div style={{ position: "relative", maxWidth: "90%", maxHeight: "90%" }} onClick={(e) => e.stopPropagation()}>
+                    <img
+                        src={imageUri || "/placeholder.svg"}
+                        alt="Full size"
+                        style={{
+                            maxWidth: "100%",
+                            maxHeight: "90vh",
+                            borderRadius: "8px",
+                            objectFit: "contain",
+                        }}
+                    />
+                    <button
+                        onClick={onClose}
+                        style={{
+                            position: "absolute",
+                            top: "-10px",
+                            right: "-10px",
+                            backgroundColor: "#fff",
+                            border: "none",
+                            borderRadius: "20px",
+                            width: "40px",
+                            height: "40px",
+                            fontSize: "18px",
+                            fontWeight: "bold",
+                            color: "#333",
+                            cursor: "pointer",
+                            boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
+                        }}
+                    >
+                        ✕
+                    </button>
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <View style={modalStyles.overlay}>
+            <TouchableOpacity style={modalStyles.backdrop} onPress={onClose} activeOpacity={1} />
+            <View style={modalStyles.container}>
+                <View style={modalStyles.imageContainer}>
+                    <Image
+                        source={{ uri: imageUri }}
+                        style={modalStyles.image}
+                        resizeMode="contain"
+                        onError={(error) => {
+                            console.log("Image load error:", error)
+                        }}
+                    />
+                </View>
+                <TouchableOpacity
+                    style={modalStyles.closeButton}
+                    onPress={onClose}
+                    hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+                >
+                    <Text style={modalStyles.closeButtonText}>✕</Text>
+                </TouchableOpacity>
+            </View>
+        </View>
+    )
 }
 
 /**
@@ -224,62 +322,93 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({ sortOption, o
         flatListRef.current?.scrollToOffset({ offset: 0, animated: true })
     }, [])
 
-    // Compact time unit selector with inputs in a single row
+    // Fixed compact time unit selector with better layout and z-index
     const renderCompactTimeSelector = () => {
         return (
-            <View style={compactStyles.compactRow}>
-                <View style={compactStyles.compactSection}>
-                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+            <View style={[compactStyles.compactContainer]}>
+                <View style={compactStyles.compactRow}>
+                    <View style={compactStyles.unitSection}>
                         <Text style={compactStyles.compactLabel}>Unit:</Text>
-                        <View style={compactStyles.compactDropdownWrapper}>
+                        <View style={[compactStyles.compactDropdownWrapper, compactStyles.dropdownContainer]}>
                             <UnitDropdown value={timeUnit} onChange={handleTimeUnitChange} />
                         </View>
                     </View>
-                </View>
 
-                <View style={{ flex: 2 }}>
-                    {timeUnit === "day" && (
-                        <View style={{ flexDirection: "row", alignItems: "center" }}>
-                            <Text style={compactStyles.compactLabel}>Date:</Text>
-                            <DatePicker selectedDate={selectedDate} onDateChange={handleDateChange} />
-                        </View>
-                    )}
-                    {timeUnit === "week" && (
-                        <View style={{ flexDirection: "row", alignItems: "center" }}>
-                            <Text style={compactStyles.compactLabel}>Weeks Ago:</Text>
-                            <WeekInput weeksAgo={weeksAgo} onWeekChange={handleWeekChange} />
-                        </View>
-                    )}
-                    {timeUnit === "month" && (
-                        <View style={{ flexDirection: "row", alignItems: "center" }}>
-                            <Text style={compactStyles.compactLabel}>Month:</Text>
-                            <MonthPicker selectedMonth={selectedMonth} onMonthChange={handleMonthChange} />
-                        </View>
-                    )}
+                    <View style={compactStyles.inputSection}>
+                        {timeUnit === "day" && (
+                            <View style={compactStyles.inputRow}>
+                                <Text style={compactStyles.compactLabel}>Date:</Text>
+                                <DatePicker selectedDate={selectedDate} onDateChange={handleDateChange} />
+                            </View>
+                        )}
+                        {timeUnit === "week" && (
+                            <View style={compactStyles.inputRow}>
+                                <Text style={compactStyles.compactLabel}>Weeks Ago:</Text>
+                                <WeekInput weeksAgo={weeksAgo} onWeekChange={handleWeekChange} />
+                            </View>
+                        )}
+                        {timeUnit === "month" && (
+                            <View style={compactStyles.inputRow}>
+                                <Text style={compactStyles.compactLabel}>Month:</Text>
+                                <MonthPicker selectedMonth={selectedMonth} onMonthChange={handleMonthChange} />
+                            </View>
+                        )}
+                    </View>
                 </View>
             </View>
         )
     }
 
-    // Render a food item
+    // Render a food item with loading animation
     const renderFoodItem = useCallback(
         ({ item }: { item: FoodItem }) => {
             const formattedDate = formatDate(item.createdAt)
+            const isDeleting = item.isDeleting || false
 
             return (
-                <View style={sharedStyles.foodCard}>
+                <View style={[sharedStyles.foodCard, isDeleting && { opacity: 0.7 }]}>
                     <View style={sharedStyles.foodCardHeader}>
                         <Text style={sharedStyles.foodName}>{item.predictName}</Text>
                         <View style={sharedStyles.actionButtons}>
-                            <TouchableOpacity style={sharedStyles.editButton} onPress={() => startEditing(item)}>
+                            <TouchableOpacity
+                                style={sharedStyles.editButton}
+                                onPress={() => startEditing(item)}
+                                disabled={isDeleting}
+                            >
                                 {Platform.OS === "web" ? (
-                                    <div style={{ color: "#3498db", cursor: "pointer", fontSize: "18px" }}>✎</div>
+                                    <div
+                                        style={{
+                                            color: isDeleting ? "#ccc" : "#3498db",
+                                            cursor: isDeleting ? "not-allowed" : "pointer",
+                                            fontSize: "18px",
+                                        }}
+                                    >
+                                        ✎
+                                    </div>
                                 ) : (
-                                    <Text style={sharedStyles.editButtonText}>✎</Text>
+                                    <Text style={[sharedStyles.editButtonText, { color: isDeleting ? "#ccc" : "#3498db" }]}>✎</Text>
                                 )}
                             </TouchableOpacity>
-                            <TouchableOpacity style={sharedStyles.deleteButton} onPress={() => handleDeleteItem(item.id)}>
-                                {Platform.OS === "web" ? (
+                            <TouchableOpacity
+                                style={[sharedStyles.deleteButton, isDeleting && { opacity: 0.5 }]}
+                                onPress={() => handleDeleteItem(item.id)}
+                                disabled={isDeleting}
+                            >
+                                {isDeleting ? (
+                                    Platform.OS === "web" ? (
+                                        <div
+                                            style={{
+                                                fontSize: "18px",
+                                                animation: "spin 1s linear infinite",
+                                                display: "inline-block",
+                                            }}
+                                        >
+                                            ⟳
+                                        </div>
+                                    ) : (
+                                        <Text style={[sharedStyles.deleteButtonText, { fontSize: 18 }]}>⟳</Text>
+                                    )
+                                ) : Platform.OS === "web" ? (
                                     <div style={{ color: "#e74c3c", cursor: "pointer", fontSize: "18px" }}>🗑</div>
                                 ) : (
                                     <Text style={sharedStyles.deleteButtonText}>🗑</Text>
@@ -294,6 +423,7 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({ sortOption, o
                             style={sharedStyles.imageWrapper}
                             onPress={() => openImageModal(item.publicUrl.originImage)}
                             activeOpacity={0.9}
+                            disabled={isDeleting}
                         >
                             <Image
                                 source={{ uri: item.publicUrl.originImage }}
@@ -306,6 +436,7 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({ sortOption, o
                             style={sharedStyles.imageWrapper}
                             onPress={() => openImageModal(item.publicUrl.segmentationImage)}
                             activeOpacity={0.9}
+                            disabled={isDeleting}
                         >
                             <Image
                                 source={{ uri: item.publicUrl.segmentationImage }}
@@ -415,25 +546,110 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({ sortOption, o
     )
 }
 
+const modalStyles = StyleSheet.create({
+    overlay: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: "rgba(0, 0, 0, 0.9)",
+        zIndex: 10000,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    backdrop: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+    },
+    container: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        padding: 20,
+    },
+    imageContainer: {
+        maxWidth: "90%",
+        maxHeight: "80%",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    image: {
+        width: 350,
+        height: 350,
+        maxWidth: "100%",
+        maxHeight: "100%",
+    },
+    closeButton: {
+        position: "absolute",
+        top: 40,
+        right: 20,
+        backgroundColor: "#fff",
+        borderRadius: 25,
+        width: 50,
+        height: 50,
+        justifyContent: "center",
+        alignItems: "center",
+        shadowColor: "#000",
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
+        elevation: 8,
+        zIndex: 10001,
+    },
+    closeButtonText: {
+        fontSize: 20,
+        fontWeight: "bold",
+        color: "#333",
+    },
+})
+
 const compactStyles = StyleSheet.create({
+    compactContainer: {
+        backgroundColor: "#f8f9fa",
+        borderBottomWidth: 1,
+        borderBottomColor: "#e9ecef",
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        overflow: "hidden",
+        zIndex: 999,
+    },
     compactRow: {
         flexDirection: "row",
-        justifyContent: "space-between",
         alignItems: "center",
-        paddingHorizontal: 10,
-        paddingVertical: 5,
+        justifyContent: "space-between",
     },
-    compactSection: {
+    unitSection: {
+        flexDirection: "row",
+        alignItems: "center",
         flex: 1,
-        marginRight: 5,
+        marginRight: 16,
+    },
+    inputSection: {
+        flex: 2,
+        alignItems: "flex-end",
+    },
+    inputRow: {
+        flexDirection: "row",
+        alignItems: "center",
     },
     compactLabel: {
-        fontSize: 16,
-        fontWeight: "bold",
-        marginRight: 5,
+        fontSize: 14,
+        fontWeight: "600",
+        color: "#495057",
+        marginRight: 8,
     },
     compactDropdownWrapper: {
-        flex: 1,
+        minWidth: 80,
+        maxWidth: 100,
+        overflow: "hidden",
+    },
+    dropdownContainer: {
+        position: "relative",
+        zIndex: 1001,
+        overflow: "hidden",
     },
 })
 

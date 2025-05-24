@@ -34,6 +34,7 @@ export interface FoodItem {
     predictName: string
     comment: string
     calo: number
+    isDeleting?: boolean // Add this optional property
 }
 
 export interface ApiResponse {
@@ -184,12 +185,14 @@ export const useFoodHistory = (
         [sortOption],
     )
 
-    // Delete food item with confirmation
-    const handleDeleteItem = useCallback(
-        async (id: string) => {
-            // Show confirmation dialog
+    // Delete food item with confirmation and loading animation
+    const handleDeleteItem = useCallback(async (id: string) => {
+        if (Platform.OS === "web") {
+            const confirmed = window.confirm("Are you sure you want to delete this food item?")
+            if (!confirmed) return
+        } else {
             Alert.alert(
-                "Delete Item",
+                "Delete Food Item",
                 "Are you sure you want to delete this food item?",
                 [
                     {
@@ -200,30 +203,45 @@ export const useFoodHistory = (
                         text: "Delete",
                         style: "destructive",
                         onPress: async () => {
-                            try {
-                                const response = await deleteData(URL_FOOD_CALO_ESTIMATOR, id)
-                                if (response.status === 204) {
-                                    // Remove the item from the list
-                                    setFoodItems((prev) => prev.filter((item) => item.id !== id))
-                                    // Update total calories
-                                    setTotalCalories((prev) => {
-                                        const deletedItem = foodItems.find((item) => item.id === id)
-                                        return deletedItem ? prev - deletedItem.calo : prev
-                                    })
-                                    showMessage({ message: "Item deleted successfully" })
-                                }
-                            } catch (error) {
-                                console.error("Error deleting food item:", error)
-                                showMessage({ message: "Failed to delete food item. Please try again." })
-                            }
+                            await performActualDelete(id)
                         },
                     },
                 ],
                 { cancelable: true },
             )
-        },
-        [foodItems],
-    )
+            return
+        }
+
+        await performActualDelete(id)
+    }, [])
+
+    const performActualDelete = async (id: string) => {
+        try {
+            // Find the item to show loading state
+            const itemToDelete = foodItems.find((item) => item.id === id)
+            if (!itemToDelete) return
+
+            // Update the item to show loading state
+            setFoodItems((prev) => prev.map((item) => (item.id === id ? { ...item, isDeleting: true } : item)))
+
+            const response = await deleteData(URL_FOOD_CALO_ESTIMATOR, id)
+            if (response.status === 204) {
+                // Remove the item from the list
+                setFoodItems((prev) => prev.filter((item) => item.id !== id))
+                // Update total calories
+                setTotalCalories((prev) => {
+                    const deletedItem = foodItems.find((item) => item.id === id)
+                    return deletedItem ? prev - deletedItem.calo : prev
+                })
+                // No success message needed
+            }
+        } catch (error) {
+            console.error("Error deleting food item:", error)
+            // Remove loading state on error
+            setFoodItems((prev) => prev.map((item) => (item.id === id ? { ...item, isDeleting: false } : item)))
+            showMessage(error)
+        }
+    }
 
     // Save edited item
     const saveEditedItem = useCallback(async (editingItem: FoodItem, calo: string, comment: string) => {
@@ -535,6 +553,7 @@ export const SortingDropdown: React.FC<{
                 style={{
                     position: "relative",
                     minWidth: "120px",
+                    zIndex: 1000, // Added z-index for web
                 }}
             >
                 <select
@@ -555,6 +574,7 @@ export const SortingDropdown: React.FC<{
                         backgroundRepeat: "no-repeat",
                         backgroundPosition: "right 8px center",
                         paddingRight: "30px",
+                        zIndex: 1001, // High z-index for select element
                     }}
                 >
                     {options.map((option) => (
@@ -568,14 +588,14 @@ export const SortingDropdown: React.FC<{
     }
 
     return (
-        <View style={styles.dropdownContainer}>
+        <View style={[styles.dropdownContainer, { zIndex: isOpen ? 1001 : 1000 }]}>
             <TouchableOpacity style={styles.dropdownButton} onPress={() => setIsOpen(!isOpen)}>
                 <Text style={styles.dropdownButtonText}>{selectedLabel}</Text>
                 <Text style={styles.dropdownIcon}>{isOpen ? "▲" : "▼"}</Text>
             </TouchableOpacity>
 
             {isOpen && (
-                <View style={styles.dropdownOptions}>
+                <View style={[styles.dropdownOptions, { zIndex: 1002 }]}>
                     {options.map((option) => (
                         <TouchableOpacity
                             key={option.value}
@@ -611,8 +631,20 @@ export const FilterDropdown: React.FC<{
 
     if (Platform.OS === "web") {
         return (
-            <div style={webDropdownStyles.container}>
-                <select value={value} onChange={(e) => onChange(e.target.value as TimeFilter)} style={webDropdownStyles.select}>
+            <div
+                style={{
+                    ...webDropdownStyles.container,
+                    zIndex: 1000, // Added z-index for web
+                }}
+            >
+                <select
+                    value={value}
+                    onChange={(e) => onChange(e.target.value as TimeFilter)}
+                    style={{
+                        ...webDropdownStyles.select,
+                        zIndex: 1001, // High z-index for select element
+                    }}
+                >
                     {options.map((option) => (
                         <option key={option.value} value={option.value}>
                             {option.label}
@@ -624,14 +656,14 @@ export const FilterDropdown: React.FC<{
     }
 
     return (
-        <View style={styles.dropdownContainer}>
+        <View style={[styles.dropdownContainer, { zIndex: isOpen ? 1002 : 1001 }]}>
             <TouchableOpacity style={styles.dropdownButton} onPress={() => setIsOpen(!isOpen)}>
                 <Text style={styles.dropdownButtonText}>{selectedLabel}</Text>
                 <Text style={styles.dropdownIcon}>{isOpen ? "▲" : "▼"}</Text>
             </TouchableOpacity>
 
             {isOpen && (
-                <View style={styles.dropdownOptions}>
+                <View style={[styles.dropdownOptions, { zIndex: 1003 }]}>
                     {options.map((option) => (
                         <TouchableOpacity
                             key={option.value}
@@ -1355,7 +1387,7 @@ export const styles = StyleSheet.create({
     },
     dropdownContainer: {
         position: "relative",
-        zIndex: 100,
+        zIndex: 1000, // Increased z-index
     },
     dropdownButton: {
         flexDirection: "row",
@@ -1392,8 +1424,8 @@ export const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
-        elevation: 3,
-        zIndex: 101,
+        elevation: 8, // Increased elevation for Android
+        zIndex: 1001, // Higher z-index for dropdown options
     },
     dropdownOption: {
         paddingVertical: 10,
