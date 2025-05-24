@@ -99,7 +99,7 @@ type ImagePickerResult = {
 
 /**
  * Animated button with press effects for both platforms
- * Provides visual feedback when pressed
+ * Fixed animation conflicts by using consistent useNativeDriver settings
  */
 const AnimatedButton: React.FC<{
     style: any
@@ -110,41 +110,26 @@ const AnimatedButton: React.FC<{
     buttonType?: "primary" | "success" | "danger"
 }> = ({ style, onPress, disabled = false, children, activeOpacity = 0.8, buttonType = "primary" }) => {
     const scaleAnim = useRef(new Animated.Value(1)).current
-    const shadowAnim = useRef(new Animated.Value(1)).current
 
     const handlePressIn = () => {
         if (!disabled) {
-            Animated.parallel([
-                Animated.spring(scaleAnim, {
-                    toValue: 0.96,
-                    useNativeDriver: true,
-                    tension: 300,
-                    friction: 10,
-                }),
-                Animated.timing(shadowAnim, {
-                    toValue: 0.7,
-                    duration: 150,
-                    useNativeDriver: false,
-                }),
-            ]).start()
+            Animated.spring(scaleAnim, {
+                toValue: 0.96,
+                useNativeDriver: true,
+                tension: 300,
+                friction: 10,
+            }).start()
         }
     }
 
     const handlePressOut = () => {
         if (!disabled) {
-            Animated.parallel([
-                Animated.spring(scaleAnim, {
-                    toValue: 1,
-                    useNativeDriver: true,
-                    tension: 300,
-                    friction: 10,
-                }),
-                Animated.timing(shadowAnim, {
-                    toValue: 1,
-                    duration: 150,
-                    useNativeDriver: false,
-                }),
-            ]).start()
+            Animated.spring(scaleAnim, {
+                toValue: 1,
+                useNativeDriver: true,
+                tension: 300,
+                friction: 10,
+            }).start()
         }
     }
 
@@ -180,20 +165,6 @@ const AnimatedButton: React.FC<{
         }
     }
 
-    const animatedShadowStyle =
-        Platform.OS === "web"
-            ? {}
-            : {
-                shadowOpacity: shadowAnim.interpolate({
-                    inputRange: [0.7, 1],
-                    outputRange: [0.1, 0.3],
-                }),
-                elevation: shadowAnim.interpolate({
-                    inputRange: [0.7, 1],
-                    outputRange: [2, 5],
-                }),
-            }
-
     return (
         <TouchableOpacity
             onPressIn={handlePressIn}
@@ -206,7 +177,6 @@ const AnimatedButton: React.FC<{
             <Animated.View
                 style={[
                     style,
-                    animatedShadowStyle,
                     {
                         transform: [{ scale: scaleAnim }],
                     },
@@ -247,9 +217,8 @@ const Index: React.FC = () => {
 
                 const result = await ImagePicker.launchImageLibraryAsync({
                     mediaTypes: "Images",
-                    allowsEditing: true,
-                    aspect: [4, 3],
-                    quality: 1,
+                    allowsEditing: false, // Không cho phép cắt ảnh
+                    quality: 1, // Chất lượng cao nhất
                 })
 
                 if (!result.canceled && result.assets?.[0]) {
@@ -271,7 +240,7 @@ const Index: React.FC = () => {
                             options: ["Cancel", "Take Photo", "Choose from Library"],
                             cancelButtonIndex: 0,
                         },
-                        async (buttonIndex) => {
+                        async (buttonIndex: number) => {
                             if (buttonIndex === 0) {
                                 // Cancel
                                 return
@@ -306,50 +275,58 @@ const Index: React.FC = () => {
 
     // Launch camera to take a photo
     const launchCamera = async () => {
-        const { status } = await ImagePicker.requestCameraPermissionsAsync()
-        if (status !== "granted") {
-            Alert.alert("Permission required", "Please allow the app to access your camera")
-            return
-        }
+        try {
+            const { status } = await ImagePicker.requestCameraPermissionsAsync()
+            if (status !== "granted") {
+                Alert.alert("Permission required", "Please allow the app to access your camera")
+                return
+            }
 
-        const result = await ImagePicker.launchCameraAsync({
-            allowsEditing: true,
-            aspect: [4, 3],
-            quality: 1,
-        })
+            const result = await ImagePicker.launchCameraAsync({
+                allowsEditing: false, // Không cho phép cắt ảnh
+                quality: 1, // Chất lượng cao nhất
+            })
 
-        if (!result.canceled && result.assets?.[0]) {
-            setSelectedImage(result.assets[0])
-            setResult(null) // Reset previous result
+            if (!result.canceled && result.assets?.[0]) {
+                setSelectedImage(result.assets[0])
+                setResult(null) // Reset previous result
 
-            // Reset result animations
-            resultCardAnim.setValue(0)
-            resultOpacityAnim.setValue(0)
+                // Reset result animations
+                resultCardAnim.setValue(0)
+                resultOpacityAnim.setValue(0)
+            }
+        } catch (error) {
+            console.error("Error launching camera:", error)
+            showMessage({ message: "Error accessing camera" })
         }
     }
 
     // Launch image library to select a photo
     const launchImageLibrary = async () => {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
-        if (status !== "granted") {
-            Alert.alert("Permission required", "Please allow the app to access your photo library")
-            return
-        }
+        try {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+            if (status !== "granted") {
+                Alert.alert("Permission required", "Please allow the app to access your photo library")
+                return
+            }
 
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: "Images",
-            allowsEditing: true,
-            aspect: [4, 3],
-            quality: 1,
-        })
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: "Images",
+                allowsEditing: false, // Không cho phép cắt ảnh
+                quality: 1, // Chất lượng cao nhất
+            })
 
-        if (!result.canceled && result.assets?.[0]) {
-            setSelectedImage(result.assets[0])
-            setResult(null) // Reset previous result
+            if (!result.canceled && result.assets?.[0]) {
+                setSelectedImage(result.assets[0])
+                setResult(null) // Reset previous result
 
-            // Reset result animations
-            resultCardAnim.setValue(0)
-            resultOpacityAnim.setValue(0)
+                // Reset result animations
+                resultCardAnim.setValue(0)
+                resultOpacityAnim.setValue(0)
+            }
+        } catch (error) {
+            console.error("Error launching image library:", error)
+            showMessage({ message: "Error accessing photo library" })
         }
     }
 
@@ -617,7 +594,7 @@ const styles = StyleSheet.create({
     container: {
         padding: 16,
         backgroundColor: "#f8f9fa",
-        minHeight: Platform.OS === "web" ? 0 : undefined, // Use a number for minHeight
+        minHeight: Platform.OS === "web" ? 0 : undefined,
     },
     header: {
         marginBottom: 20,
