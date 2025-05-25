@@ -9,13 +9,12 @@ import { useRouter } from "expo-router"
 import { useState } from "react"
 import {
     KeyboardAvoidingView,
-    Platform,
     ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from "react-native"
 import { URL_RESEND_EMAIL } from "../../constants/url_constants"
 
@@ -61,7 +60,7 @@ export default function ForgotPassword() {
     }
 
     return (
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.keyboardAvoid}>
+        <KeyboardAvoidingView behavior="height" style={styles.keyboardAvoid}>
             <ScrollView contentContainerStyle={styles.scrollContainer}>
                 <View style={styles.container}>
                     <Text style={styles.title}>Forgot Password</Text>

@@ -151,7 +151,6 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({ sortOption, onS
         error,
         page,
         hasMore,
-        totalCalories,
         fetchFoodHistory,
         handleDeleteItem,
         saveEditedItem,

@@ -395,36 +395,16 @@ const Index: React.FC = () => {
                     resultOpacityAnim.setValue(0)
                 }
             } else {
-                if (Platform.OS === "ios") {
-                    const ActionSheetIOS = require("react-native").ActionSheetIOS
-
-                    ActionSheetIOS.showActionSheetWithOptions(
-                        {
-                            options: ["Cancel", "Take Photo", "Choose from Library"],
-                            cancelButtonIndex: 0,
-                        },
-                        async (buttonIndex: number) => {
-                            if (buttonIndex === 0) {
-                                return
-                            } else if (buttonIndex === 1) {
-                                await launchCamera()
-                            } else if (buttonIndex === 2) {
-                                await launchImageLibrary()
-                            }
-                        },
-                    )
-                } else {
-                    Alert.alert(
-                        "Select Image",
-                        "Choose an option",
-                        [
-                            { text: "Cancel", style: "cancel" },
-                            { text: "Take Photo", onPress: launchCamera },
-                            { text: "Choose from Library", onPress: launchImageLibrary },
-                        ],
-                        { cancelable: true },
-                    )
-                }
+                Alert.alert(
+                    "Select Image",
+                    "Choose an option",
+                    [
+                        { text: "Cancel", style: "cancel" },
+                        { text: "Take Photo", onPress: launchCamera },
+                        { text: "Choose from Library", onPress: launchImageLibrary },
+                    ],
+                    { cancelable: true },
+                )
             }
         } catch (error) {
             console.error("Error picking image:", error)

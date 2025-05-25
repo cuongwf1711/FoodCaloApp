@@ -136,7 +136,6 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({ sortOption, o
         isLoading,
         isRefreshing,
         error,
-        totalCalories,
         fetchFoodHistory,
         handleDeleteItem,
         saveEditedItem,

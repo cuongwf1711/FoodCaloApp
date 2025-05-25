@@ -10,13 +10,12 @@ import { useState } from "react"
 import {
     ActivityIndicator,
     KeyboardAvoidingView,
-    Platform,
     ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from "react-native"
 import { URL_CHANGE_PASSWORD } from "../../constants/url_constants"
 
@@ -91,7 +90,7 @@ export default function ChangePassword() {
     }
 
     return (
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>
+        <KeyboardAvoidingView behavior="height" style={styles.container}>
             <ScrollView contentContainerStyle={styles.scrollContainer}>
                 <View style={styles.content}>
                     <Text style={styles.pageTitle}>Change Password</Text>

@@ -102,7 +102,7 @@ export default function SignIn() {
     }
 
     return (
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.keyboardAvoid}>
+        <KeyboardAvoidingView behavior="height" style={styles.keyboardAvoid}>
             <ScrollView contentContainerStyle={styles.scrollContainer}>
                 <View style={styles.container}>
                     <Text style={styles.title}>Sign In</Text>

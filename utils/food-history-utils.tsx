@@ -510,13 +510,13 @@ export const SortingDropdown: React.FC<{
     const [isOpen, setIsOpen] = useState(false)
 
     const options: { value: SortOption; label: string }[] = [
-        { value: "newest", label: "Newest First" },
-        { value: "oldest", label: "Oldest First" },
-        { value: "highest-calories", label: "Highest Calories" },
-        { value: "lowest-calories", label: "Lowest Calories" },
+        { value: "newest", label: "Newest" },
+        { value: "oldest", label: "Oldest" },
+        { value: "highest-calories", label: "Highest Calo" },
+        { value: "lowest-calories", label: "Lowest Calo" },
     ]
 
-    const selectedLabel = options.find((opt) => opt.value === value)?.label || "Newest First"
+    const selectedLabel = options.find((opt) => opt.value === value)?.label || "Newest"
 
     if (Platform.OS === "web") {
         return (
@@ -525,7 +525,7 @@ export const SortingDropdown: React.FC<{
                     value={value}
                     onChange={(e) => onChange(e.target.value as SortOption)}
                     style={{
-                        width: "100%",
+                        // width: "100%",
                         padding: "8px 12px",
                         borderRadius: "8px",
                         backgroundColor: "#fff",
@@ -708,7 +708,7 @@ export const UnitDropdown: React.FC<{
                     value={value}
                     onChange={(e) => onChange(e.target.value as TimeUnit)}
                     style={{
-                        width: "100%",
+                        // width: "100%",
                         padding: "8px 12px",
                         borderRadius: "8px",
                         backgroundColor: "#fff",
@@ -1060,7 +1060,7 @@ export const WeekInput: React.FC<{
                         color: weeksAgo <= 0 ? "#ccc" : "#333",
                     }}
                 >
-                    −
+                    -
                 </button>
                 <input
                     type="number"

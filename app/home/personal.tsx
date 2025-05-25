@@ -8,7 +8,6 @@ import { useEffect, useRef, useState } from "react"
 import {
     ActivityIndicator,
     Animated,
-    Dimensions,
     KeyboardAvoidingView,
     Modal,
     Platform,
@@ -19,23 +18,20 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from "react-native"
-
-// Get screen dimensions
-const { width, height } = Dimensions.get("window")
 
 // User profile type definition
 interface UserProfile {
     gender: boolean | null
-    age: number
-    height: number
-    weight: number
-    calorieLimit: number
+    age: number | null
+    height: number | null
+    weight: number | null
+    calorieLimit: number | null
     calorieLimitPeriod: string
-    lengthReferencePoint: number
-    widthReferencePoint: number
-    areaReferencePoint: number
+    lengthReferencePoint: number | null
+    widthReferencePoint: number | null
+    areaReferencePoint: number | null
     autoSetCalorieLimit?: boolean
     totalCalories?: number
 }
@@ -459,7 +455,10 @@ const Personal = () => {
     }
 
     // Format decimal number for display - truncate if too long
-    const formatDecimalDisplay = (value: number): string => {
+    const formatDecimalDisplay = (value: number | null | undefined): string => {
+       if (value === null || value === undefined) {
+            return "..."
+        }
         const str = value.toString()
         // If number is too long, show with limited decimal places
         if (str.length > 10) {
@@ -503,9 +502,9 @@ const Personal = () => {
         <SafeAreaView style={styles.container}>
             <StatusBar style="auto" />
             <KeyboardAvoidingView
-                behavior={Platform.OS === "ios" ? "padding" : "height"}
+                behavior="height"
                 style={styles.keyboardAvoidingView}
-                keyboardVerticalOffset={Platform.OS === "ios" ? 64 : 0}
+                keyboardVerticalOffset={0}
                 contentContainerStyle={{ flex: 1 }}
             >
                 <View style={styles.header}>
@@ -559,7 +558,13 @@ const Personal = () => {
                             <Text style={styles.fieldLabel}>Gender:</Text>
                             {isEditing ? (
                                 <View style={styles.switchContainer}>
-                                    <Text style={styles.switchLabel}>{getValue("gender") ? "Male" : "Female"}</Text>
+                                    <Text style={styles.switchLabel}>
+                                        {getValue("gender") === true
+                                            ? "Male"
+                                            : getValue("gender") === false
+                                                ? "Female"
+                                                : ""}
+                                    </Text>
                                     <Switch
                                         value={getValue("gender") === true}
                                         onValueChange={(value) => handleChange("gender", value)}
@@ -568,7 +573,13 @@ const Personal = () => {
                                     />
                                 </View>
                             ) : (
-                                <Text style={styles.fieldValue}>{profile?.gender ? "Male" : "Female"}</Text>
+                                <Text style={styles.fieldValue}>
+                                    {profile?.gender === true
+                                        ? "Male"
+                                        : profile?.gender === false
+                                            ? "Female"
+                                            : ""}
+                                </Text>
                             )}
                         </View>
 
@@ -671,7 +682,7 @@ const Personal = () => {
                                 </>
                             ) : (
                                 <Text style={styles.fieldValue} numberOfLines={1} adjustsFontSizeToFit>
-                                    {formatDecimalDisplay(profile?.calorieLimit || 0)}
+                                    {formatDecimalDisplay(profile?.calorieLimit)}
                                 </Text>
                             )}
                         </View>
@@ -789,7 +800,7 @@ const Personal = () => {
                         <Text style={styles.fieldLabel}>Area Reference Point (cm²):</Text>
                         <Text style={styles.fieldValue} numberOfLines={1} adjustsFontSizeToFit>
                             {isEditing ? formatDecimalDisplay(calculateAreaReferencePoint()) : formatDecimalDisplay(profile?.areaReferencePoint || 0)}
-                            {isEditing && <Text style={styles.calculatedText}> (length × width)</Text>}
+                            {isEditing && <Text style={styles.calculatedText}> (length x width)</Text>}
                         </Text>
                     </View>
                 </View>

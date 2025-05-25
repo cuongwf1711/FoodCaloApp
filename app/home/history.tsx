@@ -154,7 +154,7 @@ const FoodHistoryScreen: React.FC = () => {
               <Text style={styles.sectionLabel}>Limit:</Text>
               <Text style={styles.calorieLimitValue} numberOfLines={1}>
                 {userProfile
-                  ? `${userProfile.calorieLimit}/${getPeriodLabel(userProfile.calorieLimitPeriod)}`
+                  ? `${userProfile.calorieLimit ?? "..."}/${getPeriodLabel(userProfile.calorieLimitPeriod)}`
                   : "Loading..."}
               </Text>
             </View>
