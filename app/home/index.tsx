@@ -168,9 +168,6 @@ const ImageModal: React.FC<{
                         source={{ uri: imageUri }}
                         style={modalStyles.image}
                         resizeMode="contain"
-                        onError={(error) => {
-                            console.log("Image load error:", error)
-                        }}
                     />
                 </View>
                 <TouchableOpacity
@@ -545,13 +542,11 @@ const Index: React.FC = () => {
     }
 
     const openImageModal = (uri: string) => {
-        console.log("Opening image modal with URI:", uri)
         setModalImageUri(uri)
         setModalVisible(true)
     }
 
     const closeImageModal = () => {
-        console.log("Closing image modal")
         setModalVisible(false)
         setModalImageUri("")
     }

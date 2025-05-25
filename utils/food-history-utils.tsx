@@ -202,21 +202,30 @@ export const useFoodHistory = (
 
     const performActualDelete = async (id: string) => {
         try {
-            const itemToDelete = foodItems.find((item) => item.id === id)
-            if (!itemToDelete) return
+            let itemToDelete: FoodItem | null = null
 
-            setFoodItems((prev) => prev.map((item) => (item.id === id ? { ...item, isDeleting: true } : item)))
+            // Sử dụng functional update để lấy current state
+            setFoodItems((currentItems) => {
+                itemToDelete = currentItems.find((item) => item.id === id) ?? null
+                if (!itemToDelete) return currentItems // Không tìm thấy item
+
+                // Set isDeleting = true
+                return currentItems.map((item) =>
+                    item.id === id ? { ...item, isDeleting: true } : item
+                )
+            })
+
+            if (!itemToDelete) {
+                return
+            }
 
             const response = await deleteData(URL_FOOD_CALO_ESTIMATOR, id)
+
             if (response.status === 204) {
                 setFoodItems((prev) => prev.filter((item) => item.id !== id))
-                setTotalCalories((prev) => {
-                    const deletedItem = foodItems.find((item) => item.id === id)
-                    return deletedItem ? prev - deletedItem.calo : prev
-                })
+                setTotalCalories((prev) => prev - itemToDelete!.calo)
             }
         } catch (error) {
-            console.error("Error deleting food item:", error)
             setFoodItems((prev) => prev.map((item) => (item.id === id ? { ...item, isDeleting: false } : item)))
             showMessage(error)
         }
@@ -351,9 +360,6 @@ export const ImageModal: React.FC<{
                                     },
                                 ]}
                                 resizeMode="contain"
-                                onError={(error) => {
-                                    console.log("Image load error:", error)
-                                }}
                             />
                         </View>
                     </TouchableWithoutFeedback>

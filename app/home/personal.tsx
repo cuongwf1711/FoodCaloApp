@@ -277,9 +277,6 @@ const Personal = () => {
             if (Object.keys(changedValues).length > 0) {
                 const response = await patchData<UserProfile>(URL_USER_PROFILE, changedValues)
                 setProfile(response.data)
-            } else {
-                // No actual changes, just update UI
-                console.log("No actual changes to save")
             }
 
             setEditedProfile({})

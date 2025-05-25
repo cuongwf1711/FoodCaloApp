@@ -121,9 +121,6 @@ const ImageModal: React.FC<{
                         source={{ uri: imageUri }}
                         style={modalStyles.image}
                         resizeMode="contain"
-                        onError={(error) => {
-                            console.log("Image load error:", error)
-                        }}
                     />
                 </View>
                 <TouchableOpacity
