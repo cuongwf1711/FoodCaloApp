@@ -344,11 +344,13 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({ sortOption, o
     const getTimePeriodLabel = () => {
         switch (timeUnit) {
             case "day":
-                return `Food History for ${selectedDate}`
+                const [y1, m1, d1] = selectedDate.split('-');
+                return `Food History for ${d1}-${m1}-${y1}`
             case "week":
                 return `Food History for ${weeksAgo} weeks ago`
             case "month":
-                return `Food History for ${selectedMonth}`
+                const [y2, m2] = selectedMonth.split('-');
+                return `Food History for ${m2}-${y2}`
             default:
                 return "Food History"
         }

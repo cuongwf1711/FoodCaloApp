@@ -197,7 +197,7 @@ const FoodHistoryScreen: React.FC = () => {
             {/* First row: Calorie info */}
             <View style={styles.leftSection}>
               <View style={styles.calorieLimitSection}>
-                <Text style={styles.sectionLabel}>Limit:</Text>
+                <Text style={styles.sectionLabel}>Calo Limit:</Text>
                 <Text style={styles.calorieLimitValue} numberOfLines={1}>
                   {userProfile
                     ? `${userProfile.calorieLimit ?? "..."}/${getPeriodLabel(userProfile.calorieLimitPeriod)}`
@@ -205,7 +205,7 @@ const FoodHistoryScreen: React.FC = () => {
                 </Text>
               </View>
               <View style={styles.totalCaloriesSection}>
-                <Text style={styles.sectionLabel}>Total:</Text>
+                <Text style={styles.sectionLabel}>Total Calo:</Text>
                 <Text style={styles.totalCaloriesValue}>{totalCalories}</Text>
               </View>
             </View>
