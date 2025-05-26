@@ -1,9 +1,10 @@
 "use client"
 
+import React from "react"
+
 import { URL_FOOD_CALO_ESTIMATOR } from "@/constants/url_constants"
 import { deleteData, patchData, postData } from "@/context/request_context"
 import { showMessage } from "@/utils/showMessage"
-import type React from "react"
 import { useRef, useState } from "react"
 import { Alert, Animated, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native"
 
@@ -36,6 +37,12 @@ type PredictionResult = {
 // Platform-specific module imports
 let ImagePicker: any
 let AsyncStorage: any
+
+// Add ReactDOM import for web portal
+let ReactDOM: any
+if (Platform.OS === "web") {
+    ReactDOM = require("react-dom")
+}
 
 if (Platform.OS === "web") {
     // Web-specific implementations
@@ -97,16 +104,43 @@ type ImagePickerResult = {
     assets: ImageAsset[]
 }
 
-// Enhanced ImageModal for better Android compatibility
+// Enhanced ImageModal with better web positioning and portal rendering
 const ImageModal: React.FC<{
     visible: boolean
     imageUri: string
     onClose: () => void
 }> = ({ visible, imageUri, onClose }) => {
+    React.useEffect(() => {
+        if (Platform.OS === "web") {
+            if (visible) {
+                // Prevent scrolling on the background
+                document.body.style.overflow = "hidden"
+                document.body.style.position = "fixed"
+                document.body.style.width = "100%"
+
+                // Add escape key listener
+                const handleEscape = (e: KeyboardEvent) => {
+                    if (e.key === "Escape") {
+                        onClose()
+                    }
+                }
+                document.addEventListener("keydown", handleEscape)
+
+                return () => {
+                    document.body.style.overflow = ""
+                    document.body.style.position = ""
+                    document.body.style.width = ""
+                    document.removeEventListener("keydown", handleEscape)
+                }
+            }
+        }
+    }, [visible, onClose])
+
     if (!visible) return null
 
     if (Platform.OS === "web") {
-        return (
+        // Create portal to render modal at document.body level
+        const modalContent = (
             <div
                 style={{
                     position: "fixed",
@@ -114,69 +148,110 @@ const ImageModal: React.FC<{
                     left: 0,
                     right: 0,
                     bottom: 0,
+                    width: "100vw",
+                    height: "100vh",
                     backgroundColor: "rgba(0, 0, 0, 0.9)",
                     display: "flex",
                     justifyContent: "center",
                     alignItems: "center",
-                    zIndex: 1000,
+                    zIndex: 999999,
+                    margin: 0,
+                    padding: "20px",
+                    boxSizing: "border-box",
                 }}
                 onClick={onClose}
             >
-                <div style={{ position: "relative", maxWidth: "90%", maxHeight: "90%" }} onClick={(e) => e.stopPropagation()}>
+                {/* Top close button */}
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation()
+                        onClose()
+                    }}
+                    style={{
+                        position: "absolute",
+                        top: "20px",
+                        right: "20px",
+                        backgroundColor: "rgba(255, 255, 255, 0.9)",
+                        border: "none",
+                        borderRadius: "50%",
+                        width: "50px",
+                        height: "50px",
+                        fontSize: "20px",
+                        fontWeight: "bold",
+                        color: "#333",
+                        cursor: "pointer",
+                        boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        zIndex: 1000000,
+                        transition: "all 0.2s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = "#fff"
+                        e.currentTarget.style.transform = "scale(1.1)"
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.9)"
+                        e.currentTarget.style.transform = "scale(1)"
+                    }}
+                >
+                    ✕
+                </button>
+
+                <div
+                    style={{
+                        position: "relative",
+                        maxWidth: "90vw",
+                        maxHeight: "80vh",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                >
                     <img
                         src={imageUri || "/placeholder.svg"}
                         alt="Full size"
                         style={{
                             maxWidth: "100%",
-                            maxHeight: "90vh",
+                            maxHeight: "100%",
                             borderRadius: "8px",
                             objectFit: "contain",
+                            display: "block",
+                            boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
                         }}
                     />
-                    <button
-                        onClick={onClose}
-                        style={{
-                            position: "absolute",
-                            top: "-10px",
-                            right: "-10px",
-                            backgroundColor: "#fff",
-                            border: "none",
-                            borderRadius: "20px",
-                            width: "40px",
-                            height: "40px",
-                            fontSize: "18px",
-                            fontWeight: "bold",
-                            color: "#333",
-                            cursor: "pointer",
-                            boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
-                        }}
-                    >
-                        ✕
-                    </button>
                 </div>
             </div>
         )
+
+        // Use React portal to render outside of current component tree
+        if (typeof document !== "undefined") {
+            const portalRoot = document.body
+            return ReactDOM.createPortal(modalContent, portalRoot)
+        }
+
+        return modalContent
     }
 
-    // Native implementation with better Android support
+    // Native implementation remains the same
     return (
         <View style={modalStyles.overlay}>
             <TouchableOpacity style={modalStyles.backdrop} onPress={onClose} activeOpacity={1} />
+
+            <TouchableOpacity
+                style={[modalStyles.closeButton, { top: 40, right: 20 }]}
+                onPress={onClose}
+                hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+            >
+                <Text style={modalStyles.closeButtonText}>✕</Text>
+            </TouchableOpacity>
+
             <View style={modalStyles.container}>
                 <View style={modalStyles.imageContainer}>
-                    <Image
-                        source={{ uri: imageUri }}
-                        style={modalStyles.image}
-                        resizeMode="contain"
-                    />
+                    <Image source={{ uri: imageUri }} style={modalStyles.image} resizeMode="contain" />
                 </View>
-                <TouchableOpacity
-                    style={modalStyles.closeButton}
-                    onPress={onClose}
-                    hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-                >
-                    <Text style={modalStyles.closeButtonText}>✕</Text>
-                </TouchableOpacity>
             </View>
         </View>
     )
@@ -806,8 +881,6 @@ const modalStyles = StyleSheet.create({
     },
     closeButton: {
         position: "absolute",
-        top: 40,
-        right: 20,
         backgroundColor: "#fff",
         borderRadius: 25,
         width: 50,
