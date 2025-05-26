@@ -186,6 +186,7 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({ sortOption, onS
         if (!isRefreshing) {
             fetchFoodHistory(1, true)
         }
+        setShowScrollToTop(false) // Hide scroll to top button on refresh
     }, [fetchFoodHistory, isRefreshing])
 
     // Handle pagination when scrolling to bottom
