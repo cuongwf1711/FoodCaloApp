@@ -9,6 +9,7 @@ import { useRef, useState } from "react"
 import { Alert, Animated, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native"
 
 // Import shared utilities
+import { useTabReload } from "@/hooks/use-tab-reload"
 import { EditModal, formatDate, styles as sharedStyles } from "@/utils/food-history-utils"
 
 // Simplified type definitions
@@ -354,6 +355,23 @@ const Index: React.FC = () => {
     const resultOpacityAnim = useRef(new Animated.Value(0)).current
     const deleteAnim = useRef(new Animated.Value(1)).current
 
+    // Use tab reload hook
+    const { isReloading, animatedStyle } = useTabReload("index", {
+        onReload: async () => {
+            // Reset all state when tab is reloaded
+            setSelectedImage(null)
+            setResult(null)
+            setModalVisible(false)
+            setModalImageUri("")
+            setIsEditing(false)
+            setIsDeleting(false)
+            resultCardAnim.setValue(0)
+            resultOpacityAnim.setValue(0)
+            deleteAnim.setValue(1)
+
+        },
+    })
+
     // Delete result with confirmation and spin animation
     const handleDeleteResult = () => {
         if (!result) return
@@ -436,7 +454,6 @@ const Index: React.FC = () => {
                 showMessage({ message: "Failed to delete result" }, true)
             }
         } catch (error) {
-            console.error("Error deleting result:", error)
             // Reset animation if error occurred
             deleteAnim.setValue(1)
             setIsDeleting(false)
@@ -479,7 +496,6 @@ const Index: React.FC = () => {
                 )
             }
         } catch (error) {
-            console.error("Error picking image:", error)
             showMessage({ message: "Error selecting image" }, true)
         }
     }
@@ -504,7 +520,6 @@ const Index: React.FC = () => {
                 resultOpacityAnim.setValue(0)
             }
         } catch (error) {
-            console.error("Error launching camera:", error)
             showMessage({ message: "Error accessing camera" }, true)
         }
     }
@@ -530,7 +545,6 @@ const Index: React.FC = () => {
                 resultOpacityAnim.setValue(0)
             }
         } catch (error) {
-            console.error("Error launching image library:", error)
             showMessage({ message: "Error accessing photo library" }, true)
         }
     }
@@ -580,7 +594,6 @@ const Index: React.FC = () => {
                 }),
             ]).start()
         } catch (error) {
-            console.error("Error processing image:", error)
             showMessage(error)
         } finally {
             setIsProcessing(false)
@@ -648,7 +661,6 @@ const Index: React.FC = () => {
 
             setIsEditing(false)
         } catch (error) {
-            console.error("Error updating food item:", error)
             showMessage(error)
         }
     }
@@ -658,190 +670,194 @@ const Index: React.FC = () => {
     }
 
     return (
-        <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-            <View style={styles.header}>
-                <Text style={styles.headerTitle}>Predict Calories from Image</Text>
-                <Text style={styles.headerSubtitle}>Take or upload a food photo for analysis</Text>
-            </View>
-
-            {/* Image Selection Card */}
-            <View style={styles.card}>
-                <Text style={styles.cardTitle}>Select Image</Text>
-
-                {selectedImage ? (
-                    <TouchableOpacity
-                        onPress={() => openImageModal(selectedImage.uri)}
-                        style={styles.selectedImageContainer}
-                        activeOpacity={0.8}
-                    >
-                        <Image source={{ uri: selectedImage.uri }} style={styles.selectedImage} resizeMode="contain" />
-                    </TouchableOpacity>
-                ) : (
-                    <TouchableOpacity style={styles.imagePlaceholder} onPress={pickImage} activeOpacity={0.7}>
-                        <Text style={styles.placeholderIcon}>📷</Text>
-                        <Text style={styles.placeholderText}>No image selected</Text>
-                        <Text style={styles.placeholderHint}>Tap to select an image</Text>
-                    </TouchableOpacity>
-                )}
-
-                <View style={styles.buttonRow}>
-                    <AnimatedButton style={[styles.button, styles.primaryButton]} onPress={pickImage} buttonType="primary">
-                        <Text style={styles.buttonText}>Select Image</Text>
-                    </AnimatedButton>
-
-                    <AnimatedButton
-                        style={[styles.button, styles.successButton, (!selectedImage || isProcessing) && styles.disabledButton]}
-                        disabled={!selectedImage || isProcessing}
-                        onPress={processImage}
-                        buttonType="success"
-                    >
-                        <Text style={styles.buttonText}>{isProcessing ? "Processing..." : "Analyze"}</Text>
-                    </AnimatedButton>
-
-                    <AnimatedButton
-                        style={[styles.button, styles.dangerButton, !selectedImage && !result && styles.disabledButton]}
-                        disabled={!selectedImage && !result}
-                        onPress={reset}
-                        buttonType="danger"
-                    >
-                        <Text style={styles.buttonText}>Reset</Text>
-                    </AnimatedButton>
+        <Animated.View style={[{ flex: 1 }, animatedStyle]}>
+            <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+                <View style={styles.header}>
+                    <Text style={styles.headerTitle}>Predict Calories from Image</Text>
+                    <Text style={styles.headerSubtitle}>Take or upload a food photo for analysis</Text>
+                    {isReloading && <Text style={styles.reloadingText}>🔄 Refreshing...</Text>}
                 </View>
-            </View>
 
-            {/* Results Card - Now matches history style */}
-            {result && !isProcessing && (
-                <Animated.View
-                    style={[
-                        sharedStyles.foodCard,
-                        {
-                            opacity: resultOpacityAnim,
-                            transform: [
-                                {
-                                    translateY: resultCardAnim.interpolate({
-                                        inputRange: [0, 1],
-                                        outputRange: [50, 0],
-                                    }),
-                                },
-                                {
-                                    scale: deleteAnim.interpolate({
-                                        inputRange: [0, 1],
-                                        outputRange: [0.8, 1],
-                                    }),
-                                },
-                                // Add rotation for spin effect when deleting
-                                {
-                                    rotate: isDeleting
-                                        ? deleteAnim.interpolate({
+                {/* Image Selection Card */}
+                <View style={styles.card}>
+                    <Text style={styles.cardTitle}>Select Image</Text>
+
+                    {selectedImage ? (
+                        <TouchableOpacity
+                            onPress={() => openImageModal(selectedImage.uri)}
+                            style={styles.selectedImageContainer}
+                            activeOpacity={0.8}
+                        >
+                            <Image source={{ uri: selectedImage.uri }} style={styles.selectedImage} resizeMode="contain" />
+                        </TouchableOpacity>
+                    ) : (
+                        <TouchableOpacity style={styles.imagePlaceholder} onPress={pickImage} activeOpacity={0.7}>
+                            <Text style={styles.placeholderIcon}>📷</Text>
+                            <Text style={styles.placeholderText}>No image selected</Text>
+                            <Text style={styles.placeholderHint}>Tap to select an image</Text>
+                        </TouchableOpacity>
+                    )}
+
+                    <View style={styles.buttonRow}>
+                        <AnimatedButton style={[styles.button, styles.primaryButton]} onPress={pickImage} buttonType="primary">
+                            <Text style={styles.buttonText}>Select Image</Text>
+                        </AnimatedButton>
+
+                        <AnimatedButton
+                            style={[styles.button, styles.successButton, (!selectedImage || isProcessing) && styles.disabledButton]}
+                            disabled={!selectedImage || isProcessing}
+                            onPress={processImage}
+                            buttonType="success"
+                        >
+                            <Text style={styles.buttonText}>{isProcessing ? "Processing..." : "Analyze"}</Text>
+                        </AnimatedButton>
+
+                        <AnimatedButton
+                            style={[styles.button, styles.dangerButton, !selectedImage && !result && styles.disabledButton]}
+                            disabled={!selectedImage && !result}
+                            onPress={reset}
+                            buttonType="danger"
+                        >
+                            <Text style={styles.buttonText}>Reset</Text>
+                        </AnimatedButton>
+                    </View>
+                </View>
+
+                {/* Results Card - Now matches history style */}
+                {result && !isProcessing && (
+                    <Animated.View
+                        style={[
+                            sharedStyles.foodCard,
+                            {
+                                opacity: resultOpacityAnim,
+                                transform: [
+                                    {
+                                        translateY: resultCardAnim.interpolate({
                                             inputRange: [0, 1],
-                                            outputRange: ["0deg", "360deg"],
-                                        })
-                                        : "0deg",
-                                },
-                            ],
-                        },
-                    ]}
-                >
-                    <View style={sharedStyles.foodCardHeader}>
-                        <Text style={sharedStyles.foodName}>{result.predictName}</Text>
-                        <View style={sharedStyles.actionButtons}>
-                            <TouchableOpacity style={sharedStyles.editButton} onPress={startEditing} disabled={isDeleting}>
-                                {Platform.OS === "web" ? (
-                                    <div style={{ color: "#3498db", cursor: "pointer", fontSize: "18px" }}>✎</div>
-                                ) : (
-                                    <Text style={sharedStyles.editButtonText}>✎</Text>
-                                )}
-                            </TouchableOpacity>
+                                            outputRange: [50, 0],
+                                        }),
+                                    },
+                                    {
+                                        scale: deleteAnim.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [0.8, 1],
+                                        }),
+                                    },
+                                    // Add rotation for spin effect when deleting
+                                    {
+                                        rotate: isDeleting
+                                            ? deleteAnim.interpolate({
+                                                inputRange: [0, 1],
+                                                outputRange: ["0deg", "360deg"],
+                                            })
+                                            : "0deg",
+                                    },
+                                ],
+                            },
+                        ]}
+                    >
+                        <View style={sharedStyles.foodCardHeader}>
+                            <Text style={sharedStyles.foodName}>{result.predictName}</Text>
+                            <View style={sharedStyles.actionButtons}>
+                                <TouchableOpacity style={sharedStyles.editButton} onPress={startEditing} disabled={isDeleting}>
+                                    {Platform.OS === "web" ? (
+                                        <div style={{ color: "#3498db", cursor: "pointer", fontSize: "18px" }}>✎</div>
+                                    ) : (
+                                        <Text style={sharedStyles.editButtonText}>✎</Text>
+                                    )}
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[sharedStyles.deleteButton, isDeleting && { opacity: 0.5 }]}
+                                    onPress={handleDeleteResult}
+                                    disabled={isDeleting}
+                                >
+                                    {Platform.OS === "web" ? (
+                                        <div
+                                            style={{
+                                                color: "#e74c3c",
+                                                cursor: isDeleting ? "not-allowed" : "pointer",
+                                                fontSize: "18px",
+                                                transform: isDeleting ? "rotate(180deg)" : "rotate(0deg)",
+                                                transition: "transform 0.3s ease",
+                                                userSelect: "none",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                width: "100%",
+                                                height: "100%",
+                                            }}
+                                            onClick={(e) => {
+                                                e.preventDefault()
+                                                e.stopPropagation()
+                                                if (!isDeleting) {
+                                                    handleDeleteResult()
+                                                }
+                                            }}
+                                        >
+                                            🗑
+                                        </div>
+                                    ) : (
+                                        <Text style={sharedStyles.deleteButtonText}>🗑</Text>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                        <Text style={sharedStyles.foodCalories}>{result.calo} calories</Text>
+
+                        <View style={sharedStyles.imagesContainer}>
                             <TouchableOpacity
-                                style={[sharedStyles.deleteButton, isDeleting && { opacity: 0.5 }]}
-                                onPress={handleDeleteResult}
+                                style={sharedStyles.imageWrapper}
+                                onPress={() => openImageModal(result.publicUrl.originImage)}
+                                activeOpacity={0.8}
                                 disabled={isDeleting}
                             >
-                                {Platform.OS === "web" ? (
-                                    <div
-                                        style={{
-                                            color: "#e74c3c",
-                                            cursor: isDeleting ? "not-allowed" : "pointer",
-                                            fontSize: "18px",
-                                            transform: isDeleting ? "rotate(180deg)" : "rotate(0deg)",
-                                            transition: "transform 0.3s ease",
-                                            userSelect: "none",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            width: "100%",
-                                            height: "100%",
-                                        }}
-                                        onClick={(e) => {
-                                            e.preventDefault()
-                                            e.stopPropagation()
-                                            if (!isDeleting) {
-                                                handleDeleteResult()
-                                            }
-                                        }}
-                                    >
-                                        🗑
-                                    </div>
-                                ) : (
-                                    <Text style={sharedStyles.deleteButtonText}>🗑</Text>
-                                )}
+                                <Image
+                                    source={{ uri: result.publicUrl.originImage }}
+                                    style={sharedStyles.thumbnailImage}
+                                    resizeMode="contain"
+                                />
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={sharedStyles.imageWrapper}
+                                onPress={() => openImageModal(result.publicUrl.segmentationImage)}
+                                activeOpacity={0.8}
+                                disabled={isDeleting}
+                            >
+                                <Image
+                                    source={{ uri: result.publicUrl.segmentationImage }}
+                                    style={sharedStyles.thumbnailImage}
+                                    resizeMode="contain"
+                                />
                             </TouchableOpacity>
                         </View>
-                    </View>
-                    <Text style={sharedStyles.foodCalories}>{result.calo} calories</Text>
 
-                    <View style={sharedStyles.imagesContainer}>
-                        <TouchableOpacity
-                            style={sharedStyles.imageWrapper}
-                            onPress={() => openImageModal(result.publicUrl.originImage)}
-                            activeOpacity={0.8}
-                            disabled={isDeleting}
-                        >
-                            <Image
-                                source={{ uri: result.publicUrl.originImage }}
-                                style={sharedStyles.thumbnailImage}
-                                resizeMode="contain"
-                            />
-                        </TouchableOpacity>
+                        <Text style={sharedStyles.foodDate}>{formatDate(result.createdAt)}</Text>
+                        <Text style={sharedStyles.confidenceText}>Confidence: {result.confidencePercentage}</Text>
 
-                        <TouchableOpacity
-                            style={sharedStyles.imageWrapper}
-                            onPress={() => openImageModal(result.publicUrl.segmentationImage)}
-                            activeOpacity={0.8}
-                            disabled={isDeleting}
-                        >
-                            <Image
-                                source={{ uri: result.publicUrl.segmentationImage }}
-                                style={sharedStyles.thumbnailImage}
-                                resizeMode="contain"
-                            />
-                        </TouchableOpacity>
-                    </View>
+                        <View style={sharedStyles.commentContainer}>
+                            <Text style={sharedStyles.commentLabel}>Notes:</Text>
+                            <Text style={sharedStyles.foodComment}>{result.comment ? result.comment : "No notes"}</Text>
+                        </View>
+                    </Animated.View>
+                )}
 
-                    <Text style={sharedStyles.foodDate}>{formatDate(result.createdAt)}</Text>
-                    <Text style={sharedStyles.confidenceText}>Confidence: {result.confidencePercentage}</Text>
+                <ImageModal visible={modalVisible} imageUri={modalImageUri} onClose={closeImageModal} />
 
-                    <View style={sharedStyles.commentContainer}>
-                        <Text style={sharedStyles.commentLabel}>Notes:</Text>
-                        <Text style={sharedStyles.foodComment}>{result.comment ? result.comment : "No notes"}</Text>
-                    </View>
-                </Animated.View>
-            )}
-
-            <ImageModal visible={modalVisible} imageUri={modalImageUri} onClose={closeImageModal} />
-
-            {result && (
-                <EditModal
-                    visible={isEditing}
-                    initialCalo={result.calo.toString()}
-                    initialComment={result.comment || ""}
-                    onSave={saveEditedItem}
-                    onCancel={cancelEditing}
-                />
-            )}
-        </ScrollView>
+                {result && (
+                    <EditModal
+                        visible={isEditing}
+                        initialCalo={result.calo.toString()}
+                        initialComment={result.comment || ""}
+                        onSave={saveEditedItem}
+                        onCancel={cancelEditing}
+                    />
+                )}
+            </ScrollView>
+        </Animated.View>
     )
 }
+
 const modalStyles = StyleSheet.create({
     overlay: {
         position: "absolute",
@@ -923,6 +939,12 @@ const styles = StyleSheet.create({
         color: "#6c757d",
         textAlign: "center",
         lineHeight: 22,
+    },
+    reloadingText: {
+        fontSize: 14,
+        color: "#007AFF",
+        marginTop: 8,
+        fontWeight: "600",
     },
     card: {
         backgroundColor: "#fff",

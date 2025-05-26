@@ -18,6 +18,7 @@ import {
 } from "@/utils/food-history-utils"
 
 // Import the different view components
+import { useTabReload } from "@/hooks/use-tab-reload"
 import FoodHistoryAllView from "./food-history-all"
 import FoodHistoryDateView from "./food-history-date"
 
@@ -41,6 +42,27 @@ const FoodHistoryScreen: React.FC = () => {
 
   // Use shared hook for user profile
   const { userProfile, fetchUserProfile } = useUserProfile()
+
+  // Use tab reload hook
+  const { isReloading, animatedStyle } = useTabReload("history", {
+    onReload: async () => {
+      // Reset filters and reload data
+      setTimeFilter("all")
+      setCurrentView("all")
+      setSortOption("newest")
+      setTotalCalories(0)
+
+      // Reset animations
+      fadeAnim.setValue(1)
+      slideAnim.setValue(0)
+      sortScaleAnim.setValue(1)
+      filterScaleAnim.setValue(1)
+
+      // Refresh user profile
+      await fetchUserProfile()
+
+    },
+  })
 
   // Handle data change from child components
   const handleDataChange = useCallback((calories: number) => {
@@ -144,8 +166,6 @@ const FoodHistoryScreen: React.FC = () => {
     fetchUserProfile()
   }, [fetchUserProfile])
 
-
-
   // Render the appropriate view based on the selected filter
   const renderFilterView = () => {
     switch (currentView) {
@@ -165,78 +185,85 @@ const FoodHistoryScreen: React.FC = () => {
   }
 
   return (
-    <View style={sharedStyles.container}>
-      <StatusBar style="dark" />
+    <Animated.View style={[{ flex: 1 }, animatedStyle]}>
+      <View style={sharedStyles.container}>
+        <StatusBar style="dark" />
 
-      {/* Fixed header section with better layout and higher z-index */}
-      <View style={styles.headerContainer}>
+        {/* Fixed header section with better layout and higher z-index */}
+        <View style={styles.headerContainer}>
+          {isReloading && (
+            <View style={styles.reloadingContainer}>
+              <Text style={styles.reloadingText}>🔄 Refreshing history...</Text>
+            </View>
+          )}
 
-        {/* Info and controls row */}
-        <View style={styles.controlsContainer}>
-          {/* First row: Calorie info */}
-          <View style={styles.leftSection}>
-            <View style={styles.calorieLimitSection}>
-              <Text style={styles.sectionLabel}>Limit:</Text>
-              <Text style={styles.calorieLimitValue} numberOfLines={1}>
-                {userProfile
-                  ? `${userProfile.calorieLimit ?? "..."}/${getPeriodLabel(userProfile.calorieLimitPeriod)}`
-                  : "Loading..."}
-              </Text>
+          {/* Info and controls row */}
+          <View style={styles.controlsContainer}>
+            {/* First row: Calorie info */}
+            <View style={styles.leftSection}>
+              <View style={styles.calorieLimitSection}>
+                <Text style={styles.sectionLabel}>Limit:</Text>
+                <Text style={styles.calorieLimitValue} numberOfLines={1}>
+                  {userProfile
+                    ? `${userProfile.calorieLimit ?? "..."}/${getPeriodLabel(userProfile.calorieLimitPeriod)}`
+                    : "Loading..."}
+                </Text>
+              </View>
+              <View style={styles.totalCaloriesSection}>
+                <Text style={styles.sectionLabel}>Total:</Text>
+                <Text style={styles.totalCaloriesValue}>{totalCalories}</Text>
+              </View>
             </View>
-            <View style={styles.totalCaloriesSection}>
-              <Text style={styles.sectionLabel}>Total:</Text>
-              <Text style={styles.totalCaloriesValue}>{totalCalories}</Text>
-            </View>
-          </View>
 
-          {/* Second row: Simple animated controls */}
-          <View style={styles.rightSection}>
-            <View style={styles.filterSection}>
-              <Text style={styles.sectionLabel}>Filter:</Text>
-              <Animated.View
-                style={[
-                  styles.animatedDropdownWrapper,
-                  {
-                    transform: [{ scale: filterScaleAnim }],
-                  },
-                ]}
-              >
-                <View style={styles.dropdownWrapper}>
-                  <FilterDropdown value={timeFilter} onChange={handleFilterChange} />
-                </View>
-              </Animated.View>
-            </View>
-            <View style={styles.sortSection}>
-              <Text style={styles.sectionLabel}>Sort:</Text>
-              <Animated.View
-                style={[
-                  styles.animatedDropdownWrapper,
-                  {
-                    transform: [{ scale: sortScaleAnim }],
-                  },
-                ]}
-              >
-                <View style={styles.dropdownWrapper}>
-                  <SortingDropdown value={sortOption} onChange={handleSortChange} />
-                </View>
-              </Animated.View>
+            {/* Second row: Simple animated controls */}
+            <View style={styles.rightSection}>
+              <View style={styles.filterSection}>
+                <Text style={styles.sectionLabel}>Filter:</Text>
+                <Animated.View
+                  style={[
+                    styles.animatedDropdownWrapper,
+                    {
+                      transform: [{ scale: filterScaleAnim }],
+                    },
+                  ]}
+                >
+                  <View style={styles.dropdownWrapper}>
+                    <FilterDropdown value={timeFilter} onChange={handleFilterChange} />
+                  </View>
+                </Animated.View>
+              </View>
+              <View style={styles.sortSection}>
+                <Text style={styles.sectionLabel}>Sort:</Text>
+                <Animated.View
+                  style={[
+                    styles.animatedDropdownWrapper,
+                    {
+                      transform: [{ scale: sortScaleAnim }],
+                    },
+                  ]}
+                >
+                  <View style={styles.dropdownWrapper}>
+                    <SortingDropdown value={sortOption} onChange={handleSortChange} />
+                  </View>
+                </Animated.View>
+              </View>
             </View>
           </View>
         </View>
-      </View>
 
-      <Animated.View
-        style={[
-          styles.animatedContainer,
-          {
-            opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }],
-          },
-        ]}
-      >
-        {renderFilterView()}
-      </Animated.View>
-    </View>
+        <Animated.View
+          style={[
+            styles.animatedContainer,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}
+        >
+          {renderFilterView()}
+        </Animated.View>
+      </View>
+    </Animated.View>
   )
 }
 
@@ -256,6 +283,15 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 2,
     zIndex: 1000, // Ensure header is above other elements
+  },
+  reloadingContainer: {
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  reloadingText: {
+    fontSize: 14,
+    color: "#007AFF",
+    fontWeight: "600",
   },
   titleRow: {
     marginBottom: 12,

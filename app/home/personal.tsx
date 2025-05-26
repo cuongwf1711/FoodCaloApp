@@ -2,6 +2,7 @@
 
 import { URL_USER_PROFILE } from "@/constants/url_constants"
 import { getData, patchData } from "@/context/request_context"
+import { useTabReload } from "@/hooks/use-tab-reload"
 import { showMessage } from "@/utils/showMessage"
 import { StatusBar } from "expo-status-bar"
 import { useEffect, useRef, useState } from "react"
@@ -18,7 +19,7 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View
+    View,
 } from "react-native"
 
 // User profile type definition
@@ -89,6 +90,23 @@ const Personal = () => {
     // Animated values for button effects
     const saveButtonScale = useRef(new Animated.Value(1)).current
     const resetButtonScale = useRef(new Animated.Value(1)).current
+
+    // Use tab reload hook
+    const { isReloading, animatedStyle } = useTabReload("personal", {
+        onReload: async () => {
+            // Reset all state when tab is reloaded
+            setEditedProfile({})
+            setValidationErrors({})
+            setIsEditing(false)
+            setShowPeriodDropdown(false)
+            setLengthInputText("")
+            setWidthInputText("")
+            setCalorieInputText("")
+
+            // Refresh profile data
+            await fetchUserProfile()
+        },
+    })
 
     // Button press animation
     const animateButton = (animated: Animated.Value) => {
@@ -390,55 +408,55 @@ const Personal = () => {
     // Helper function to parse decimal input - STRICT validation for numbers only
     const parseDecimalInput = (text: string): number => {
         // Only allow digits, decimal point, and minus sign at the beginning
-        const cleanText = text.replace(/[^0-9.-]/g, '')
+        const cleanText = text.replace(/[^0-9.-]/g, "")
 
         // Handle multiple decimal points - keep only the first one
-        const parts = cleanText.split('.')
+        const parts = cleanText.split(".")
         let result = parts[0]
         if (parts.length > 1) {
-            result = parts[0] + '.' + parts.slice(1).join('').replace(/\./g, '')
+            result = parts[0] + "." + parts.slice(1).join("").replace(/\./g, "")
         }
 
         // Handle multiple minus signs - keep only the first one if at the beginning
-        if (result.includes('-')) {
+        if (result.includes("-")) {
             const minusCount = (result.match(/-/g) || []).length
-            if (minusCount > 1 || (result.indexOf('-') !== 0 && result.includes('-'))) {
-                result = result.replace(/-/g, '')
-                if (text.startsWith('-')) {
-                    result = '-' + result
+            if (minusCount > 1 || (result.indexOf("-") !== 0 && result.includes("-"))) {
+                result = result.replace(/-/g, "")
+                if (text.startsWith("-")) {
+                    result = "-" + result
                 }
             }
         }
 
-        return parseFloat(result) || 0
+        return Number.parseFloat(result) || 0
     }
 
     // Validate input text to only allow numbers and decimal point
     const validateNumericInput = (text: string): string => {
         // Only allow digits, one decimal point, and minus sign at the beginning
-        let cleanText = text.replace(/[^0-9.-]/g, '')
+        let cleanText = text.replace(/[^0-9.-]/g, "")
 
         // Handle decimal points
         const decimalCount = (cleanText.match(/\./g) || []).length
         if (decimalCount > 1) {
-            const firstDecimalIndex = cleanText.indexOf('.')
-            cleanText = cleanText.substring(0, firstDecimalIndex + 1) +
-                cleanText.substring(firstDecimalIndex + 1).replace(/\./g, '')
+            const firstDecimalIndex = cleanText.indexOf(".")
+            cleanText =
+                cleanText.substring(0, firstDecimalIndex + 1) + cleanText.substring(firstDecimalIndex + 1).replace(/\./g, "")
         }
 
         // Handle minus signs - only allow at the beginning
-        if (cleanText.includes('-')) {
+        if (cleanText.includes("-")) {
             const minusPositions = []
             for (let i = 0; i < cleanText.length; i++) {
-                if (cleanText[i] === '-') {
+                if (cleanText[i] === "-") {
                     minusPositions.push(i)
                 }
             }
 
             if (minusPositions.length > 1 || (minusPositions.length === 1 && minusPositions[0] !== 0)) {
-                cleanText = cleanText.replace(/-/g, '')
-                if (text.startsWith('-')) {
-                    cleanText = '-' + cleanText
+                cleanText = cleanText.replace(/-/g, "")
+                if (text.startsWith("-")) {
+                    cleanText = "-" + cleanText
                 }
             }
         }
@@ -453,7 +471,7 @@ const Personal = () => {
 
     // Format decimal number for display - truncate if too long
     const formatDecimalDisplay = (value: number | null | undefined): string => {
-       if (value === null || value === undefined) {
+        if (value === null || value === undefined) {
             return "..."
         }
         const str = value.toString()
@@ -469,11 +487,7 @@ const Personal = () => {
     }
 
     // Handle decimal input changes with text state management and strict validation
-    const handleDecimalInputChange = (
-        field: keyof UserProfile,
-        text: string,
-        setInputText: (text: string) => void
-    ) => {
+    const handleDecimalInputChange = (field: keyof UserProfile, text: string, setInputText: (text: string) => void) => {
         // Validate and clean the input
         const validatedText = validateNumericInput(text)
 
@@ -496,351 +510,350 @@ const Personal = () => {
     }
 
     return (
-        <SafeAreaView style={styles.container}>
-            <StatusBar style="auto" />
-            <KeyboardAvoidingView
-                behavior="height"
-                style={styles.keyboardAvoidingView}
-                keyboardVerticalOffset={0}
-                contentContainerStyle={{ flex: 1 }}
-            >
-                <View style={styles.header}>
-                    <Text style={styles.title}>User Profile</Text>
-                    <TouchableOpacity style={styles.cancelButton} onPress={toggleEditMode} activeOpacity={0.7}>
-                        <Text style={styles.cancelButtonText}>{isEditing ? "Cancel" : "Edit"}</Text>
-                    </TouchableOpacity>
-                </View>
+        <Animated.View style={[{ flex: 1 }, animatedStyle]}>
+            <SafeAreaView style={styles.container}>
+                <StatusBar style="auto" />
+                <KeyboardAvoidingView
+                    behavior="height"
+                    style={styles.keyboardAvoidingView}
+                    keyboardVerticalOffset={0}
+                    contentContainerStyle={{ flex: 1 }}
+                >
+                    <View style={styles.header}>
+                        <Text style={styles.title}>User Profile</Text>
+                        {isReloading && <Text style={styles.reloadingText}>🔄 Refreshing profile...</Text>}
+                        <TouchableOpacity style={styles.cancelButton} onPress={toggleEditMode} activeOpacity={0.7}>
+                            <Text style={styles.cancelButtonText}>{isEditing ? "Cancel" : "Edit"}</Text>
+                        </TouchableOpacity>
+                    </View>
 
-                <View style={styles.formContainer}>
-                    {/* Display total calories and progress bar */}
-                    {!isEditing && profile?.totalCalories !== undefined && (
-                        <View style={styles.calorieProgressContainer}>
-                            <View style={styles.calorieInfoRow}>
-                                <Text style={styles.calorieTitle}>Calories Consumed</Text>
-                                <Text style={styles.calorieValue} numberOfLines={1} adjustsFontSizeToFit>
-                                    {profile.totalCalories.toFixed(0)} / {formatDecimalDisplay(profile.calorieLimit)}
-                                </Text>
-                            </View>
-
-                            <View style={styles.caloriePeriodRow}>
-                                <Text style={styles.periodText}>Period: {getPeriodLabel(profile.calorieLimitPeriod)}</Text>
-                            </View>
-
-                            <View style={styles.progressBarContainer}>
-                                <View
-                                    style={[
-                                        styles.progressBar,
-                                        {
-                                            width: `${Math.min(calculateCaloriePercentage(), 100)}%`,
-                                            backgroundColor: getProgressColor(),
-                                        },
-                                    ]}
-                                />
-                                <View style={styles.progressTextContainer}>
-                                    <Text style={styles.progressText}>{calculateCaloriePercentage()}%</Text>
-                                </View>
-                            </View>
-
-                            {calculateCaloriePercentage() > 100 && (
-                                <View style={styles.warningContainer}>
-                                    <Text style={styles.warningText}>⚠️ Calorie limit exceeded!</Text>
-                                </View>
-                            )}
-                        </View>
-                    )}
-
-                    {/* Gender and Age in one row */}
-                    <View style={styles.rowContainer}>
-                        <View style={[styles.columnContainer, { marginRight: 8 }]}>
-                            <Text style={styles.fieldLabel}>Gender:</Text>
-                            {isEditing ? (
-                                <View style={styles.switchContainer}>
-                                    <Text style={styles.switchLabel}>
-                                        {getValue("gender") === true
-                                            ? "Male"
-                                            : getValue("gender") === false
-                                                ? "Female"
-                                                : ""}
+                    <View style={styles.formContainer}>
+                        {/* Display total calories and progress bar */}
+                        {!isEditing && profile?.totalCalories !== undefined && (
+                            <View style={styles.calorieProgressContainer}>
+                                <View style={styles.calorieInfoRow}>
+                                    <Text style={styles.calorieTitle}>Calories Consumed</Text>
+                                    <Text style={styles.calorieValue} numberOfLines={1} adjustsFontSizeToFit>
+                                        {profile.totalCalories.toFixed(0)} / {formatDecimalDisplay(profile.calorieLimit)}
                                     </Text>
-                                    <Switch
-                                        value={getValue("gender") === true}
-                                        onValueChange={(value) => handleChange("gender", value)}
-                                        trackColor={{ false: "#e9e9e9", true: "#81b0ff" }}
-                                        thumbColor={getValue("gender") === true ? "#0066cc" : "#f4f3f4"}
-                                    />
                                 </View>
-                            ) : (
-                                <Text style={styles.fieldValue}>
-                                    {profile?.gender === true
-                                        ? "Male"
-                                        : profile?.gender === false
-                                            ? "Female"
-                                            : ""}
-                                </Text>
-                            )}
-                        </View>
 
-                        <View style={styles.columnContainer}>
-                            <Text style={styles.fieldLabel}>Age:</Text>
-                            {isEditing ? (
-                                <>
-                                    <TextInput
-                                        style={[styles.input, validationErrors.age && styles.inputError]}
-                                        value={getValue("age")?.toString()}
-                                        onChangeText={(text) => handleChange("age", Number.parseInt(text) || 0)}
-                                        keyboardType="number-pad"
-                                        placeholder="0-200"
+                                <View style={styles.caloriePeriodRow}>
+                                    <Text style={styles.periodText}>Period: {getPeriodLabel(profile.calorieLimitPeriod)}</Text>
+                                </View>
+
+                                <View style={styles.progressBarContainer}>
+                                    <View
+                                        style={[
+                                            styles.progressBar,
+                                            {
+                                                width: `${Math.min(calculateCaloriePercentage(), 100)}%`,
+                                                backgroundColor: getProgressColor(),
+                                            },
+                                        ]}
                                     />
-                                    {validationErrors.age && <Text style={styles.errorText}>{validationErrors.age}</Text>}
-                                </>
-                            ) : (
-                                <Text style={styles.fieldValue}>{profile?.age}</Text>
-                            )}
-                        </View>
-                    </View>
+                                    <View style={styles.progressTextContainer}>
+                                        <Text style={styles.progressText}>{calculateCaloriePercentage()}%</Text>
+                                    </View>
+                                </View>
 
-                    {/* Height and Weight in one row */}
-                    <View style={styles.rowContainer}>
-                        <View style={[styles.columnContainer, { marginRight: 8 }]}>
-                            <Text style={styles.fieldLabel}>Height (cm):</Text>
-                            {isEditing ? (
-                                <>
-                                    <TextInput
-                                        style={[styles.input, validationErrors.height && styles.inputError]}
-                                        value={getValue("height")?.toString()}
-                                        onChangeText={(text) => handleChange("height", Number.parseInt(text) || 0)}
-                                        keyboardType="number-pad"
-                                        placeholder="0-999"
-                                    />
-                                    {validationErrors.height && <Text style={styles.errorText}>{validationErrors.height}</Text>}
-                                </>
-                            ) : (
-                                <Text style={styles.fieldValue}>{profile?.height}</Text>
-                            )}
-                        </View>
+                                {calculateCaloriePercentage() > 100 && (
+                                    <View style={styles.warningContainer}>
+                                        <Text style={styles.warningText}>⚠️ Calorie limit exceeded!</Text>
+                                    </View>
+                                )}
+                            </View>
+                        )}
 
-                        <View style={styles.columnContainer}>
-                            <Text style={styles.fieldLabel}>Weight (kg):</Text>
-                            {isEditing ? (
-                                <>
-                                    <TextInput
-                                        style={[styles.input, validationErrors.weight && styles.inputError]}
-                                        value={getValue("weight")?.toString()}
-                                        onChangeText={(text) => handleChange("weight", Number.parseInt(text) || 0)}
-                                        keyboardType="number-pad"
-                                        placeholder="0-999"
-                                    />
-                                    {validationErrors.weight && <Text style={styles.errorText}>{validationErrors.weight}</Text>}
-                                </>
-                            ) : (
-                                <Text style={styles.fieldValue}>{profile?.weight}</Text>
-                            )}
-                        </View>
-                    </View>
+                        {/* Gender and Age in one row */}
+                        <View style={styles.rowContainer}>
+                            <View style={[styles.columnContainer, { marginRight: 8 }]}>
+                                <Text style={styles.fieldLabel}>Gender:</Text>
+                                {isEditing ? (
+                                    <View style={styles.switchContainer}>
+                                        <Text style={styles.switchLabel}>
+                                            {getValue("gender") === true ? "Male" : getValue("gender") === false ? "Female" : ""}
+                                        </Text>
+                                        <Switch
+                                            value={getValue("gender") === true}
+                                            onValueChange={(value) => handleChange("gender", value)}
+                                            trackColor={{ false: "#e9e9e9", true: "#81b0ff" }}
+                                            thumbColor={getValue("gender") === true ? "#0066cc" : "#f4f3f4"}
+                                        />
+                                    </View>
+                                ) : (
+                                    <Text style={styles.fieldValue}>
+                                        {profile?.gender === true ? "Male" : profile?.gender === false ? "Female" : ""}
+                                    </Text>
+                                )}
+                            </View>
 
-                    {/* Auto-calculate calorie limit */}
-                    {isEditing && (
-                        <View style={styles.fieldRow}>
-                            <Text style={styles.fieldLabel}>Auto-calculate calorie limit:</Text>
-                            <View style={styles.switchContainer}>
-                                <Text style={styles.switchLabel}>{isAutoSetCalorieLimit() ? "On" : "Off"}</Text>
-                                <Switch
-                                    value={isAutoSetCalorieLimit()}
-                                    onValueChange={(value) => handleChange("autoSetCalorieLimit", value)}
-                                    trackColor={{ false: "#e9e9e9", true: "#81b0ff" }}
-                                    thumbColor={isAutoSetCalorieLimit() ? "#0066cc" : "#f4f3f4"}
-                                />
+                            <View style={styles.columnContainer}>
+                                <Text style={styles.fieldLabel}>Age:</Text>
+                                {isEditing ? (
+                                    <>
+                                        <TextInput
+                                            style={[styles.input, validationErrors.age && styles.inputError]}
+                                            value={getValue("age")?.toString()}
+                                            onChangeText={(text) => handleChange("age", Number.parseInt(text) || 0)}
+                                            keyboardType="number-pad"
+                                            placeholder="0-200"
+                                        />
+                                        {validationErrors.age && <Text style={styles.errorText}>{validationErrors.age}</Text>}
+                                    </>
+                                ) : (
+                                    <Text style={styles.fieldValue}>{profile?.age}</Text>
+                                )}
                             </View>
                         </View>
-                    )}
 
-                    {/* Calorie Limit and Period in one row - Now supports decimals */}
-                    <View style={styles.rowContainer}>
-                        <View style={[styles.columnContainer, { marginRight: 8 }]}>
-                            <Text style={styles.fieldLabel}>Calorie Limit:</Text>
-                            {isEditing ? (
-                                <>
-                                    <TextInput
-                                        style={[
-                                            styles.input,
-                                            isAutoSetCalorieLimit() && styles.disabledInput,
-                                            validationErrors.calorieLimit && styles.inputError,
-                                        ]}
-                                        value={calorieInputText || getValue("calorieLimit")?.toString()}
-                                        onChangeText={(text) => handleDecimalInputChange("calorieLimit", text, setCalorieInputText)}
-                                        keyboardType="decimal-pad"
-                                        editable={!isAutoSetCalorieLimit()}
-                                        placeholder="e.g. 2000.5"
-                                        maxLength={15}
-                                    />
-                                    {validationErrors.calorieLimit && (
-                                        <Text style={styles.errorText}>{validationErrors.calorieLimit}</Text>
-                                    )}
-                                </>
-                            ) : (
-                                <Text style={styles.fieldValue} numberOfLines={1} adjustsFontSizeToFit>
-                                    {formatDecimalDisplay(profile?.calorieLimit)}
-                                </Text>
-                            )}
+                        {/* Height and Weight in one row */}
+                        <View style={styles.rowContainer}>
+                            <View style={[styles.columnContainer, { marginRight: 8 }]}>
+                                <Text style={styles.fieldLabel}>Height (cm):</Text>
+                                {isEditing ? (
+                                    <>
+                                        <TextInput
+                                            style={[styles.input, validationErrors.height && styles.inputError]}
+                                            value={getValue("height")?.toString()}
+                                            onChangeText={(text) => handleChange("height", Number.parseInt(text) || 0)}
+                                            keyboardType="number-pad"
+                                            placeholder="0-999"
+                                        />
+                                        {validationErrors.height && <Text style={styles.errorText}>{validationErrors.height}</Text>}
+                                    </>
+                                ) : (
+                                    <Text style={styles.fieldValue}>{profile?.height}</Text>
+                                )}
+                            </View>
+
+                            <View style={styles.columnContainer}>
+                                <Text style={styles.fieldLabel}>Weight (kg):</Text>
+                                {isEditing ? (
+                                    <>
+                                        <TextInput
+                                            style={[styles.input, validationErrors.weight && styles.inputError]}
+                                            value={getValue("weight")?.toString()}
+                                            onChangeText={(text) => handleChange("weight", Number.parseInt(text) || 0)}
+                                            keyboardType="number-pad"
+                                            placeholder="0-999"
+                                        />
+                                        {validationErrors.weight && <Text style={styles.errorText}>{validationErrors.weight}</Text>}
+                                    </>
+                                ) : (
+                                    <Text style={styles.fieldValue}>{profile?.weight}</Text>
+                                )}
+                            </View>
                         </View>
 
-                        <View style={styles.columnContainer}>
-                            <Text style={styles.fieldLabel}>Calorie Limit Period:</Text>
-                            {isEditing ? (
-                                <View>
-                                    <TouchableOpacity
-                                        style={styles.dropdownButton}
-                                        onPress={() => setShowPeriodDropdown(true)}
-                                        activeOpacity={0.7}
-                                    >
-                                        <Text style={styles.dropdownButtonText}>
-                                            {getPeriodLabel(getValue("calorieLimitPeriod") as string)}
-                                        </Text>
-                                    </TouchableOpacity>
-
-                                    <Modal
-                                        visible={showPeriodDropdown}
-                                        transparent={true}
-                                        animationType="fade"
-                                        onRequestClose={() => setShowPeriodDropdown(false)}
-                                    >
-                                        <TouchableOpacity
-                                            style={styles.modalOverlay}
-                                            activeOpacity={1}
-                                            onPress={() => setShowPeriodDropdown(false)}
-                                        >
-                                            <View style={styles.dropdownModal}>
-                                                {PERIOD_OPTIONS.map((option) => (
-                                                    <TouchableOpacity
-                                                        key={option.value}
-                                                        style={[
-                                                            styles.dropdownItem,
-                                                            getValue("calorieLimitPeriod") === option.value && styles.dropdownItemSelected,
-                                                        ]}
-                                                        onPress={() => {
-                                                            handleChange("calorieLimitPeriod", option.value)
-                                                            setShowPeriodDropdown(false)
-                                                        }}
-                                                        activeOpacity={0.7}
-                                                    >
-                                                        <Text
-                                                            style={[
-                                                                styles.dropdownItemText,
-                                                                getValue("calorieLimitPeriod") === option.value && styles.dropdownItemTextSelected,
-                                                            ]}
-                                                        >
-                                                            {option.label}
-                                                        </Text>
-                                                    </TouchableOpacity>
-                                                ))}
-                                            </View>
-                                        </TouchableOpacity>
-                                    </Modal>
+                        {/* Auto-calculate calorie limit */}
+                        {isEditing && (
+                            <View style={styles.fieldRow}>
+                                <Text style={styles.fieldLabel}>Auto-calculate calorie limit:</Text>
+                                <View style={styles.switchContainer}>
+                                    <Text style={styles.switchLabel}>{isAutoSetCalorieLimit() ? "On" : "Off"}</Text>
+                                    <Switch
+                                        value={isAutoSetCalorieLimit()}
+                                        onValueChange={(value) => handleChange("autoSetCalorieLimit", value)}
+                                        trackColor={{ false: "#e9e9e9", true: "#81b0ff" }}
+                                        thumbColor={isAutoSetCalorieLimit() ? "#0066cc" : "#f4f3f4"}
+                                    />
                                 </View>
-                            ) : (
-                                <Text style={styles.fieldValue}>{getPeriodLabel(profile?.calorieLimitPeriod || "day")}</Text>
-                            )}
-                        </View>
-                    </View>
+                            </View>
+                        )}
 
-                    {/* Length and Width Reference Points in one row - Now supports decimals */}
-                    <View style={styles.rowContainer}>
-                        <View style={[styles.columnContainer, { marginRight: 8 }]}>
-                            <Text style={styles.fieldLabel}>Length Reference Point (cm):</Text>
-                            {isEditing ? (
-                                <>
-                                    <TextInput
-                                        style={[styles.input, validationErrors.lengthReferencePoint && styles.inputError]}
-                                        value={lengthInputText || getValue("lengthReferencePoint")?.toString()}
-                                        onChangeText={(text) => handleDecimalInputChange("lengthReferencePoint", text, setLengthInputText)}
-                                        keyboardType="decimal-pad"
-                                        placeholder="e.g. 15.5"
-                                        maxLength={10}
-                                    />
-                                    {validationErrors.lengthReferencePoint && (
-                                        <Text style={styles.errorText}>{validationErrors.lengthReferencePoint}</Text>
-                                    )}
-                                </>
-                            ) : (
-                                <Text style={styles.fieldValue} numberOfLines={1} adjustsFontSizeToFit>
-                                    {formatDecimalDisplay(profile?.lengthReferencePoint || 0)}
-                                </Text>
-                            )}
-                        </View>
-
-                        <View style={styles.columnContainer}>
-                            <Text style={styles.fieldLabel}>Width Reference Point (cm):</Text>
-                            {isEditing ? (
-                                <>
-                                    <TextInput
-                                        style={[styles.input, validationErrors.widthReferencePoint && styles.inputError]}
-                                        value={widthInputText || getValue("widthReferencePoint")?.toString()}
-                                        onChangeText={(text) => handleDecimalInputChange("widthReferencePoint", text, setWidthInputText)}
-                                        keyboardType="decimal-pad"
-                                        placeholder="e.g. 7.25"
-                                        maxLength={10}
-                                    />
-                                    {validationErrors.widthReferencePoint && (
-                                        <Text style={styles.errorText}>{validationErrors.widthReferencePoint}</Text>
-                                    )}
-                                </>
-                            ) : (
-                                <Text style={styles.fieldValue} numberOfLines={1} adjustsFontSizeToFit>
-                                    {formatDecimalDisplay(profile?.widthReferencePoint || 0)}
-                                </Text>
-                            )}
-                        </View>
-                    </View>
-
-                    {/* Area Reference Point - Now shows decimal precision */}
-                    <View style={styles.fieldRow}>
-                        <Text style={styles.fieldLabel}>Area Reference Point (cm²):</Text>
-                        <Text style={styles.fieldValue} numberOfLines={1} adjustsFontSizeToFit>
-                            {isEditing ? formatDecimalDisplay(calculateAreaReferencePoint()) : formatDecimalDisplay(profile?.areaReferencePoint || 0)}
-                            {isEditing && <Text style={styles.calculatedText}> (length x width)</Text>}
-                        </Text>
-                    </View>
-                </View>
-
-                {isEditing && (
-                    <View style={styles.buttonContainer}>
-                        <Animated.View style={{ transform: [{ scale: resetButtonScale }], flex: 1, marginRight: 8 }}>
-                            <Pressable
-                                style={({ pressed }) => [styles.resetButton, pressed && styles.buttonPressed]}
-                                onPress={resetToOriginal}
-                                disabled={saving || resetting}
-                                android_ripple={{ color: "rgba(255, 255, 255, 0.4)" }}
-                            >
-                                {resetting ? (
-                                    <ActivityIndicator size="small" color="#fff" />
+                        {/* Calorie Limit and Period in one row - Now supports decimals */}
+                        <View style={styles.rowContainer}>
+                            <View style={[styles.columnContainer, { marginRight: 8 }]}>
+                                <Text style={styles.fieldLabel}>Calorie Limit:</Text>
+                                {isEditing ? (
+                                    <>
+                                        <TextInput
+                                            style={[
+                                                styles.input,
+                                                isAutoSetCalorieLimit() && styles.disabledInput,
+                                                validationErrors.calorieLimit && styles.inputError,
+                                            ]}
+                                            value={calorieInputText || getValue("calorieLimit")?.toString()}
+                                            onChangeText={(text) => handleDecimalInputChange("calorieLimit", text, setCalorieInputText)}
+                                            keyboardType="decimal-pad"
+                                            editable={!isAutoSetCalorieLimit()}
+                                            placeholder="e.g. 2000.5"
+                                            maxLength={15}
+                                        />
+                                        {validationErrors.calorieLimit && (
+                                            <Text style={styles.errorText}>{validationErrors.calorieLimit}</Text>
+                                        )}
+                                    </>
                                 ) : (
-                                    <Text style={styles.buttonText}>Reset</Text>
+                                    <Text style={styles.fieldValue} numberOfLines={1} adjustsFontSizeToFit>
+                                        {formatDecimalDisplay(profile?.calorieLimit)}
+                                    </Text>
                                 )}
-                            </Pressable>
-                        </Animated.View>
+                            </View>
 
-                        <Animated.View style={{ transform: [{ scale: saveButtonScale }], flex: 1, marginLeft: 8 }}>
-                            <Pressable
-                                style={({ pressed }) => [
-                                    styles.saveButton,
-                                    !hasChanges() && styles.disabledButton,
-                                    pressed && styles.buttonPressed,
-                                ]}
-                                onPress={updateProfile}
-                                disabled={saving || !hasChanges() || resetting}
-                                android_ripple={{ color: "rgba(255, 255, 255, 0.4)" }}
-                            >
-                                {saving ? (
-                                    <ActivityIndicator size="small" color="#fff" />
+                            <View style={styles.columnContainer}>
+                                <Text style={styles.fieldLabel}>Calorie Limit Period:</Text>
+                                {isEditing ? (
+                                    <View>
+                                        <TouchableOpacity
+                                            style={styles.dropdownButton}
+                                            onPress={() => setShowPeriodDropdown(true)}
+                                            activeOpacity={0.7}
+                                        >
+                                            <Text style={styles.dropdownButtonText}>
+                                                {getPeriodLabel(getValue("calorieLimitPeriod") as string)}
+                                            </Text>
+                                        </TouchableOpacity>
+
+                                        <Modal
+                                            visible={showPeriodDropdown}
+                                            transparent={true}
+                                            animationType="fade"
+                                            onRequestClose={() => setShowPeriodDropdown(false)}
+                                        >
+                                            <TouchableOpacity
+                                                style={styles.modalOverlay}
+                                                activeOpacity={1}
+                                                onPress={() => setShowPeriodDropdown(false)}
+                                            >
+                                                <View style={styles.dropdownModal}>
+                                                    {PERIOD_OPTIONS.map((option) => (
+                                                        <TouchableOpacity
+                                                            key={option.value}
+                                                            style={[
+                                                                styles.dropdownItem,
+                                                                getValue("calorieLimitPeriod") === option.value && styles.dropdownItemSelected,
+                                                            ]}
+                                                            onPress={() => {
+                                                                handleChange("calorieLimitPeriod", option.value)
+                                                                setShowPeriodDropdown(false)
+                                                            }}
+                                                            activeOpacity={0.7}
+                                                        >
+                                                            <Text
+                                                                style={[
+                                                                    styles.dropdownItemText,
+                                                                    getValue("calorieLimitPeriod") === option.value && styles.dropdownItemTextSelected,
+                                                                ]}
+                                                            >
+                                                                {option.label}
+                                                            </Text>
+                                                        </TouchableOpacity>
+                                                    ))}
+                                                </View>
+                                            </TouchableOpacity>
+                                        </Modal>
+                                    </View>
                                 ) : (
-                                    <Text style={styles.buttonText}>Save Changes</Text>
+                                    <Text style={styles.fieldValue}>{getPeriodLabel(profile?.calorieLimitPeriod || "day")}</Text>
                                 )}
-                            </Pressable>
-                        </Animated.View>
+                            </View>
+                        </View>
+
+                        {/* Length and Width Reference Points in one row - Now supports decimals */}
+                        <View style={styles.rowContainer}>
+                            <View style={[styles.columnContainer, { marginRight: 8 }]}>
+                                <Text style={styles.fieldLabel}>Length Reference Point (cm):</Text>
+                                {isEditing ? (
+                                    <>
+                                        <TextInput
+                                            style={[styles.input, validationErrors.lengthReferencePoint && styles.inputError]}
+                                            value={lengthInputText || getValue("lengthReferencePoint")?.toString()}
+                                            onChangeText={(text) =>
+                                                handleDecimalInputChange("lengthReferencePoint", text, setLengthInputText)
+                                            }
+                                            keyboardType="decimal-pad"
+                                            placeholder="e.g. 15.5"
+                                            maxLength={10}
+                                        />
+                                        {validationErrors.lengthReferencePoint && (
+                                            <Text style={styles.errorText}>{validationErrors.lengthReferencePoint}</Text>
+                                        )}
+                                    </>
+                                ) : (
+                                    <Text style={styles.fieldValue} numberOfLines={1} adjustsFontSizeToFit>
+                                        {formatDecimalDisplay(profile?.lengthReferencePoint || 0)}
+                                    </Text>
+                                )}
+                            </View>
+
+                            <View style={styles.columnContainer}>
+                                <Text style={styles.fieldLabel}>Width Reference Point (cm):</Text>
+                                {isEditing ? (
+                                    <>
+                                        <TextInput
+                                            style={[styles.input, validationErrors.widthReferencePoint && styles.inputError]}
+                                            value={widthInputText || getValue("widthReferencePoint")?.toString()}
+                                            onChangeText={(text) => handleDecimalInputChange("widthReferencePoint", text, setWidthInputText)}
+                                            keyboardType="decimal-pad"
+                                            placeholder="e.g. 7.25"
+                                            maxLength={10}
+                                        />
+                                        {validationErrors.widthReferencePoint && (
+                                            <Text style={styles.errorText}>{validationErrors.widthReferencePoint}</Text>
+                                        )}
+                                    </>
+                                ) : (
+                                    <Text style={styles.fieldValue} numberOfLines={1} adjustsFontSizeToFit>
+                                        {formatDecimalDisplay(profile?.widthReferencePoint || 0)}
+                                    </Text>
+                                )}
+                            </View>
+                        </View>
+
+                        {/* Area Reference Point - Now shows decimal precision */}
+                        <View style={styles.fieldRow}>
+                            <Text style={styles.fieldLabel}>Area Reference Point (cm²):</Text>
+                            <Text style={styles.fieldValue} numberOfLines={1} adjustsFontSizeToFit>
+                                {isEditing
+                                    ? formatDecimalDisplay(calculateAreaReferencePoint())
+                                    : formatDecimalDisplay(profile?.areaReferencePoint || 0)}
+                                {isEditing && <Text style={styles.calculatedText}> (length x width)</Text>}
+                            </Text>
+                        </View>
                     </View>
-                )}
-            </KeyboardAvoidingView>
-        </SafeAreaView>
+
+                    {isEditing && (
+                        <View style={styles.buttonContainer}>
+                            <Animated.View style={{ transform: [{ scale: resetButtonScale }], flex: 1, marginRight: 8 }}>
+                                <Pressable
+                                    style={({ pressed }) => [styles.resetButton, pressed && styles.buttonPressed]}
+                                    onPress={resetToOriginal}
+                                    disabled={saving || resetting}
+                                    android_ripple={{ color: "rgba(255, 255, 255, 0.4)" }}
+                                >
+                                    {resetting ? (
+                                        <ActivityIndicator size="small" color="#fff" />
+                                    ) : (
+                                        <Text style={styles.buttonText}>Reset</Text>
+                                    )}
+                                </Pressable>
+                            </Animated.View>
+
+                            <Animated.View style={{ transform: [{ scale: saveButtonScale }], flex: 1, marginLeft: 8 }}>
+                                <Pressable
+                                    style={({ pressed }) => [
+                                        styles.saveButton,
+                                        !hasChanges() && styles.disabledButton,
+                                        pressed && styles.buttonPressed,
+                                    ]}
+                                    onPress={updateProfile}
+                                    disabled={saving || !hasChanges() || resetting}
+                                    android_ripple={{ color: "rgba(255, 255, 255, 0.4)" }}
+                                >
+                                    {saving ? (
+                                        <ActivityIndicator size="small" color="#fff" />
+                                    ) : (
+                                        <Text style={styles.buttonText}>Save Changes</Text>
+                                    )}
+                                </Pressable>
+                            </Animated.View>
+                        </View>
+                    )}
+                </KeyboardAvoidingView>
+            </SafeAreaView>
+        </Animated.View>
     )
 }
 
@@ -874,6 +887,15 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: "bold",
         color: "#333",
+    },
+    reloadingText: {
+        fontSize: 14,
+        color: "#007AFF",
+        fontWeight: "600",
+        position: "absolute",
+        left: "50%",
+        top: 30,
+        transform: [{ translateX: -50 }],
     },
     cancelButton: {
         padding: 8,

@@ -160,7 +160,6 @@ export const useFoodHistory = (
                 setPage(pageNum)
             } catch (err) {
                 setError("Failed to load food history. Please try again.")
-                console.error("Error fetching food history:", err)
             } finally {
                 setIsLoading(false)
                 setIsLoadingMore(false)
@@ -252,7 +251,6 @@ export const useFoodHistory = (
             }
             return false
         } catch (error) {
-            console.error("Error updating food item:", error)
             setError("Failed to update food item. Please try again.")
             return false
         }
