@@ -64,13 +64,34 @@ interface FoodHistoryDateViewProps {
     onDataChange: (totalCalories: number) => void
 }
 
-// Enhanced ImageModal with loading animation
+// Simple ImageModal for Android compatibility
 const ImageModal: React.FC<{
     visible: boolean
     imageUri: string
     onClose: () => void
 }> = ({ visible, imageUri, onClose }) => {
     const [imageLoading, setImageLoading] = useState(true)
+
+    // Add ESC key support for web
+    useEffect(() => {
+        const handleEscape = (event: KeyboardEvent) => {
+            if (event.key === "Escape") {
+                onClose()
+            }
+        }
+
+        if (visible && Platform.OS === "web") {
+            document.addEventListener("keydown", handleEscape)
+            return () => document.removeEventListener("keydown", handleEscape)
+        }
+    }, [visible, onClose])
+
+    // Reset loading when modal opens
+    useEffect(() => {
+        if (visible) {
+            setImageLoading(true)
+        }
+    }, [visible])
 
     if (!visible) return null
 
@@ -304,6 +325,7 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({ sortOption, o
         saveEditedItem,
         handleSortChange,
         isSortChanging,
+        scrollToTop: scrollToTopUtil,
     } = useFoodHistory("newest", sortOption, onDataChange)
 
     // UI state management
@@ -344,12 +366,12 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({ sortOption, o
     const getTimePeriodLabel = () => {
         switch (timeUnit) {
             case "day":
-                const [y1, m1, d1] = selectedDate.split('-');
+                const [y1, m1, d1] = selectedDate.split("-")
                 return `Food History for ${d1}-${m1}-${y1}`
             case "week":
                 return `Food History for ${weeksAgo} weeks ago`
             case "month":
-                const [y2, m2] = selectedMonth.split('-');
+                const [y2, m2] = selectedMonth.split("-")
                 return `Food History for ${m2}-${y2}`
             default:
                 return "Food History"
@@ -430,14 +452,15 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({ sortOption, o
     useEffect(() => {
         if (isInitialized && sortOption) {
             handleSortChange(sortOption, (sortOpt) => {
-                // Scroll to top immediately
+                // Scroll to top immediately and hide scroll button
                 if (flatListRef.current) {
-                    flatListRef.current.scrollToOffset({ offset: 0, animated: true })
+                    scrollToTopUtil(flatListRef as React.RefObject<FlatList<any>>)
                 }
+                setShowScrollToTop(false) // Hide scroll to top button
                 fetchData(true, sortOpt, true)
             })
         }
-    }, [sortOption])
+    }, [sortOption, scrollToTopUtil])
 
     // Handle time unit change with animation
     const handleTimeUnitChange = useCallback((unit: TimeUnit) => {

@@ -32,12 +32,26 @@ interface FoodHistoryAllViewProps {
     onDataChange: (totalCalories: number) => void
 }
 
-// Enhanced ImageModal matching index implementation
+// Simple ImageModal for Android compatibility
 const ImageModal: React.FC<{
     visible: boolean
     imageUri: string
     onClose: () => void
 }> = ({ visible, imageUri, onClose }) => {
+    // Add ESC key support for web
+    useEffect(() => {
+        const handleEscape = (event: KeyboardEvent) => {
+            if (event.key === "Escape") {
+                onClose()
+            }
+        }
+
+        if (visible && Platform.OS === "web") {
+            document.addEventListener("keydown", handleEscape)
+            return () => document.removeEventListener("keydown", handleEscape)
+        }
+    }, [visible, onClose])
+
     // Add CSS animation for web spinning effect inside useEffect
     useEffect(() => {
         if (Platform.OS === "web" && typeof document !== "undefined") {
@@ -117,11 +131,7 @@ const ImageModal: React.FC<{
             <TouchableOpacity style={modalStyles.backdrop} onPress={onClose} activeOpacity={1} />
             <View style={modalStyles.container}>
                 <View style={modalStyles.imageContainer}>
-                    <Image
-                        source={{ uri: imageUri }}
-                        style={modalStyles.image}
-                        resizeMode="contain"
-                    />
+                    <Image source={{ uri: imageUri }} style={modalStyles.image} resizeMode="contain" />
                 </View>
                 <TouchableOpacity
                     style={modalStyles.closeButton}
@@ -152,6 +162,7 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({ sortOption, onS
         handleDeleteItem,
         saveEditedItem,
         handleSortChange,
+        scrollToTop: scrollToTopUtil,
     } = useFoodHistory("newest", sortOption, onDataChange)
 
     // UI state management
@@ -172,14 +183,15 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({ sortOption, onS
     useEffect(() => {
         if (sortOption) {
             handleSortChange(sortOption, (sortOpt) => {
-                // Scroll to top immediately
+                // Scroll to top immediately and hide scroll button
                 if (flatListRef.current) {
-                    flatListRef.current.scrollToOffset({ offset: 0, animated: true })
+                    scrollToTopUtil(flatListRef as React.RefObject<FlatList<any>>)
                 }
+                setShowScrollToTop(false) // Hide scroll to top button
                 fetchFoodHistory(1, true, sortOpt)
             })
         }
-    }, [sortOption, handleSortChange, fetchFoodHistory])
+    }, [sortOption, handleSortChange, fetchFoodHistory, scrollToTopUtil])
 
     // Handle refresh (pull to refresh)
     const handleRefresh = useCallback(() => {

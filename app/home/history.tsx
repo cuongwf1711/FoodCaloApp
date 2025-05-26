@@ -4,7 +4,7 @@ import type React from "react"
 
 import { StatusBar } from "expo-status-bar"
 import { useCallback, useEffect, useState } from "react"
-import { Animated, Easing, StyleSheet, Text, View } from "react-native"
+import { Animated, Easing, Platform, StyleSheet, Text, View } from "react-native"
 
 // Import shared utilities
 import {
@@ -60,42 +60,51 @@ const FoodHistoryScreen: React.FC = () => {
 
       // Refresh user profile
       await fetchUserProfile()
-
     },
   })
 
-  // Handle data change from child components
+  // Handle data change from child components - Enhanced for Android compatibility
   const handleDataChange = useCallback((calories: number) => {
     setTotalCalories(calories)
+
+    // Force re-render on Android to ensure UI updates
+    if (Platform.OS === "android") {
+      setTimeout(() => {
+        setTotalCalories(calories)
+      }, 0)
+    }
   }, [])
 
-  // Simple sort change handler with scale animation
-  const handleSortChange = useCallback((newSortOption: SortOption) => {
-    // Simple scale animation
-    Animated.sequence([
-      Animated.timing(sortScaleAnim, {
-        toValue: 0.95,
-        duration: 100,
-        useNativeDriver: true,
-        easing: Easing.out(Easing.quad),
-      }),
-      Animated.timing(sortScaleAnim, {
-        toValue: 1.05,
-        duration: 150,
-        useNativeDriver: true,
-        easing: Easing.out(Easing.back(1.2)),
-      }),
-      Animated.timing(sortScaleAnim, {
-        toValue: 1,
-        duration: 100,
-        useNativeDriver: true,
-        easing: Easing.out(Easing.ease),
-      }),
-    ]).start()
+  // Enhanced sort change handler with scroll to top and scale animation
+  const handleSortChange = useCallback(
+    (newSortOption: SortOption) => {
+      // Simple scale animation
+      Animated.sequence([
+        Animated.timing(sortScaleAnim, {
+          toValue: 0.95,
+          duration: 100,
+          useNativeDriver: true,
+          easing: Easing.out(Easing.quad),
+        }),
+        Animated.timing(sortScaleAnim, {
+          toValue: 1.05,
+          duration: 150,
+          useNativeDriver: true,
+          easing: Easing.out(Easing.back(1.2)),
+        }),
+        Animated.timing(sortScaleAnim, {
+          toValue: 1,
+          duration: 100,
+          useNativeDriver: true,
+          easing: Easing.out(Easing.ease),
+        }),
+      ]).start()
 
-    // Update sort option
-    setSortOption(newSortOption)
-  }, [])
+      // Update sort option
+      setSortOption(newSortOption)
+    },
+    [sortScaleAnim],
+  )
 
   // Simple filter change handler with scale animation
   const handleFilterChange = (newFilter: TimeFilter) => {
@@ -191,7 +200,6 @@ const FoodHistoryScreen: React.FC = () => {
 
         {/* Fixed header section with better layout and higher z-index */}
         <View style={styles.headerContainer}>
-
           {/* Info and controls row */}
           <View style={styles.controlsContainer}>
             {/* First row: Calorie info */}

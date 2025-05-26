@@ -19,6 +19,7 @@ import {
     TouchableOpacity,
     TouchableWithoutFeedback,
     View,
+    type FlatList,
 } from "react-native"
 
 // Common Types
@@ -76,6 +77,7 @@ export const useFoodHistory = (
     const [totalCalories, setTotalCalories] = useState(0)
     const [sortOption, setSortOption] = useState<SortOption>(externalSortOption || initialSortOption)
     const [isSortChanging, setIsSortChanging] = useState(false)
+    const [scrollPosition, setScrollPosition] = useState(0)
 
     useEffect(() => {
         if (externalSortOption && externalSortOption !== sortOption) {
@@ -155,7 +157,23 @@ export const useFoodHistory = (
                     setFoodItems((prev) => [...prev, ...newItems])
                 }
 
-                setTotalCalories(response.data.totalCalories)
+                // Enhanced total calories handling for better persistence
+                const newTotalCalories = response.data.totalCalories
+                setTotalCalories(newTotalCalories)
+
+                // Force update for Android compatibility with multiple approaches
+                if (Platform.OS === "android") {
+                    // Use multiple methods to ensure state update
+                    setTimeout(() => {
+                        setTotalCalories(newTotalCalories)
+                    }, 0)
+
+                    // Additional fallback for Android
+                    requestAnimationFrame(() => {
+                        setTotalCalories(newTotalCalories)
+                    })
+                }
+
                 setHasMore(response.data.next !== null)
                 setPage(pageNum)
             } catch (err) {
@@ -209,9 +227,7 @@ export const useFoodHistory = (
                 if (!itemToDelete) return currentItems // Không tìm thấy item
 
                 // Set isDeleting = true
-                return currentItems.map((item) =>
-                    item.id === id ? { ...item, isDeleting: true } : item
-                )
+                return currentItems.map((item) => (item.id === id ? { ...item, isDeleting: true } : item))
             })
 
             if (!itemToDelete) {
@@ -292,6 +308,23 @@ export const useFoodHistory = (
         setIsLoading,
         setIsRefreshing,
         setError,
+        scrollPosition,
+        setScrollPosition,
+        scrollToTop: useCallback((flatListRef: React.RefObject<FlatList>, onComplete?: () => void) => {
+            if (flatListRef.current) {
+                flatListRef.current.scrollToOffset({
+                    offset: 0,
+                    animated: true,
+                })
+
+                // Call completion callback after scroll animation
+                if (onComplete) {
+                    setTimeout(() => {
+                        onComplete()
+                    }, 300) // Match scroll animation duration
+                }
+            }
+        }, []),
     }
 }
 
@@ -316,13 +349,73 @@ export const ImageModal: React.FC<{
     imageUri: string
     onClose: () => void
 }> = ({ visible, imageUri, onClose }) => {
+    const [isModalVisible, setIsModalVisible] = useState(visible)
+
+    useEffect(() => {
+        setIsModalVisible(visible)
+    }, [visible])
+
+    useEffect(() => {
+        const handleEscape = (event: KeyboardEvent) => {
+            if (event.key === "Escape") {
+                onClose()
+            }
+        }
+
+        if (Platform.OS === "web" && isModalVisible) {
+            document.addEventListener("keydown", handleEscape)
+            return () => document.removeEventListener("keydown", handleEscape)
+        }
+    }, [isModalVisible, onClose])
+
     if (Platform.OS === "web") {
-        if (!visible) return null
+        if (!isModalVisible) return null
+
         return (
-            <div style={webModalStyles.overlay} onClick={onClose}>
-                <div style={webModalStyles.content} onClick={(e) => e.stopPropagation()}>
-                    <img src={imageUri || "/placeholder.svg"} alt="Full size" style={webModalStyles.image} />
-                    <button onClick={onClose} style={webModalStyles.closeButton}>
+            <div
+                style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: "rgba(0, 0, 0, 0.9)",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    zIndex: 10000,
+                }}
+                onClick={onClose}
+            >
+                <div style={{ position: "relative", maxWidth: "90%", maxHeight: "90%" }} onClick={(e) => e.stopPropagation()}>
+                    <img
+                        src={imageUri || "/placeholder.svg"}
+                        alt="Full size"
+                        style={{
+                            maxWidth: "100%",
+                            maxHeight: "90vh",
+                            borderRadius: "8px",
+                            objectFit: "contain",
+                        }}
+                    />
+                    <button
+                        onClick={onClose}
+                        style={{
+                            position: "absolute",
+                            top: "-10px",
+                            right: "-10px",
+                            backgroundColor: "#fff",
+                            border: "none",
+                            borderRadius: "20px",
+                            width: "40px",
+                            height: "40px",
+                            fontSize: "18px",
+                            fontWeight: "bold",
+                            color: "#333",
+                            cursor: "pointer",
+                            boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
+                        }}
+                    >
                         ✕
                     </button>
                 </div>
@@ -340,27 +433,21 @@ export const ImageModal: React.FC<{
             onRequestClose={onClose}
             statusBarTranslucent={true}
         >
-            <View style={styles.modalOverlay}>
-                <TouchableWithoutFeedback onPress={onClose}>
-                    <View style={styles.modalBackdrop} />
-                </TouchableWithoutFeedback>
-
-                <View style={styles.modalContent} pointerEvents="box-none">
-                    <TouchableWithoutFeedback>
-                        <View style={styles.imageContainer}>
-                            <Image
-                                source={{ uri: imageUri }}
-                                style={[
-                                    styles.fullImage,
-                                    {
-                                        maxWidth: width - 40,
-                                        maxHeight: height - 100,
-                                    },
-                                ]}
-                                resizeMode="contain"
-                            />
-                        </View>
-                    </TouchableWithoutFeedback>
+            <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={onClose}>
+                <TouchableOpacity style={styles.modalContent} activeOpacity={1} onPress={(e) => e.stopPropagation()}>
+                    <View style={styles.imageContainer}>
+                        <Image
+                            source={{ uri: imageUri }}
+                            style={[
+                                styles.fullImage,
+                                {
+                                    maxWidth: width - 40,
+                                    maxHeight: height - 100,
+                                },
+                            ]}
+                            resizeMode="contain"
+                        />
+                    </View>
 
                     <TouchableOpacity
                         style={styles.closeButton}
@@ -369,8 +456,8 @@ export const ImageModal: React.FC<{
                     >
                         <Text style={styles.closeButtonText}>✕</Text>
                     </TouchableOpacity>
-                </View>
-            </View>
+                </TouchableOpacity>
+            </TouchableOpacity>
         </Modal>
     )
 }
@@ -539,7 +626,7 @@ export const SortingDropdown: React.FC<{
                         cursor: "pointer",
                         appearance: "none",
                         backgroundImage:
-                            'url(\'data:image/svg+xml;utf8,<svg fill="%23333" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>\')',
+                            'url(\'data:image/svg+xml;utf8,<svg fill="%2333" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>\')',
                         backgroundRepeat: "no-repeat",
                         backgroundPosition: "right 8px center",
                         paddingRight: "30px",
@@ -1312,11 +1399,7 @@ export const renderSharedFoodItem = (
             <View style={styles.foodCardHeader}>
                 <Text style={styles.foodName}>{item.predictName}</Text>
                 <View style={styles.actionButtons}>
-                    <TouchableOpacity
-                        style={styles.editButton}
-                        onPress={() => startEditing(item)}
-                        disabled={isDeleting}
-                    >
+                    <TouchableOpacity style={styles.editButton} onPress={() => startEditing(item)} disabled={isDeleting}>
                         {Platform.OS === "web" ? (
                             <div
                                 style={{
@@ -1367,11 +1450,7 @@ export const renderSharedFoodItem = (
                     activeOpacity={0.9}
                     disabled={isDeleting}
                 >
-                    <Image
-                        source={{ uri: item.publicUrl.originImage }}
-                        style={styles.thumbnailImage}
-                        resizeMode="contain"
-                    />
+                    <Image source={{ uri: item.publicUrl.originImage }} style={styles.thumbnailImage} resizeMode="contain" />
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -1940,7 +2019,7 @@ export const styles = StyleSheet.create({
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: "rgba(255, 255, 255, 0.7)",
+        backgroundColor: "rgba(255, 255, 255, 0.9)",
         justifyContent: "center",
         alignItems: "center",
         zIndex: 999,
