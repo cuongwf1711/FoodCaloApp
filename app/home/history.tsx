@@ -35,9 +35,9 @@ const FoodHistoryScreen: React.FC = () => {
   const [totalCalories, setTotalCalories] = useState(0)
   const [sortOption, setSortOption] = useState<SortOption>("newest")
 
-  // Add these to the existing state declarations
-  const [sortAnim] = useState(new Animated.Value(1))
-  const [sortRotateAnim] = useState(new Animated.Value(0))
+  // Simple animation states for dropdowns
+  const [sortScaleAnim] = useState(new Animated.Value(1))
+  const [filterScaleAnim] = useState(new Animated.Value(1))
 
   // Use shared hook for user profile
   const { userProfile, fetchUserProfile } = useUserProfile()
@@ -47,26 +47,27 @@ const FoodHistoryScreen: React.FC = () => {
     setTotalCalories(calories)
   }, [])
 
-  // Replace the handleSortChange function with this animated version
+  // Simple sort change handler with scale animation
   const handleSortChange = useCallback((newSortOption: SortOption) => {
-    // Start animation
+    // Simple scale animation
     Animated.sequence([
-      Animated.parallel([
-        Animated.timing(sortAnim, {
-          toValue: 0.9,
-          duration: 150,
-          useNativeDriver: true,
-        }),
-        Animated.timing(sortRotateAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]),
-      Animated.timing(sortAnim, {
-        toValue: 1,
+      Animated.timing(sortScaleAnim, {
+        toValue: 0.95,
+        duration: 100,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.quad),
+      }),
+      Animated.timing(sortScaleAnim, {
+        toValue: 1.05,
         duration: 150,
         useNativeDriver: true,
+        easing: Easing.out(Easing.back(1.2)),
+      }),
+      Animated.timing(sortScaleAnim, {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.ease),
       }),
     ]).start()
 
@@ -74,26 +75,43 @@ const FoodHistoryScreen: React.FC = () => {
     setSortOption(newSortOption)
   }, [])
 
-  // Fetch user profile on mount
-  useEffect(() => {
-    fetchUserProfile()
-  }, [fetchUserProfile])
-
-  // Handle filter change with animation
+  // Simple filter change handler with scale animation
   const handleFilterChange = (newFilter: TimeFilter) => {
-    // Start fade out animation
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 250,
+    // Simple scale animation for filter dropdown
+    Animated.sequence([
+      Animated.timing(filterScaleAnim, {
+        toValue: 0.95,
+        duration: 100,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.quad),
+      }),
+      Animated.timing(filterScaleAnim, {
+        toValue: 1.05,
+        duration: 150,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.back(1.2)),
+      }),
+      Animated.timing(filterScaleAnim, {
+        toValue: 1,
+        duration: 100,
         useNativeDriver: true,
         easing: Easing.out(Easing.ease),
       }),
-      Animated.timing(slideAnim, {
-        toValue: -50,
-        duration: 250,
+    ]).start()
+
+    // View transition animation (unchanged)
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 200,
         useNativeDriver: true,
-        easing: Easing.out(Easing.ease),
+        easing: Easing.out(Easing.cubic),
+      }),
+      Animated.timing(slideAnim, {
+        toValue: -30,
+        duration: 200,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.cubic),
       }),
     ]).start(() => {
       // Change the view after fade out
@@ -101,25 +119,32 @@ const FoodHistoryScreen: React.FC = () => {
       setCurrentView(newFilter)
 
       // Reset slide position for next animation
-      slideAnim.setValue(50)
+      slideAnim.setValue(30)
 
-      // Start fade in animation
+      // Fade in animation
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 1,
-          duration: 250,
+          duration: 300,
           useNativeDriver: true,
-          easing: Easing.in(Easing.ease),
+          easing: Easing.out(Easing.back(1.2)),
         }),
         Animated.timing(slideAnim, {
           toValue: 0,
-          duration: 250,
+          duration: 300,
           useNativeDriver: true,
-          easing: Easing.in(Easing.ease),
+          easing: Easing.out(Easing.back(1.1)),
         }),
       ]).start()
     })
   }
+
+  // Fetch user profile on mount
+  useEffect(() => {
+    fetchUserProfile()
+  }, [fetchUserProfile])
+
+
 
   // Render the appropriate view based on the selected filter
   const renderFilterView = () => {
@@ -164,19 +189,37 @@ const FoodHistoryScreen: React.FC = () => {
             </View>
           </View>
 
-          {/* Second row: Controls with proper spacing and z-index */}
+          {/* Second row: Simple animated controls */}
           <View style={styles.rightSection}>
             <View style={styles.filterSection}>
               <Text style={styles.sectionLabel}>Filter:</Text>
-              <View style={styles.dropdownWrapper}>
-                <FilterDropdown value={timeFilter} onChange={handleFilterChange} />
-              </View>
+              <Animated.View
+                style={[
+                  styles.animatedDropdownWrapper,
+                  {
+                    transform: [{ scale: filterScaleAnim }],
+                  },
+                ]}
+              >
+                <View style={styles.dropdownWrapper}>
+                  <FilterDropdown value={timeFilter} onChange={handleFilterChange} />
+                </View>
+              </Animated.View>
             </View>
             <View style={styles.sortSection}>
               <Text style={styles.sectionLabel}>Sort:</Text>
-              <View style={styles.dropdownWrapper}>
-                <SortingDropdown value={sortOption} onChange={handleSortChange} />
-              </View>
+              <Animated.View
+                style={[
+                  styles.animatedDropdownWrapper,
+                  {
+                    transform: [{ scale: sortScaleAnim }],
+                  },
+                ]}
+              >
+                <View style={styles.dropdownWrapper}>
+                  <SortingDropdown value={sortOption} onChange={handleSortChange} />
+                </View>
+              </Animated.View>
             </View>
           </View>
         </View>
@@ -288,6 +331,9 @@ const styles = StyleSheet.create({
     minWidth: 100,
     maxWidth: 120,
     zIndex: 1000, // Ensure dropdown wrapper has high z-index
+  },
+  animatedDropdownWrapper: {
+    zIndex: 1000,
   },
   animatedContainer: {
     flex: 1,
