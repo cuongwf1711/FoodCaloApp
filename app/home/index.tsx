@@ -675,7 +675,6 @@ const Index: React.FC = () => {
                 <View style={styles.header}>
                     <Text style={styles.headerTitle}>Predict Calories from Image</Text>
                     <Text style={styles.headerSubtitle}>Take or upload a food photo for analysis</Text>
-                    {isReloading && <Text style={styles.reloadingText}>🔄 Refreshing...</Text>}
                 </View>
 
                 {/* Image Selection Card */}

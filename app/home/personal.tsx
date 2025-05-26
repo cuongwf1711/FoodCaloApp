@@ -521,7 +521,6 @@ const Personal = () => {
                 >
                     <View style={styles.header}>
                         <Text style={styles.title}>User Profile</Text>
-                        {isReloading && <Text style={styles.reloadingText}>🔄 Refreshing profile...</Text>}
                         <TouchableOpacity style={styles.cancelButton} onPress={toggleEditMode} activeOpacity={0.7}>
                             <Text style={styles.cancelButtonText}>{isEditing ? "Cancel" : "Edit"}</Text>
                         </TouchableOpacity>

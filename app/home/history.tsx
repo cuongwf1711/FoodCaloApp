@@ -4,7 +4,7 @@ import type React from "react"
 
 import { StatusBar } from "expo-status-bar"
 import { useCallback, useEffect, useState } from "react"
-import { Animated, Easing, Platform, StyleSheet, Text, View } from "react-native"
+import { Animated, Easing, StyleSheet, Text, View } from "react-native"
 
 // Import shared utilities
 import {
@@ -191,11 +191,6 @@ const FoodHistoryScreen: React.FC = () => {
 
         {/* Fixed header section with better layout and higher z-index */}
         <View style={styles.headerContainer}>
-          {isReloading && (
-            <View style={styles.reloadingContainer}>
-              <Text style={styles.reloadingText}>🔄 Refreshing history...</Text>
-            </View>
-          )}
 
           {/* Info and controls row */}
           <View style={styles.controlsContainer}>
@@ -266,8 +261,6 @@ const FoodHistoryScreen: React.FC = () => {
     </Animated.View>
   )
 }
-
-const isWeb = Platform.OS === "web"
 
 const styles = StyleSheet.create({
   headerContainer: {
