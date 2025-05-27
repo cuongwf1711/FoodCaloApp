@@ -48,7 +48,7 @@ const FoodHistoryScreen: React.FC = () => {
 
   // FIXED: Use ref to track refresh state and prevent double calls
   const isRefreshingRef = useRef(false)
-  const childRefreshTriggerRef = useRef<() => void>()
+  const childRefreshTriggerRef = useRef<(() => void) | undefined>(undefined)
 
   // FIXED: Improved data change handler without race conditions
   const handleDataChange = useCallback((calories: number, itemCount?: number) => {

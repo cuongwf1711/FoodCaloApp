@@ -62,6 +62,7 @@ interface FoodHistoryDateViewProps {
     sortOption: SortOption
     onSortChange: (sortOption: SortOption) => void
     onDataChange: (totalCalories: number) => void
+    onRegisterRefreshTrigger?: (triggerFn: () => void) => void
 }
 
 // Simple ImageModal for Android compatibility
@@ -314,7 +315,12 @@ const EnhancedLoadingOverlay: React.FC<{ message?: string }> = ({ message = "Loa
  * Enhanced Component to display food history filtered by date
  * Now includes loading animations and smooth transitions
  */
-const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({ sortOption, onSortChange, onDataChange }) => {
+const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
+    sortOption,
+    onSortChange,
+    onDataChange,
+    onRegisterRefreshTrigger,
+}) => {
     const {
         foodItems,
         isLoading,
@@ -440,6 +446,17 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({ sortOption, o
             setIsInitialized(true)
         }
     }, [fetchData, isInitialized])
+
+    // FIXED: Register refresh trigger function
+    useEffect(() => {
+        const refreshTrigger = () => {
+            fetchData(true, undefined, false)
+        }
+
+        if (onRegisterRefreshTrigger) {
+            onRegisterRefreshTrigger(refreshTrigger)
+        }
+    }, [onRegisterRefreshTrigger, fetchData])
 
     // Fetch data when time unit or related parameters change (but not on initial mount)
     useEffect(() => {
