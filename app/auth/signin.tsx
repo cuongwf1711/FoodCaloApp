@@ -12,13 +12,12 @@ import { useRouter } from "expo-router"
 import { useContext, useState } from "react"
 import {
     KeyboardAvoidingView,
-    Platform,
     ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from "react-native"
 import { URL_SIGN_IN } from "../../constants/url_constants"
 
@@ -216,6 +215,7 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         paddingHorizontal: 12,
         fontSize: 16,
+        backgroundColor: "white",
     },
     inputError: {
         borderColor: "red",
