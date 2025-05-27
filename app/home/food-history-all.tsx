@@ -155,6 +155,139 @@ const EnhancedLoadingOverlay: React.FC<{ message?: string }> = ({ message = "Loa
     )
 }
 
+// Enhanced Delete Loading Overlay similar to EnhancedLoadingOverlay
+const DeleteLoadingOverlay: React.FC<{ message?: string }> = ({ message = "Deleting..." }) => {
+    const [fadeAnim] = useState(new Animated.Value(0))
+    const [scaleAnim] = useState(new Animated.Value(0.8))
+
+    useEffect(() => {
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 300,
+                useNativeDriver: true,
+                easing: Easing.out(Easing.ease),
+            }),
+            Animated.spring(scaleAnim, {
+                toValue: 1,
+                tension: 100,
+                friction: 8,
+                useNativeDriver: true,
+            }),
+        ]).start()
+    }, [])
+
+    if (Platform.OS === "web") {
+        return (
+            <div
+                style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: "rgba(255, 255, 255, 0.9)",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    zIndex: 999,
+                    animation: "fadeInUp 0.3s ease-out",
+                    borderRadius: "12px",
+                }}
+            >
+                <div
+                    style={{
+                        backgroundColor: "#fff",
+                        borderRadius: "12px",
+                        padding: "24px",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        boxShadow: "0 4px 20px rgba(231, 76, 60, 0.25)",
+                        minWidth: "180px",
+                        animation: "pulse 2s infinite",
+                        border: "2px solid #e74c3c",
+                    }}
+                >
+                    <div
+                        style={{
+                            width: "40px",
+                            height: "40px",
+                            border: "4px solid #f3f3f3",
+                            borderTop: "4px solid #e74c3c",
+                            borderRadius: "50%",
+                            animation: "spin 1s linear infinite",
+                            marginBottom: "16px",
+                        }}
+                    />
+                    <div
+                        style={{
+                            fontSize: "16px",
+                            color: "#e74c3c",
+                            fontWeight: "500",
+                        }}
+                    >
+                        {message}
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <Animated.View
+            style={[
+                {
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 999,
+                    borderRadius: 12,
+                },
+                {
+                    opacity: fadeAnim,
+                    transform: [{ scale: scaleAnim }],
+                },
+            ]}
+        >
+            <Animated.View
+                style={[
+                    {
+                        backgroundColor: '#fff',
+                        borderRadius: 12,
+                        padding: 24,
+                        alignItems: 'center',
+                        shadowColor: '#e74c3c',
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.25,
+                        shadowRadius: 20,
+                        elevation: 8,
+                        minWidth: 180,
+                        borderWidth: 2,
+                        borderColor: '#e74c3c',
+                    },
+                    {
+                        transform: [{ scale: scaleAnim }],
+                    },
+                ]}
+            >
+                <ActivityIndicator size="large" color="#e74c3c" />
+                <Text style={{
+                    marginTop: 16,
+                    fontSize: 16,
+                    color: '#e74c3c',
+                    fontWeight: '500',
+                }}>{message}</Text>
+            </Animated.View>
+        </Animated.View>
+    )
+}
+
 interface FoodHistoryAllViewProps {
     sortOption: SortOption
     onSortChange: (sortOption: SortOption) => void
@@ -428,14 +561,17 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
         flatListRef.current?.scrollToOffset({ offset: 0, animated: true })
     }, [])
 
-    // FIXED: Simplified render food item without problematic Android workarounds
+    // Enhanced render food item with new delete effect
     const renderFoodItem = useCallback(
         ({ item }: { item: FoodItem }) => {
             const formattedDate = formatDate(item.createdAt)
             const isDeleting = item.isDeleting || false
 
             return (
-                <View style={[sharedStyles.foodCard, isDeleting && { opacity: 0.7 }]}>
+                <View style={[sharedStyles.foodCard, isDeleting && { opacity: 0.9 }]}>
+                    {/* Delete Loading Overlay */}
+                    {isDeleting && <DeleteLoadingOverlay message="Deleting item..." />}
+
                     <View style={sharedStyles.foodCardHeader}>
                         <Text style={sharedStyles.foodName}>{item.predictName}</Text>
                         <View style={sharedStyles.actionButtons}>
@@ -463,22 +599,8 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
                                 onPress={() => handleDeleteItem(item.id)}
                                 disabled={isDeleting}
                             >
-                                {isDeleting ? (
-                                    Platform.OS === "web" ? (
-                                        <div
-                                            style={{
-                                                fontSize: "18px",
-                                                animation: "spin 1s linear infinite",
-                                                display: "inline-block",
-                                            }}
-                                        >
-                                            ⟳
-                                        </div>
-                                    ) : (
-                                        <Text style={[sharedStyles.deleteButtonText, { fontSize: 18 }]}>⟳</Text>
-                                    )
-                                ) : Platform.OS === "web" ? (
-                                    <div style={{ color: "#e74c3c", cursor: "pointer", fontSize: "18px" }}>🗑</div>
+                                {Platform.OS === "web" ? (
+                                    <div style={{ color: "#e74c3c", cursor: isDeleting ? "not-allowed" : "pointer", fontSize: "18px" }}>🗑</div>
                                 ) : (
                                     <Text style={sharedStyles.deleteButtonText}>🗑</Text>
                                 )}
@@ -569,7 +691,7 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
     if (isLoading) {
         return (
             <View style={sharedStyles.container}>
-                <EnhancedLoadingOverlay/>
+                <EnhancedLoadingOverlay />
             </View>
         )
     }
@@ -637,7 +759,7 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
                 />
             )}
             {/* Loading overlay for data changes */}
-            {(isDataChanging || isSortChanging) && <EnhancedLoadingOverlay/>}
+            {(isDataChanging || isSortChanging) && <EnhancedLoadingOverlay />}
         </View>
     )
 }
