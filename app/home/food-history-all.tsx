@@ -30,6 +30,8 @@ interface FoodHistoryAllViewProps {
     sortOption: SortOption
     onSortChange: (sortOption: SortOption) => void
     onDataChange: (totalCalories: number) => void
+    onRegisterRefreshTrigger?: (triggerFn: () => void) => void
+    key?: string // Add key prop to interface
 }
 
 // Simple ImageModal for Android compatibility
@@ -38,7 +40,6 @@ const ImageModal: React.FC<{
     imageUri: string
     onClose: () => void
 }> = ({ visible, imageUri, onClose }) => {
-    // Add ESC key support for web
     useEffect(() => {
         const handleEscape = (event: KeyboardEvent) => {
             if (event.key === "Escape") {
@@ -52,10 +53,8 @@ const ImageModal: React.FC<{
         }
     }, [visible, onClose])
 
-    // Add CSS animation for web spinning effect inside useEffect
     useEffect(() => {
         if (Platform.OS === "web" && typeof document !== "undefined") {
-            // Check if style already exists
             const existingStyle = document.getElementById("spin-animation")
             if (!existingStyle) {
                 const style = document.createElement("style")
@@ -149,7 +148,12 @@ const ImageModal: React.FC<{
  * Component to display all food history items
  * Supports sorting, pagination, and item editing/deletion
  */
-const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({ sortOption, onSortChange, onDataChange }) => {
+const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
+    sortOption,
+    onSortChange,
+    onDataChange,
+    onRegisterRefreshTrigger,
+}) => {
     const {
         foodItems,
         isLoading,
@@ -158,6 +162,8 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({ sortOption, onS
         error,
         page,
         hasMore,
+        totalCalories,
+        updateCounter,
         fetchFoodHistory,
         handleDeleteItem,
         saveEditedItem,
@@ -173,21 +179,51 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({ sortOption, onS
     const [showScrollToTop, setShowScrollToTop] = useState(false)
     const flatListRef = useRef<FlatList>(null)
 
+    // FIXED: Simplified force re-render for Android compatibility
+    const [, forceUpdate] = useState({})
+    useEffect(() => {
+        if (Platform.OS === "android") {
+            forceUpdate({})
+        }
+    }, [updateCounter, totalCalories])
+
+    const isInitialMountRef = useRef(true)
+    const lastFetchTimeRef = useRef(0)
+
     // Initial data load - only run once on mount
     useEffect(() => {
-        fetchFoodHistory(1, true)
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []) // Empty dependency array to run only once
+        if (isInitialMountRef.current) {
+            fetchFoodHistory(1, true)
+            isInitialMountRef.current = false
+        }
+    }, [])
 
-    // Handle sort option change - this is the key fix
+    // Add useEffect mới để register refresh trigger:
+    useEffect(() => {
+        const refreshTrigger = () => {
+            const now = Date.now()
+            // Prevent rapid successive calls (debounce 1 second)
+            if (now - lastFetchTimeRef.current < 1000) {
+                return
+            }
+
+            lastFetchTimeRef.current = now
+            fetchFoodHistory(1, true)
+        }
+
+        if (onRegisterRefreshTrigger) {
+            onRegisterRefreshTrigger(refreshTrigger)
+        }
+    }, [onRegisterRefreshTrigger, fetchFoodHistory])
+
+    // FIXED: Handle sort option change with better logging
     useEffect(() => {
         if (sortOption) {
             handleSortChange(sortOption, (sortOpt) => {
-                // Scroll to top immediately and hide scroll button
                 if (flatListRef.current) {
                     scrollToTopUtil(flatListRef as React.RefObject<FlatList<any>>)
                 }
-                setShowScrollToTop(false) // Hide scroll to top button
+                setShowScrollToTop(false)
                 fetchFoodHistory(1, true, sortOpt)
             })
         }
@@ -196,9 +232,10 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({ sortOption, onS
     // Handle refresh (pull to refresh)
     const handleRefresh = useCallback(() => {
         if (!isRefreshing) {
+            // Force a complete refresh
             fetchFoodHistory(1, true)
         }
-        setShowScrollToTop(false) // Hide scroll to top button on refresh
+        setShowScrollToTop(false)
     }, [fetchFoodHistory, isRefreshing])
 
     // Handle pagination when scrolling to bottom
@@ -248,7 +285,7 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({ sortOption, onS
     // Handle scroll events
     const handleScroll = useCallback((event: any) => {
         const scrollY = event.nativeEvent.contentOffset.y
-        setShowScrollToTop(scrollY > 300) // Show button when scrolled down 300px
+        setShowScrollToTop(scrollY > 300)
     }, [])
 
     // Scroll to top function
@@ -256,7 +293,7 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({ sortOption, onS
         flatListRef.current?.scrollToOffset({ offset: 0, animated: true })
     }, [])
 
-    // Render a food item with loading animation
+    // FIXED: Simplified render food item without problematic Android workarounds
     const renderFoodItem = useCallback(
         ({ item }: { item: FoodItem }) => {
             const formattedDate = formatDate(item.createdAt)
@@ -414,7 +451,7 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({ sortOption, onS
     }
 
     return (
-        <View style={sharedStyles.container}>
+        <View style={sharedStyles.container} key={updateCounter}>
             <FlatList
                 ref={flatListRef}
                 data={foodItems}
@@ -441,6 +478,7 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({ sortOption, onS
                         tintColor="#3498db"
                     />
                 }
+                extraData={updateCounter}
             />
 
             {showScrollToTop && (

@@ -3,8 +3,8 @@
 import type React from "react"
 
 import { StatusBar } from "expo-status-bar"
-import { useCallback, useEffect, useState } from "react"
-import { Animated, Easing, Platform, StyleSheet, Text, View } from "react-native"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { Animated, Easing, StyleSheet, Text, View } from "react-native"
 
 // Import shared utilities
 import {
@@ -36,6 +36,9 @@ const FoodHistoryScreen: React.FC = () => {
   const [totalCalories, setTotalCalories] = useState(0)
   const [sortOption, setSortOption] = useState<SortOption>("newest")
 
+  // Track if we have any data to determine if dropdowns should be disabled
+  const [hasData, setHasData] = useState(true)
+
   // Simple animation states for dropdowns
   const [sortScaleAnim] = useState(new Animated.Value(1))
   const [filterScaleAnim] = useState(new Animated.Value(1))
@@ -43,41 +46,69 @@ const FoodHistoryScreen: React.FC = () => {
   // Use shared hook for user profile
   const { userProfile, fetchUserProfile } = useUserProfile()
 
-  // Use tab reload hook
+  // FIXED: Use ref to track refresh state and prevent double calls
+  const isRefreshingRef = useRef(false)
+  const childRefreshTriggerRef = useRef<() => void>()
+
+  // FIXED: Improved data change handler without race conditions
+  const handleDataChange = useCallback((calories: number, itemCount?: number) => {
+
+    // Use functional updates to prevent race conditions
+    setTotalCalories((prevCalories) => {
+      return calories
+    })
+
+    // Determine if we have data based on calories or item count
+    const hasDataNow = calories > 0 || (itemCount !== undefined && itemCount > 0)
+    setHasData(hasDataNow)
+  }, [])
+
+  // FIXED: Improved tab reload without double API calls
   const { isReloading, animatedStyle } = useTabReload("history", {
     onReload: async () => {
-      // Reset filters and reload data
-      setTimeFilter("all")
-      setCurrentView("all")
-      setSortOption("newest")
-      setTotalCalories(0)
+      // Prevent double refresh
+      if (isRefreshingRef.current) {
+        return
+      }
 
-      // Reset animations
-      fadeAnim.setValue(1)
-      slideAnim.setValue(0)
-      sortScaleAnim.setValue(1)
-      filterScaleAnim.setValue(1)
+      isRefreshingRef.current = true
 
-      // Refresh user profile
-      await fetchUserProfile()
+      try {
+        // Reset filters and UI state but NOT totalCalories
+        setTimeFilter("all")
+        setCurrentView("all")
+        setSortOption("newest")
+        setHasData(true)
+
+        // Reset animations smoothly
+        fadeAnim.setValue(1)
+        slideAnim.setValue(0)
+        sortScaleAnim.setValue(1)
+        filterScaleAnim.setValue(1)
+
+        // Refresh user profile
+        await fetchUserProfile()
+
+        // FIXED: Use ref to trigger child refresh instead of state change
+        if (childRefreshTriggerRef.current) {
+          childRefreshTriggerRef.current()
+        }
+      } finally {
+        // Reset refresh flag after a short delay
+        setTimeout(() => {
+          isRefreshingRef.current = false
+        }, 500)
+      }
     },
   })
-
-  // Handle data change from child components - Enhanced for Android compatibility
-  const handleDataChange = useCallback((calories: number) => {
-    setTotalCalories(calories)
-
-    // Force re-render on Android to ensure UI updates
-    if (Platform.OS === "android") {
-      setTimeout(() => {
-        setTotalCalories(calories)
-      }, 0)
-    }
-  }, [])
 
   // Enhanced sort change handler with scroll to top and scale animation
   const handleSortChange = useCallback(
     (newSortOption: SortOption) => {
+      // Don't allow sort change if no data or if refreshing
+      if (!hasData || isRefreshingRef.current) return
+
+
       // Simple scale animation
       Animated.sequence([
         Animated.timing(sortScaleAnim, {
@@ -103,11 +134,15 @@ const FoodHistoryScreen: React.FC = () => {
       // Update sort option
       setSortOption(newSortOption)
     },
-    [sortScaleAnim],
+    [sortScaleAnim, hasData],
   )
 
-  // Simple filter change handler with scale animation
+  // FIXED: Simplified filter change handler without complex animations during refresh
   const handleFilterChange = (newFilter: TimeFilter) => {
+    // Don't allow filter change during refresh
+    if (isRefreshingRef.current) return
+
+
     // Simple scale animation for filter dropdown
     Animated.sequence([
       Animated.timing(filterScaleAnim, {
@@ -130,50 +165,29 @@ const FoodHistoryScreen: React.FC = () => {
       }),
     ]).start()
 
-    // View transition animation (unchanged)
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-        easing: Easing.out(Easing.cubic),
-      }),
-      Animated.timing(slideAnim, {
-        toValue: -30,
-        duration: 200,
-        useNativeDriver: true,
-        easing: Easing.out(Easing.cubic),
-      }),
-    ]).start(() => {
-      // Change the view after fade out
-      setTimeFilter(newFilter)
-      setCurrentView(newFilter)
-
-      // Reset slide position for next animation
-      slideAnim.setValue(30)
-
-      // Fade in animation
-      Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-          easing: Easing.out(Easing.back(1.2)),
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-          easing: Easing.out(Easing.back(1.1)),
-        }),
-      ]).start()
-    })
+    // Simplified view transition without complex animations
+    setTimeFilter(newFilter)
+    setCurrentView(newFilter)
   }
 
   // Fetch user profile on mount
   useEffect(() => {
     fetchUserProfile()
   }, [fetchUserProfile])
+
+  // FIXED: Simplified data change handler
+  const enhancedDataChange = useCallback(
+    (calories: number, items?: any[]) => {
+      const itemCount = items ? items.length : 0
+      handleDataChange(calories, itemCount)
+    },
+    [handleDataChange],
+  )
+
+  // FIXED: Register refresh trigger function
+  const registerChildRefreshTrigger = useCallback((triggerFn: () => void) => {
+    childRefreshTriggerRef.current = triggerFn
+  }, [])
 
   // Render the appropriate view based on the selected filter
   const renderFilterView = () => {
@@ -183,12 +197,18 @@ const FoodHistoryScreen: React.FC = () => {
           <FoodHistoryDateView
             sortOption={sortOption}
             onSortChange={handleSortChange}
-            onDataChange={handleDataChange}
+            onDataChange={enhancedDataChange}
+            onRegisterRefreshTrigger={registerChildRefreshTrigger}
           />
         )
       default:
         return (
-          <FoodHistoryAllView sortOption={sortOption} onSortChange={handleSortChange} onDataChange={handleDataChange} />
+          <FoodHistoryAllView
+            sortOption={sortOption}
+            onSortChange={handleSortChange}
+            onDataChange={enhancedDataChange}
+            onRegisterRefreshTrigger={registerChildRefreshTrigger}
+          />
         )
     }
   }
@@ -218,7 +238,7 @@ const FoodHistoryScreen: React.FC = () => {
               </View>
             </View>
 
-            {/* Second row: Simple animated controls */}
+            {/* Second row: Enhanced animated controls with disabled states */}
             <View style={styles.rightSection}>
               <View style={styles.filterSection}>
                 <Text style={styles.sectionLabel}>Filter:</Text>
@@ -242,11 +262,12 @@ const FoodHistoryScreen: React.FC = () => {
                     styles.animatedDropdownWrapper,
                     {
                       transform: [{ scale: sortScaleAnim }],
+                      opacity: hasData ? 1 : 0.5,
                     },
                   ]}
                 >
                   <View style={styles.dropdownWrapper}>
-                    <SortingDropdown value={sortOption} onChange={handleSortChange} />
+                    <SortingDropdown value={sortOption} onChange={handleSortChange} disabled={!hasData} />
                   </View>
                 </Animated.View>
               </View>
@@ -254,17 +275,8 @@ const FoodHistoryScreen: React.FC = () => {
           </View>
         </View>
 
-        <Animated.View
-          style={[
-            styles.animatedContainer,
-            {
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            },
-          ]}
-        >
-          {renderFilterView()}
-        </Animated.View>
+        {/* FIXED: Stable container without unnecessary re-renders */}
+        <View style={styles.animatedContainer}>{renderFilterView()}</View>
       </View>
     </Animated.View>
   )
@@ -283,7 +295,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 3,
     elevation: 2,
-    zIndex: 1000, // Ensure header is above other elements
+    zIndex: 1000,
   },
   reloadingContainer: {
     alignItems: "center",
@@ -310,7 +322,7 @@ const styles = StyleSheet.create({
     padding: 10,
     borderWidth: 1,
     borderColor: "#E5E5E5",
-    zIndex: 999, // High z-index for controls container
+    zIndex: 999,
   },
   leftSection: {
     flexDirection: "row",
@@ -322,7 +334,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    zIndex: 998, // Ensure right section is properly layered
+    zIndex: 998,
   },
   calorieLimitSection: {
     flexDirection: "row",
@@ -339,14 +351,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
-    zIndex: 1002, // Higher z-index for filter dropdown
+    zIndex: 1002,
   },
   sortSection: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
     justifyContent: "flex-end",
-    zIndex: 1001, // High z-index for sort dropdown
+    zIndex: 1001,
   },
   sectionLabel: {
     fontSize: 13,
@@ -367,14 +379,14 @@ const styles = StyleSheet.create({
   dropdownWrapper: {
     minWidth: 100,
     maxWidth: 120,
-    zIndex: 1000, // Ensure dropdown wrapper has high z-index
+    zIndex: 1000,
   },
   animatedDropdownWrapper: {
     zIndex: 1000,
   },
   animatedContainer: {
     flex: 1,
-    zIndex: 1, // Lower z-index for content area
+    zIndex: 1,
   },
 })
 
