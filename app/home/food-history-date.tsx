@@ -651,7 +651,7 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
         return (
             <View style={sharedStyles.container}>
                 {renderCompactTimeSelector()}
-                <EnhancedLoadingOverlay message="Loading food history..." />
+                <EnhancedLoadingOverlay/>
             </View>
         )
     }
@@ -739,7 +739,7 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
             )}
 
             {/* Loading overlay for data changes */}
-            {(isDataChanging || isSortChanging) && <EnhancedLoadingOverlay message="Loading data..." />}
+            {(isDataChanging || isSortChanging) && <EnhancedLoadingOverlay/>}
 
             <ImageModal visible={modalVisible} imageUri={modalImageUri} onClose={closeImageModal} />
             {editingItem && (

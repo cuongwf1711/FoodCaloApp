@@ -569,7 +569,7 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
     if (isLoading) {
         return (
             <View style={sharedStyles.container}>
-                <EnhancedLoadingOverlay message="Loading food history..." />
+                <EnhancedLoadingOverlay/>
             </View>
         )
     }
@@ -637,7 +637,7 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
                 />
             )}
             {/* Loading overlay for data changes */}
-            {(isDataChanging || isSortChanging) && <EnhancedLoadingOverlay message="Loading data..." />}
+            {(isDataChanging || isSortChanging) && <EnhancedLoadingOverlay/>}
         </View>
     )
 }
