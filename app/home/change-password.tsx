@@ -2,11 +2,14 @@
 
 // Change Password Screen - Allows users to update their password securely
 import { SIGNIN_ROUTE } from "@/constants/router_constants"
+import { ACCESS_TOKEN, REFRESH_TOKEN, USER_EMAIL } from "@/constants/token_constants"
+import { AuthContext } from "@/context/AuthContext"
 import { postData } from "@/context/request_context"
 import { showMessage } from "@/utils/showMessage"
 import { getPasswordErrorMessage } from "@/utils/validation"
+import AsyncStorage from "@react-native-async-storage/async-storage"
 import { useRouter } from "expo-router"
-import { useState } from "react"
+import { useContext, useState } from "react"
 import {
     ActivityIndicator,
     KeyboardAvoidingView,
@@ -29,6 +32,7 @@ export default function ChangePassword() {
     const [confirmPasswordError, setConfirmPasswordError] = useState("")
     const [isLoading, setIsLoading] = useState(false)
     const router = useRouter()
+    const { email, setToken, setEmail } = useContext(AuthContext)
 
     // Validate all form inputs before submission
     const validateInputs = () => {
@@ -81,6 +85,9 @@ export default function ChangePassword() {
                 newPassword,
             })
             showMessage(res.data, true)
+            await AsyncStorage.multiRemove([ACCESS_TOKEN, REFRESH_TOKEN, USER_EMAIL])
+            setToken(null)
+            setEmail(null)
             router.replace(SIGNIN_ROUTE)
         } catch (error: any) {
             showMessage(error)
