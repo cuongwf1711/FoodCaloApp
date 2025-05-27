@@ -95,8 +95,8 @@ export default function Verify() {
         setResendLoading(true)
         try {
             const endpoint = mode === "signup" ? URL_SIGN_UP : URL_RESEND_EMAIL
-            await postData(endpoint, { email })
-            showMessage({ message: "Verification code has been resent successfully!" }, true)
+            const res = await postData(endpoint, { email })
+            showMessage(res.data, true)
         } catch (err: any) {
             showMessage(err)
         } finally {

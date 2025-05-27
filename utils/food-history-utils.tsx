@@ -199,7 +199,6 @@ export const useFoodHistory = (
                 // Force update counter for Android compatibility
                 setUpdateCounter((prev) => prev + 1)
             } catch (err) {
-                console.error("❌ Fetch error:", err)
                 setError("Failed to load food history. Please try again.")
             } finally {
                 setIsLoading(false)

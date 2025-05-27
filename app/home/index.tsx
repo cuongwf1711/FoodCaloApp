@@ -6,11 +6,22 @@ import { URL_FOOD_CALO_ESTIMATOR } from "@/constants/url_constants"
 import { deleteData, patchData, postData } from "@/context/request_context"
 import { showMessage } from "@/utils/showMessage"
 import { useRef, useState } from "react"
-import { Alert, Animated, Image, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native"
+import {
+    Alert,
+    Animated,
+    Image,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from "react-native"
 
 // Import shared utilities
 import { useTabReload } from "@/hooks/use-tab-reload"
-import { EditModal, formatDate, styles as sharedStyles } from "@/utils/food-history-utils"
+import { formatDate, styles as sharedStyles } from "@/utils/food-history-utils"
 
 // Simplified type definitions
 type ImageAsset = {
@@ -258,6 +269,306 @@ const ImageModal: React.FC<{
     )
 }
 
+// Enhanced EditModal with same behavior as ImageModal
+const EditModal: React.FC<{
+    visible: boolean
+    initialCalo: string
+    initialComment: string
+    onSave: (calories: string, comment: string) => void
+    onCancel: () => void
+}> = ({ visible, initialCalo, initialComment, onSave, onCancel }) => {
+    const [calories, setCalories] = useState(initialCalo)
+    const [comment, setComment] = useState(initialComment)
+
+    // Reset values when modal becomes visible
+    React.useEffect(() => {
+        if (visible) {
+            setCalories(initialCalo)
+            setComment(initialComment)
+        }
+    }, [visible, initialCalo, initialComment])
+
+    React.useEffect(() => {
+        if (Platform.OS === "web") {
+            if (visible) {
+                // Prevent scrolling on the background
+                document.body.style.overflow = "hidden"
+                document.body.style.position = "fixed"
+                document.body.style.width = "100%"
+
+                // Add escape key listener
+                const handleEscape = (e: KeyboardEvent) => {
+                    if (e.key === "Escape") {
+                        onCancel()
+                    }
+                }
+                document.addEventListener("keydown", handleEscape)
+
+                return () => {
+                    document.body.style.overflow = ""
+                    document.body.style.position = ""
+                    document.body.style.width = ""
+                    document.removeEventListener("keydown", handleEscape)
+                }
+            }
+        }
+    }, [visible, onCancel])
+
+    const handleSave = () => {
+        onSave(calories, comment)
+    }
+
+    if (!visible) return null
+
+    if (Platform.OS === "web") {
+        // Create portal to render modal at document.body level
+        const modalContent = (
+            <div
+                style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    width: "100vw",
+                    height: "100vh",
+                    backgroundColor: "rgba(0, 0, 0, 0.5)",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    zIndex: 999999,
+                    margin: 0,
+                    padding: "20px",
+                    boxSizing: "border-box",
+                }}
+                onClick={onCancel}
+            >
+                <div
+                    style={{
+                        backgroundColor: "white",
+                        borderRadius: "12px",
+                        padding: "24px",
+                        maxWidth: "500px",
+                        width: "100%",
+                        maxHeight: "80vh",
+                        boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
+                        position: "relative",
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {/* Close button */}
+                    <button
+                        onClick={onCancel}
+                        style={{
+                            position: "absolute",
+                            top: "12px",
+                            right: "12px",
+                            backgroundColor: "transparent",
+                            border: "none",
+                            fontSize: "20px",
+                            color: "#666",
+                            cursor: "pointer",
+                            width: "30px",
+                            height: "30px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            borderRadius: "50%",
+                            transition: "all 0.2s ease",
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = "#f0f0f0"
+                            e.currentTarget.style.color = "#333"
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = "transparent"
+                            e.currentTarget.style.color = "#666"
+                        }}
+                    >
+                        ✕
+                    </button>
+
+                    <h3 style={{ margin: "0 0 20px 0", fontSize: "18px", fontWeight: "600", color: "#333" }}>
+                        Edit Food Details
+                    </h3>
+
+                    <div style={{ marginBottom: "16px" }}>
+                        <label
+                            style={{ display: "block", marginBottom: "8px", fontSize: "14px", fontWeight: "500", color: "#555" }}
+                        >
+                            Calories:
+                        </label>
+                        <input
+                            type="number"
+                            value={calories}
+                            onChange={(e) => setCalories(e.target.value)}
+                            style={{
+                                width: "100%",
+                                padding: "12px",
+                                border: "2px solid #e1e5e9",
+                                borderRadius: "8px",
+                                fontSize: "16px",
+                                outline: "none",
+                                transition: "border-color 0.2s ease",
+                                boxSizing: "border-box",
+                            }}
+                            onFocus={(e) => {
+                                e.target.style.borderColor = "#3498db"
+                            }}
+                            onBlur={(e) => {
+                                e.target.style.borderColor = "#e1e5e9"
+                            }}
+                        />
+                    </div>
+
+                    <div style={{ marginBottom: "24px" }}>
+                        <label
+                            style={{ display: "block", marginBottom: "8px", fontSize: "14px", fontWeight: "500", color: "#555" }}
+                        >
+                            Comment:
+                        </label>
+                        <textarea
+                            value={comment}
+                            onChange={(e) => setComment(e.target.value)}
+                            rows={4}
+                            style={{
+                                width: "100%",
+                                padding: "12px",
+                                border: "2px solid #e1e5e9",
+                                borderRadius: "8px",
+                                fontSize: "16px",
+                                outline: "none",
+                                transition: "border-color 0.2s ease",
+                                resize: "vertical",
+                                minHeight: "100px",
+                                boxSizing: "border-box",
+                                fontFamily: "inherit",
+                            }}
+                            onFocus={(e) => {
+                                e.target.style.borderColor = "#3498db"
+                            }}
+                            onBlur={(e) => {
+                                e.target.style.borderColor = "#e1e5e9"
+                            }}
+                        />
+                    </div>
+
+                    <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
+                        <button
+                            onClick={onCancel}
+                            style={{
+                                padding: "12px 24px",
+                                border: "2px solid #e1e5e9",
+                                borderRadius: "8px",
+                                backgroundColor: "white",
+                                color: "#666",
+                                fontSize: "14px",
+                                fontWeight: "500",
+                                cursor: "pointer",
+                                transition: "all 0.2s ease",
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = "#f8f9fa"
+                                e.currentTarget.style.borderColor = "#d1d5db"
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = "white"
+                                e.currentTarget.style.borderColor = "#e1e5e9"
+                            }}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={handleSave}
+                            style={{
+                                padding: "12px 24px",
+                                border: "none",
+                                borderRadius: "8px",
+                                backgroundColor: "#3498db",
+                                color: "white",
+                                fontSize: "14px",
+                                fontWeight: "500",
+                                cursor: "pointer",
+                                transition: "all 0.2s ease",
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = "#2980b9"
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = "#3498db"
+                            }}
+                        >
+                            Save
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )
+
+        // Use React portal to render outside of current component tree
+        if (typeof document !== "undefined") {
+            const portalRoot = document.body
+            return ReactDOM.createPortal(modalContent, portalRoot)
+        }
+
+        return modalContent
+    }
+
+    // Native implementation
+    return (
+        <View style={editModalStyles.overlay}>
+            <TouchableOpacity style={editModalStyles.backdrop} onPress={onCancel} activeOpacity={1} />
+
+            <View style={editModalStyles.container}>
+                <View style={editModalStyles.modal}>
+                    <TouchableOpacity
+                        style={editModalStyles.closeButton}
+                        onPress={onCancel}
+                        hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+                    >
+                        <Text style={editModalStyles.closeButtonText}>✕</Text>
+                    </TouchableOpacity>
+
+                    <Text style={editModalStyles.title}>Edit Food Details</Text>
+
+                    <View style={editModalStyles.inputContainer}>
+                        <Text style={editModalStyles.label}>Calories:</Text>
+                        <TextInput
+                            style={editModalStyles.input}
+                            value={calories}
+                            onChangeText={setCalories}
+                            keyboardType="numeric"
+                            placeholder="Enter calories"
+                        />
+                    </View>
+
+                    <View style={editModalStyles.inputContainer}>
+                        <Text style={editModalStyles.label}>Comment:</Text>
+                        <TextInput
+                            style={[editModalStyles.input, editModalStyles.textArea]}
+                            value={comment}
+                            onChangeText={setComment}
+                            multiline
+                            numberOfLines={4}
+                            placeholder="Enter comment"
+                            textAlignVertical="top"
+                        />
+                    </View>
+
+                    <View style={editModalStyles.buttonContainer}>
+                        <TouchableOpacity style={editModalStyles.cancelButton} onPress={onCancel}>
+                            <Text style={editModalStyles.cancelButtonText}>Cancel</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={editModalStyles.saveButton} onPress={handleSave}>
+                            <Text style={editModalStyles.saveButtonText}>Save</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </View>
+        </View>
+    )
+}
+
 /**
  * Animated button with press effects for both platforms
  */
@@ -359,18 +670,22 @@ const Index: React.FC = () => {
     const { isReloading, animatedStyle } = useTabReload("index", {
         onReload: async () => {
             // Reset all state when tab is reloaded
-            setSelectedImage(null)
-            setResult(null)
-            setModalVisible(false)
-            setModalImageUri("")
-            setIsEditing(false)
-            setIsDeleting(false)
-            resultCardAnim.setValue(0)
-            resultOpacityAnim.setValue(0)
-            deleteAnim.setValue(1)
-
+            clearAllState()
         },
     })
+
+    // Centralized function to clear all state like reset
+    const clearAllState = () => {
+        setSelectedImage(null)
+        setResult(null)
+        setModalVisible(false)
+        setModalImageUri("")
+        setIsEditing(false)
+        setIsDeleting(false)
+        resultCardAnim.setValue(0)
+        resultOpacityAnim.setValue(0)
+        deleteAnim.setValue(1)
+    }
 
     // Delete result with confirmation and spin animation
     const handleDeleteResult = () => {
@@ -440,23 +755,16 @@ const Index: React.FC = () => {
                     }),
                 ]).start(() => {
                     // Clear everything like reset
-                    setSelectedImage(null)
-                    setResult(null)
-                    resultCardAnim.setValue(0)
-                    resultOpacityAnim.setValue(0)
-                    deleteAnim.setValue(1)
-                    setIsDeleting(false)
+                    clearAllState()
                 })
             } else {
-                // Reset animation if delete failed
-                deleteAnim.setValue(1)
-                setIsDeleting(false)
+                // Reset animation and clear everything if delete failed
+                clearAllState()
                 showMessage({ message: "Failed to delete result" }, true)
             }
         } catch (error) {
-            // Reset animation if error occurred
-            deleteAnim.setValue(1)
-            setIsDeleting(false)
+            // Clear everything if error occurred
+            clearAllState()
             showMessage(error)
         }
     }
@@ -594,6 +902,8 @@ const Index: React.FC = () => {
                 }),
             ]).start()
         } catch (error) {
+            // Clear everything if processing fails
+            clearAllState()
             showMessage(error)
         } finally {
             setIsProcessing(false)
@@ -614,18 +924,10 @@ const Index: React.FC = () => {
                     useNativeDriver: true,
                 }),
             ]).start(() => {
-                setSelectedImage(null)
-                setResult(null)
-                resultCardAnim.setValue(0)
-                resultOpacityAnim.setValue(0)
-                deleteAnim.setValue(1)
+                clearAllState()
             })
         } else {
-            setSelectedImage(null)
-            setResult(null)
-            resultCardAnim.setValue(0)
-            resultOpacityAnim.setValue(0)
-            deleteAnim.setValue(1)
+            clearAllState()
         }
     }
 
@@ -656,11 +958,18 @@ const Index: React.FC = () => {
 
             if (response.status === 200) {
                 setResult(response.data)
+                setIsEditing(false)
                 showMessage({ message: "Updated successfully" }, true)
+            } else {
+                // Clear everything if update failed
+                setIsEditing(false)
+                clearAllState()
+                showMessage({ message: "Failed to update result" }, true)
             }
-
-            setIsEditing(false)
         } catch (error) {
+            // Clear everything if error occurred during edit
+            setIsEditing(false)
+            clearAllState()
             showMessage(error)
         }
     }
@@ -912,6 +1221,122 @@ const modalStyles = StyleSheet.create({
         fontSize: 20,
         fontWeight: "bold",
         color: "#333",
+    },
+})
+
+const editModalStyles = StyleSheet.create({
+    overlay: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        zIndex: 1000,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    backdrop: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+    },
+    container: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        padding: 20,
+    },
+    modal: {
+        backgroundColor: "white",
+        borderRadius: 12,
+        padding: 24,
+        maxWidth: 500,
+        width: "100%",
+        maxHeight: "80%",
+        shadowColor: "#000",
+        shadowOpacity: 0.2,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 10,
+        position: "relative",
+    },
+    closeButton: {
+        position: "absolute",
+        top: 12,
+        right: 12,
+        width: 30,
+        height: 30,
+        borderRadius: 15,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: "transparent",
+        zIndex: 1001,
+    },
+    closeButtonText: {
+        fontSize: 18,
+        color: "#666",
+        fontWeight: "bold",
+    },
+    title: {
+        fontSize: 18,
+        fontWeight: "600",
+        color: "#333",
+        marginBottom: 20,
+        marginRight: 40,
+    },
+    inputContainer: {
+        marginBottom: 16,
+    },
+    label: {
+        fontSize: 14,
+        fontWeight: "500",
+        color: "#555",
+        marginBottom: 8,
+    },
+    input: {
+        borderWidth: 2,
+        borderColor: "#e1e5e9",
+        borderRadius: 8,
+        padding: 12,
+        fontSize: 16,
+        backgroundColor: "white",
+    },
+    textArea: {
+        height: 100,
+        textAlignVertical: "top",
+    },
+    buttonContainer: {
+        flexDirection: "row",
+        justifyContent: "flex-end",
+        gap: 12,
+        marginTop: 24,
+    },
+    cancelButton: {
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+        borderWidth: 2,
+        borderColor: "#e1e5e9",
+        borderRadius: 8,
+        backgroundColor: "white",
+    },
+    cancelButtonText: {
+        color: "#666",
+        fontSize: 14,
+        fontWeight: "500",
+    },
+    saveButton: {
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+        borderRadius: 8,
+        backgroundColor: "#3498db",
+    },
+    saveButtonText: {
+        color: "white",
+        fontSize: 14,
+        fontWeight: "500",
     },
 })
 
