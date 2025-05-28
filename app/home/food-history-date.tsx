@@ -692,7 +692,7 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
         return (
             <View style={[compactStyles.compactContainer, isDataChanging && compactStyles.compactContainerLoading]}>
                 <View style={compactStyles.compactRow}>
-                    <View style={compactStyles.unitSection}>
+                    <View style={compactStyles.unitSectionCompact}>
                         <Text style={compactStyles.compactLabel}>Unit:</Text>
                         <View style={[compactStyles.compactDropdownWrapper, compactStyles.dropdownContainer]}>
                             <UnitDropdown value={timeUnit} onChange={handleTimeUnitChange} />
@@ -701,22 +701,13 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
 
                     <View style={compactStyles.inputSection}>
                         {timeUnit === "day" && (
-                            <View style={compactStyles.inputRow}>
-                                <Text style={compactStyles.compactLabel}>Date:</Text>
-                                <DatePicker selectedDate={selectedDate} onDateChange={handleDateChange} />
-                            </View>
+                            <DatePicker selectedDate={selectedDate} onDateChange={handleDateChange} />
                         )}
                         {timeUnit === "week" && (
-                            <View style={compactStyles.inputRow}>
-                                <Text style={compactStyles.compactLabel}>Weeks Ago:</Text>
-                                <WeekInput weeksAgo={weeksAgo} onWeekChange={handleWeekChange} />
-                            </View>
+                            <WeekInput weeksAgo={weeksAgo} onWeekChange={handleWeekChange} />
                         )}
                         {timeUnit === "month" && (
-                            <View style={compactStyles.inputRow}>
-                                <Text style={compactStyles.compactLabel}>Month:</Text>
-                                <MonthPicker selectedMonth={selectedMonth} onMonthChange={handleMonthChange} />
-                            </View>
+                            <MonthPicker selectedMonth={selectedMonth} onMonthChange={handleMonthChange} />
                         )}
                     </View>
                 </View>
@@ -729,7 +720,9 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
                 )}
             </View>
         )
-    }    // Enhanced render function with animations
+    }
+
+    // Enhanced render function with animations
     const renderFoodItem = useCallback(
         ({ item, index }: { item: FoodItem; index: number }) => {
             const formattedDate = formatDate(item.createdAt)
@@ -1038,10 +1031,10 @@ const compactStyles = StyleSheet.create({
         backgroundColor: "#f8f9fa",
         borderBottomWidth: 1,
         borderBottomColor: "#e9ecef",
-        paddingVertical: 12,
-        paddingHorizontal: 16,
-        overflow: "hidden",
-        zIndex: 999,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        overflow: "visible",
+        zIndex: 1000,
         position: "relative",
     },
     compactContainerLoading: {
@@ -1052,51 +1045,50 @@ const compactStyles = StyleSheet.create({
         alignItems: "center",
         justifyContent: "space-between",
     },
-    unitSection: {
+    unitSectionCompact: {
         flexDirection: "row",
         alignItems: "center",
         flex: 1,
-        marginRight: 16,
+        maxWidth: "40%",
     },
     inputSection: {
         flex: 2,
         alignItems: "flex-end",
-    },
-    inputRow: {
-        flexDirection: "row",
-        alignItems: "center",
+        maxWidth: "60%",
+        zIndex: 1002,
     },
     compactLabel: {
-        fontSize: 14,
+        fontSize: 13,
         fontWeight: "600",
         color: "#495057",
-        marginRight: 8,
+        marginRight: 6,
     },
     compactDropdownWrapper: {
-        minWidth: 80,
-        maxWidth: 100,
-        overflow: "hidden",
+        minWidth: 70,
+        maxWidth: 85,
+        overflow: "visible",
     },
     dropdownContainer: {
         position: "relative",
-        zIndex: 1001,
-        overflow: "hidden",
+        zIndex: 1003,
+        overflow: "visible",
     },
     loadingIndicator: {
         position: "absolute",
-        top: 8,
-        right: 16,
+        top: 6,
+        right: 12,
         flexDirection: "row",
         alignItems: "center",
         backgroundColor: "rgba(52, 152, 219, 0.1)",
-        paddingHorizontal: 8,
-        paddingVertical: 4,
-        borderRadius: 12,
+        paddingHorizontal: 6,
+        paddingVertical: 3,
+        borderRadius: 10,
+        zIndex: 999,
     },
     loadingText: {
-        fontSize: 12,
+        fontSize: 11,
         color: "#3498db",
-        marginLeft: 6,
+        marginLeft: 4,
         fontWeight: "500",
     },
 })
