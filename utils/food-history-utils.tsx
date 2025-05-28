@@ -643,15 +643,15 @@ export const SortingDropdown: React.FC<{
     const options: { value: SortOption; label: string }[] = [
         { value: "newest", label: "Newest" },
         { value: "oldest", label: "Oldest" },
-        { value: "highest-calories", label: "Highest Calo" },
-        { value: "lowest-calories", label: "Lowest Calo" },
+        { value: "highest-calories", label: "High Calo" },
+        { value: "lowest-calories", label: "Low Calo" },
     ]
 
     const selectedLabel = options.find((opt) => opt.value === value)?.label || "Newest"
 
     if (Platform.OS === "web") {
         return (
-            <div style={{ position: "relative", minWidth: "120px" }}>
+            <div style={{ position: "relative", minWidth: "110px" }}>
                 <select
                     value={value}
                     onChange={(e) => !disabled && onChange(e.target.value as SortOption)}
@@ -671,6 +671,7 @@ export const SortingDropdown: React.FC<{
                         backgroundRepeat: "no-repeat",
                         backgroundPosition: "right 8px center",
                         paddingRight: "30px",
+                        whiteSpace: "nowrap",
                     }}
                 >
                     {options.map((option) => (
@@ -1476,7 +1477,7 @@ export const styles = StyleSheet.create({
         alignItems: "center",
     },
     dropdownWrapper: {
-        minWidth: 120,
+        minWidth: 110,
     },
     totalCaloriesLabel: {
         fontSize: 14,
@@ -1505,7 +1506,7 @@ export const styles = StyleSheet.create({
         borderColor: "#e1e1e1",
         paddingHorizontal: 12,
         paddingVertical: 10,
-        minWidth: 100,
+        minWidth: 110,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
@@ -1516,6 +1517,7 @@ export const styles = StyleSheet.create({
         fontSize: 14,
         color: "#333",
         flex: 1,
+        flexShrink: 0,
     },
     dropdownIcon: {
         fontSize: 12,
