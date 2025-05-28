@@ -442,8 +442,6 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
     const flatListRef = useRef<FlatList>(null)
 
     // Animation states
-    const [listFadeAnim] = useState(new Animated.Value(1))
-    const [listSlideAnim] = useState(new Animated.Value(0))
     const [isDataChanging, setIsDataChanging] = useState(false)
     const [isSortChanging, setIsSortChanging] = useState(false)
 
@@ -570,7 +568,7 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
             return (
                 <View style={[sharedStyles.foodCard, isDeleting && { opacity: 0.9 }]}>
                     {/* Delete Loading Overlay */}
-                    {isDeleting && <DeleteLoadingOverlay message="Deleting item..." />}
+                    {isDeleting && <DeleteLoadingOverlay/>}
 
                     <View style={sharedStyles.foodCardHeader}>
                         <Text style={sharedStyles.foodName}>{item.predictName}</Text>
