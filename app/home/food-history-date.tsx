@@ -448,7 +448,7 @@ const DeleteLoadingOverlay: React.FC<{ message?: string }> = ({ message = "Delet
  * Enhanced Component to display food history filtered by date
  * Now includes loading animations and smooth transitions
  */
-const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
+export const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
     sortOption,
     onSortChange,
     onDataChange,
@@ -846,7 +846,6 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
     if (isLoading && !isInitialized) {
         return (
             <View style={sharedStyles.container}>
-                {renderCompactTimeSelector()}
                 <EnhancedLoadingOverlay/>
             </View>
         )
@@ -863,53 +862,40 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
         )
     }
 
+    // Create header component for FlatList
+    const ListHeaderComponent = () => (
+        <View>
+            {renderCompactTimeSelector()}
+            <View style={sharedStyles.periodHeaderContainer}>
+                <Text style={sharedStyles.periodHeaderText}>{getTimePeriodLabel()}</Text>
+            </View>
+        </View>
+    )
+
     return (
         <View style={sharedStyles.container}>
-            {renderCompactTimeSelector()}
-
-            <Animated.View
-                style={[
-                    sharedStyles.periodHeaderContainer,
-                    {
-                        opacity: listFadeAnim,
-                        transform: [{ translateY: listSlideAnim }],
-                    },
-                ]}
-            >
-                <Text style={sharedStyles.periodHeaderText}>{getTimePeriodLabel()}</Text>
-            </Animated.View>
-
-            <Animated.View
-                style={[
-                    { flex: 1 },
-                    {
-                        opacity: listFadeAnim,
-                        transform: [{ translateY: listSlideAnim }],
-                    },
-                ]}
-            >
-                <FlatList
-                    ref={flatListRef}
-                    data={foodItems}
-                    renderItem={renderFoodItem}
-                    keyExtractor={(item) => item.id}
-                    contentContainerStyle={sharedStyles.listContainer}
-                    showsVerticalScrollIndicator={false}
-                    ListEmptyComponent={renderEmpty}
-                    onScroll={handleScroll}
-                    scrollEventThrottle={16}
-                    refreshControl={
-                        <RefreshControl
-                            refreshing={isRefreshing}
-                            onRefresh={handleRefresh}
-                            colors={["#3498db"]}
-                            tintColor="#3498db"
-                            title="Pull to refresh"
-                            titleColor="#666"
-                        />
-                    }
-                />
-            </Animated.View>
+            <FlatList
+                ref={flatListRef}
+                data={foodItems}
+                renderItem={renderFoodItem}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={sharedStyles.listContainer}
+                showsVerticalScrollIndicator={false}
+                ListEmptyComponent={renderEmpty}
+                ListHeaderComponent={ListHeaderComponent}
+                onScroll={handleScroll}
+                scrollEventThrottle={16}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={isRefreshing}
+                        onRefresh={handleRefresh}
+                        colors={["#3498db"]}
+                        tintColor="#3498db"
+                        title="Pull to refresh"
+                        titleColor="#666"
+                    />
+                }
+            />
 
             {showScrollToTop && (
                 <Animated.View
@@ -1022,13 +1008,7 @@ const modalStyles = StyleSheet.create({
 const compactStyles = StyleSheet.create({
     compactContainer: {
         backgroundColor: "#f8f9fa",
-        borderBottomWidth: 1,
-        borderBottomColor: "#e9ecef",
-        paddingVertical: 10,
-        paddingHorizontal: 12,
-        overflow: "visible",
-        zIndex: 1000,
-        position: "relative",
+        marginBottom: 10,
     },
     compactContainerLoading: {
         backgroundColor: "#f0f8ff",
@@ -1048,7 +1028,6 @@ const compactStyles = StyleSheet.create({
         flex: 2,
         alignItems: "flex-end",
         maxWidth: "60%",
-        zIndex: 1002,
     },
     compactLabel: {
         fontSize: 13,
@@ -1059,30 +1038,9 @@ const compactStyles = StyleSheet.create({
     compactDropdownWrapper: {
         minWidth: 70,
         maxWidth: 85,
-        overflow: "visible",
     },
     dropdownContainer: {
         position: "relative",
-        zIndex: 1003,
-        overflow: "visible",
-    },
-    loadingIndicator: {
-        position: "absolute",
-        top: 6,
-        right: 12,
-        flexDirection: "row",
-        alignItems: "center",
-        backgroundColor: "rgba(52, 152, 219, 0.1)",
-        paddingHorizontal: 6,
-        paddingVertical: 3,
-        borderRadius: 10,
-        zIndex: 999,
-    },
-    loadingText: {
-        fontSize: 11,
-        color: "#3498db",
-        marginLeft: 4,
-        fontWeight: "500",
     },
 })
 
