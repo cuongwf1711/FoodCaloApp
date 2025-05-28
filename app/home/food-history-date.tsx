@@ -27,7 +27,7 @@ import {
     type TimeUnit,
     UnitDropdown,
     WeekInput,
-    renderSharedFoodItem,
+    formatDate,
     styles as sharedStyles,
     useFoodHistory,
 } from "@/utils/food-history-utils"
@@ -306,6 +306,139 @@ const EnhancedLoadingOverlay: React.FC<{ message?: string }> = ({ message = "Loa
             >
                 <ActivityIndicator size="large" color="#3498db" />
                 <Text style={sharedStyles.loadingOverlayText}>{message}</Text>
+            </Animated.View>
+        </Animated.View>
+    )
+}
+
+// Enhanced Delete Loading Overlay similar to EnhancedLoadingOverlay
+const DeleteLoadingOverlay: React.FC<{ message?: string }> = ({ message = "Deleting..." }) => {
+    const [fadeAnim] = useState(new Animated.Value(0))
+    const [scaleAnim] = useState(new Animated.Value(0.8))
+
+    useEffect(() => {
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 300,
+                useNativeDriver: true,
+                easing: Easing.out(Easing.ease),
+            }),
+            Animated.spring(scaleAnim, {
+                toValue: 1,
+                tension: 100,
+                friction: 8,
+                useNativeDriver: true,
+            }),
+        ]).start()
+    }, [])
+
+    if (Platform.OS === "web") {
+        return (
+            <div
+                style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: "rgba(255, 255, 255, 0.9)",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    zIndex: 999,
+                    animation: "fadeInUp 0.3s ease-out",
+                    borderRadius: "12px",
+                }}
+            >
+                <div
+                    style={{
+                        backgroundColor: "#fff",
+                        borderRadius: "12px",
+                        padding: "24px",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        boxShadow: "0 4px 20px rgba(231, 76, 60, 0.25)",
+                        minWidth: "180px",
+                        animation: "pulse 2s infinite",
+                        border: "2px solid #e74c3c",
+                    }}
+                >
+                    <div
+                        style={{
+                            width: "40px",
+                            height: "40px",
+                            border: "4px solid #f3f3f3",
+                            borderTop: "4px solid #e74c3c",
+                            borderRadius: "50%",
+                            animation: "spin 1s linear infinite",
+                            marginBottom: "16px",
+                        }}
+                    />
+                    <div
+                        style={{
+                            fontSize: "16px",
+                            color: "#e74c3c",
+                            fontWeight: "500",
+                        }}
+                    >
+                        {message}
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <Animated.View
+            style={[
+                {
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 999,
+                    borderRadius: 12,
+                },
+                {
+                    opacity: fadeAnim,
+                    transform: [{ scale: scaleAnim }],
+                },
+            ]}
+        >
+            <Animated.View
+                style={[
+                    {
+                        backgroundColor: '#fff',
+                        borderRadius: 12,
+                        padding: 24,
+                        alignItems: 'center',
+                        shadowColor: '#e74c3c',
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.25,
+                        shadowRadius: 20,
+                        elevation: 8,
+                        minWidth: 180,
+                        borderWidth: 2,
+                        borderColor: '#e74c3c',
+                    },
+                    {
+                        transform: [{ scale: scaleAnim }],
+                    },
+                ]}
+            >
+                <ActivityIndicator size="large" color="#e74c3c" />
+                <Text style={{
+                    marginTop: 16,
+                    fontSize: 16,
+                    color: '#e74c3c',
+                    fontWeight: '500',
+                }}>{message}</Text>
             </Animated.View>
         </Animated.View>
     )
@@ -596,11 +729,12 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
                 )}
             </View>
         )
-    }
-
-    // Enhanced render function with animations
+    }    // Enhanced render function with animations
     const renderFoodItem = useCallback(
         ({ item, index }: { item: FoodItem; index: number }) => {
+            const formattedDate = formatDate(item.createdAt)
+            const isDeleting = item.isDeleting || false
+
             return (
                 <Animated.View
                     style={{
@@ -617,7 +751,83 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
                         ],
                     }}
                 >
-                    {renderSharedFoodItem(item, openImageModal, handleDeleteItem, startEditing)}
+                    <View style={[sharedStyles.foodCard, isDeleting && { opacity: 0.9 }]}>
+                        {/* Delete Loading Overlay */}
+                        {isDeleting && <DeleteLoadingOverlay/>}
+
+                        <View style={sharedStyles.foodCardHeader}>
+                            <Text style={sharedStyles.foodName}>{item.predictName}</Text>
+                            <View style={sharedStyles.actionButtons}>
+                                <TouchableOpacity
+                                    style={sharedStyles.editButton}
+                                    onPress={() => startEditing(item)}
+                                    disabled={isDeleting}
+                                >
+                                    {Platform.OS === "web" ? (
+                                        <div
+                                            style={{
+                                                color: isDeleting ? "#ccc" : "#3498db",
+                                                cursor: isDeleting ? "not-allowed" : "pointer",
+                                                fontSize: "18px",
+                                            }}
+                                        >
+                                            ✎
+                                        </div>
+                                    ) : (
+                                        <Text style={[sharedStyles.editButtonText, { color: isDeleting ? "#ccc" : "#3498db" }]}>✎</Text>
+                                    )}
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[sharedStyles.deleteButton, isDeleting && { opacity: 0.5 }]}
+                                    onPress={() => handleDeleteItem(item.id)}
+                                    disabled={isDeleting}
+                                >
+                                    {Platform.OS === "web" ? (
+                                        <div style={{ color: "#e74c3c", cursor: isDeleting ? "not-allowed" : "pointer", fontSize: "18px" }}>🗑</div>
+                                    ) : (
+                                        <Text style={sharedStyles.deleteButtonText}>🗑</Text>
+                                    )}
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                        <Text style={sharedStyles.foodCalories}>{item.calo} calories</Text>
+
+                        <View style={sharedStyles.imagesContainer}>
+                            <TouchableOpacity
+                                style={sharedStyles.imageWrapper}
+                                onPress={() => openImageModal(item.publicUrl.originImage)}
+                                activeOpacity={0.9}
+                                disabled={isDeleting}
+                            >
+                                <Image
+                                    source={{ uri: item.publicUrl.originImage }}
+                                    style={sharedStyles.thumbnailImage}
+                                    resizeMode="contain"
+                                />
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={sharedStyles.imageWrapper}
+                                onPress={() => openImageModal(item.publicUrl.segmentationImage)}
+                                activeOpacity={0.9}
+                                disabled={isDeleting}
+                            >
+                                <Image
+                                    source={{ uri: item.publicUrl.segmentationImage }}
+                                    style={sharedStyles.thumbnailImage}
+                                    resizeMode="contain"
+                                />
+                            </TouchableOpacity>
+                        </View>
+
+                        <Text style={sharedStyles.foodDate}>{formattedDate}</Text>
+                        <Text style={sharedStyles.confidenceText}>Confidence: {item.confidencePercentage}</Text>
+
+                        <View style={sharedStyles.commentContainer}>
+                            <Text style={sharedStyles.commentLabel}>Notes:</Text>
+                            <Text style={sharedStyles.foodComment}>{item.comment ? item.comment : "No notes"}</Text>
+                        </View>
+                    </View>
                 </Animated.View>
             )
         },
