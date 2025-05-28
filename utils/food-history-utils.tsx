@@ -1122,8 +1122,6 @@ export const WeekInput: React.FC<{
             <TouchableOpacity style={styles.weekStepperButton} onPress={handleIncrease}>
                 <Text style={styles.weekStepperButtonText}>+</Text>
             </TouchableOpacity>
-
-            <Text style={styles.weekStepperLabel}>weeks ago</Text>
         </View>
     )
 }

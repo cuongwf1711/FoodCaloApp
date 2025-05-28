@@ -753,7 +753,7 @@ const Personal = () => {
                         {/* Length and Width Reference Points in one row - Now supports decimals */}
                         <View style={styles.rowContainer}>
                             <View style={[styles.columnContainer, { marginRight: 8 }]}>
-                                <Text style={styles.fieldLabel}>Length Reference Point (cm):</Text>
+                                <Text style={styles.fieldLabel}>Length Finger (cm):</Text>
                                 {isEditing ? (
                                     <>
                                         <TextInput
@@ -778,7 +778,7 @@ const Personal = () => {
                             </View>
 
                             <View style={styles.columnContainer}>
-                                <Text style={styles.fieldLabel}>Width Reference Point (cm):</Text>
+                                <Text style={styles.fieldLabel}>Width Finger (cm):</Text>
                                 {isEditing ? (
                                     <>
                                         <TextInput
@@ -803,7 +803,7 @@ const Personal = () => {
 
                         {/* Area Reference Point - Now shows decimal precision */}
                         <View style={styles.fieldRow}>
-                            <Text style={styles.fieldLabel}>Area Reference Point (cm²):</Text>
+                            <Text style={styles.fieldLabel}>Area Finger (cm²):</Text>
                             <Text style={styles.fieldValue} numberOfLines={1} adjustsFontSizeToFit>
                                 {isEditing
                                     ? formatDecimalDisplay(calculateAreaReferencePoint())
