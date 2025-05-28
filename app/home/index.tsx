@@ -5,10 +5,12 @@ import React from "react"
 import { URL_FOOD_CALO_ESTIMATOR } from "@/constants/url_constants"
 import { deleteData, patchData, postData } from "@/context/request_context"
 import { showMessage } from "@/utils/showMessage"
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import {
+    ActivityIndicator,
     Alert,
     Animated,
+    Easing,
     Image,
     Platform,
     ScrollView,
@@ -22,6 +24,160 @@ import {
 // Import shared utilities
 import { useTabReload } from "@/hooks/use-tab-reload"
 import { formatDate, styles as sharedStyles } from "@/utils/food-history-utils"
+
+// Add CSS animation for web spinning effect - only on client side
+if (typeof window !== "undefined" && Platform.OS === "web") {
+    const style = document.createElement("style")
+    style.textContent = `
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    @keyframes fadeInUp {
+      from { 
+        opacity: 0; 
+        transform: translateY(20px); 
+      }
+      to { 
+        opacity: 1; 
+        transform: translateY(0); 
+      }
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.7; }
+    }
+  `
+    document.head.appendChild(style)
+}
+
+// Enhanced Loading Component with better animations
+const EnhancedLoadingOverlay: React.FC<{ message?: string }> = ({ message = "Processing image..." }) => {
+    const [fadeAnim] = useState(new Animated.Value(0))
+    const [scaleAnim] = useState(new Animated.Value(0.8))
+
+    useEffect(() => {
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 300,
+                useNativeDriver: true,
+                easing: Easing.out(Easing.ease),
+            }),
+            Animated.spring(scaleAnim, {
+                toValue: 1,
+                tension: 100,
+                friction: 8,
+                useNativeDriver: true,
+            }),
+        ]).start()
+    }, [])
+
+    if (Platform.OS === "web") {
+        return (
+            <div
+                style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: "rgba(255, 255, 255, 0.9)",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    zIndex: 999,
+                    animation: "fadeInUp 0.3s ease-out",
+                }}
+            >
+                <div
+                    style={{
+                        backgroundColor: "#fff",
+                        borderRadius: "12px",
+                        padding: "24px",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+                        minWidth: "200px",
+                        animation: "pulse 2s infinite",
+                    }}
+                >
+                    <div
+                        style={{
+                            width: "40px",
+                            height: "40px",
+                            border: "4px solid #f3f3f3",
+                            borderTop: "4px solid #3498db",
+                            borderRadius: "50%",
+                            animation: "spin 1s linear infinite",
+                            marginBottom: "16px",
+                        }}
+                    />
+                    <div
+                        style={{
+                            fontSize: "16px",
+                            color: "#666",
+                            fontWeight: "500",
+                        }}
+                    >
+                        {message}
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <Animated.View
+            style={[
+                {
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: "rgba(255, 255, 255, 0.9)",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    zIndex: 999,
+                },
+                {
+                    opacity: fadeAnim,
+                    transform: [{ scale: scaleAnim }],
+                },
+            ]}
+        >
+            <Animated.View
+                style={[
+                    {
+                        backgroundColor: "#fff",
+                        borderRadius: 12,
+                        padding: 24,
+                        alignItems: "center",
+                        shadowColor: "#000",
+                        shadowOffset: { width: 0, height: 4 },
+                        shadowOpacity: 0.15,
+                        shadowRadius: 20,
+                        elevation: 8,
+                        minWidth: 200,
+                    },
+                    {
+                        transform: [{ scale: scaleAnim }],
+                    },
+                ]}
+            >
+                <ActivityIndicator size="large" color="#3498db" />
+                <Text style={{
+                    marginTop: 16,
+                    fontSize: 16,
+                    color: "#666",
+                    fontWeight: "500",
+                }}>{message}</Text>
+            </Animated.View>
+        </Animated.View>
+    )
+}
 
 // Simplified type definitions
 type ImageAsset = {
@@ -787,9 +943,8 @@ const Index: React.FC = () => {
 
                 if (!result.canceled && result.assets?.[0]) {
                     setSelectedImage(result.assets[0])
-                    setResult(null)
-                    resultCardAnim.setValue(0)
-                    resultOpacityAnim.setValue(0)
+                    // Don't clear the previous result
+                    // Don't reset animations
                 }
             } else {
                 Alert.alert(
@@ -823,9 +978,8 @@ const Index: React.FC = () => {
 
             if (!result.canceled && result.assets?.[0]) {
                 setSelectedImage(result.assets[0])
-                setResult(null)
-                resultCardAnim.setValue(0)
-                resultOpacityAnim.setValue(0)
+                // Don't clear the previous result
+                // Don't reset animations
             }
         } catch (error) {
             showMessage({ message: "Error accessing camera" }, true)
@@ -848,9 +1002,8 @@ const Index: React.FC = () => {
 
             if (!result.canceled && result.assets?.[0]) {
                 setSelectedImage(result.assets[0])
-                setResult(null)
-                resultCardAnim.setValue(0)
-                resultOpacityAnim.setValue(0)
+                // Don't clear the previous result
+                // Don't reset animations
             }
         } catch (error) {
             showMessage({ message: "Error accessing photo library" }, true)
@@ -1021,8 +1174,8 @@ const Index: React.FC = () => {
                         </AnimatedButton>
 
                         <AnimatedButton
-                            style={[styles.button, styles.dangerButton, !selectedImage && !result && styles.disabledButton]}
-                            disabled={!selectedImage && !result}
+                            style={[styles.button, styles.dangerButton, (!selectedImage && !result) || isProcessing || isDeleting ? styles.disabledButton : {}]}
+                            disabled={(!selectedImage && !result) || isProcessing || isDeleting}
                             onPress={reset}
                             buttonType="danger"
                         >
@@ -1031,8 +1184,43 @@ const Index: React.FC = () => {
                     </View>
                 </View>
 
-                {/* Results Card - Now matches history style */}
-                {result && !isProcessing && (
+                {/* Results section - Show loading or results */}
+                {isProcessing ? (
+                    <View style={[sharedStyles.foodCard, styles.loadingResultCard]}>
+                        <EnhancedLoadingOverlay message="Analyzing your food image..." />
+                    </View>
+                ) : isDeleting && result ? (
+                    <Animated.View
+                        style={[
+                            sharedStyles.foodCard,
+                            {
+                                opacity: resultOpacityAnim,
+                                transform: [
+                                    {
+                                        translateY: resultCardAnim.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [50, 0],
+                                        }),
+                                    },
+                                    {
+                                        scale: deleteAnim.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: [0.8, 1],
+                                        }),
+                                    },
+                                    {
+                                        rotate: deleteAnim.interpolate({
+                                            inputRange: [0, 1],
+                                            outputRange: ["0deg", "360deg"],
+                                        })
+                                    },
+                                ],
+                            },
+                        ]}
+                    >
+                        <EnhancedLoadingOverlay message="Deleting result..." />
+                    </Animated.View>
+                ) : result ? (
                     <Animated.View
                         style={[
                             sharedStyles.foodCard,
@@ -1148,7 +1336,7 @@ const Index: React.FC = () => {
                             <Text style={sharedStyles.foodComment}>{result.comment ? result.comment : "No notes"}</Text>
                         </View>
                     </Animated.View>
-                )}
+                ) : null}
 
                 <ImageModal visible={modalVisible} imageUri={modalImageUri} onClose={closeImageModal} />
 
@@ -1473,6 +1661,13 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: "600",
         textAlign: "center",
+    },
+    loadingResultCard: {
+        minHeight: 200,
+        justifyContent: 'center',
+        alignItems: 'center',
+        position: 'relative',
+        overflow: 'hidden',
     },
 })
 
