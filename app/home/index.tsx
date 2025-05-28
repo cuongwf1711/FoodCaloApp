@@ -318,18 +318,16 @@ const ImageModal: React.FC<{
                     bottom: 0,
                     width: "100vw",
                     height: "100vh",
-                    backgroundColor: "rgba(0, 0, 0, 0.9)",
+                    backgroundColor: "rgba(0,0,0,0.9)",
                     display: "flex",
                     justifyContent: "center",
                     alignItems: "center",
                     zIndex: 999999,
                     margin: 0,
-                    padding: "20px",
-                    boxSizing: "border-box",
+                    padding: 0,
                 }}
                 onClick={onClose}
             >
-                {/* Top close button */}
                 <button
                     onClick={(e) => {
                         e.stopPropagation()
@@ -337,60 +335,29 @@ const ImageModal: React.FC<{
                     }}
                     style={{
                         position: "absolute",
-                        top: "20px",
-                        right: "20px",
-                        backgroundColor: "rgba(255, 255, 255, 0.9)",
+                        top: "16px",
+                        right: "16px",
+                        backgroundColor: "transparent",
                         border: "none",
-                        borderRadius: "50%",
-                        width: "50px",
-                        height: "50px",
-                        fontSize: "20px",
-                        fontWeight: "bold",
-                        color: "#333",
+                        fontSize: "24px",
+                        color: "#fff",
                         cursor: "pointer",
-                        boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        zIndex: 1000000,
-                        transition: "all 0.2s ease",
-                    }}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = "#fff"
-                        e.currentTarget.style.transform = "scale(1.1)"
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = "rgba(255, 255, 255, 0.9)"
-                        e.currentTarget.style.transform = "scale(1)"
                     }}
                 >
                     ✕
                 </button>
-
-                <div
-                    style={{
-                        position: "relative",
-                        maxWidth: "90vw",
-                        maxHeight: "80vh",
-                        display: "flex",
-                        justifyContent: "center",
-                        alignItems: "center",
-                    }}
+                <img
                     onClick={(e) => e.stopPropagation()}
-                >
-                    <img
-                        src={imageUri || "/placeholder.svg"}
-                        alt="Full size"
-                        style={{
-                            maxWidth: "100%",
-                            maxHeight: "100%",
-                            borderRadius: "8px",
-                            objectFit: "contain",
-                            display: "block",
-                            boxShadow: "0 4px 20px rgba(0,0,0,0.5)",
-                        }}
-                    />
-                </div>
+                    src={imageUri || "/placeholder.svg"}
+                    alt="Full size"
+                    style={{
+                        maxWidth: "100%",
+                        maxHeight: "90%",
+                        objectFit: "contain",
+                        borderRadius: 0,
+                        boxShadow: "none",
+                    }}
+                />
             </div>
         )
 
@@ -403,24 +370,25 @@ const ImageModal: React.FC<{
         return modalContent
     }
 
-    // Native implementation remains the same
+    // Native version
     return (
-        <View style={modalStyles.overlay}>
-            <TouchableOpacity style={modalStyles.backdrop} onPress={onClose} activeOpacity={1} />
-
+        <View style={{
+            position: "absolute",
+            top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: "rgba(0,0,0,0.9)",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 999999,
+        }}>
             <TouchableOpacity
-                style={[modalStyles.closeButton, { top: 40, right: 20 }]}
+                style={{ position: "absolute", width: "100%", height: "100%" }}
                 onPress={onClose}
-                hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-            >
-                <Text style={modalStyles.closeButtonText}>✕</Text>
-            </TouchableOpacity>
-
-            <View style={modalStyles.container}>
-                <View style={modalStyles.imageContainer}>
-                    <Image source={{ uri: imageUri }} style={modalStyles.image} resizeMode="contain" />
-                </View>
-            </View>
+                activeOpacity={1}
+            />
+            <Image
+                source={{ uri: imageUri }}
+                style={{ width: "100%", height: "100%", resizeMode: "contain" }}
+            />
         </View>
     )
 }
@@ -638,7 +606,6 @@ const EditModal: React.FC<{
                             onClick={handleSave}
                             style={{
                                 padding: "12px 24px",
-                                border: "none",
                                 borderRadius: "8px",
                                 backgroundColor: "#3498db",
                                 color: "white",
