@@ -1602,16 +1602,19 @@ const styles = StyleSheet.create({
         fontSize: 48,
         color: "#adb5bd",
         marginBottom: 12,
+        textAlign: "center",
     },
     placeholderText: {
         color: "#6c757d",
         fontSize: 16,
         fontWeight: "500",
+        textAlign: "center",
     },
     placeholderHint: {
         color: "#3498db",
         fontSize: 14,
         marginTop: 8,
+        textAlign: "center",
     },
     buttonRow: {
         flexDirection: "row",
