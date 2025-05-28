@@ -711,13 +711,6 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
                         )}
                     </View>
                 </View>
-
-                {isDataChanging && (
-                    <View style={compactStyles.loadingIndicator}>
-                        <ActivityIndicator size="small" color="#3498db" />
-                        <Text style={compactStyles.loadingText}>Loading...</Text>
-                    </View>
-                )}
             </View>
         )
     }
