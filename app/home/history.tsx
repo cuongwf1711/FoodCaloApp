@@ -22,6 +22,23 @@ import { useTabReload } from "@/hooks/use-tab-reload"
 import FoodHistoryAllView from "./food-history-all"
 import FoodHistoryDateView from "./food-history-date"
 
+// Format decimal number for display - truncate if too long
+const formatDecimalDisplay = (value: number | null | undefined): string => {
+  if (value === null || value === undefined) {
+    return "..."
+  }
+  const str = value.toString()
+  // If number is too long, show with limited decimal places
+  if (str.length > 10) {
+    if (value >= 1000000) {
+      return value.toExponential(2)
+    } else {
+      return value.toFixed(2)
+    }
+  }
+  return str
+}
+
 /**
  * Food History Screen - Main container for food history views
  * Manages filtering, sorting, and view transitions
@@ -226,9 +243,9 @@ const FoodHistoryScreen: React.FC = () => {
             <View style={styles.leftSection}>
               <View style={styles.calorieLimitSection}>
                 <Text style={styles.sectionLabel}>Calo Limit:</Text>
-                <Text style={styles.calorieLimitValue} numberOfLines={1}>
+                <Text style={styles.calorieLimitValue} numberOfLines={1} adjustsFontSizeToFit>
                   {userProfile
-                    ? `${userProfile.calorieLimit ?? "..."} / ${getPeriodLabel(userProfile.calorieLimitPeriod)}`
+                    ? `${formatDecimalDisplay(userProfile.calorieLimit)} / ${getPeriodLabel(userProfile.calorieLimitPeriod)}`
                     : "Loading..."}
                 </Text>
               </View>
