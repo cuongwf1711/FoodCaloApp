@@ -1574,6 +1574,7 @@ const styles = StyleSheet.create({
         fontWeight: "600",
         marginBottom: 16,
         color: "#34495e",
+        textAlign: "center",
     },
     selectedImageContainer: {
         borderRadius: 12,
