@@ -117,6 +117,7 @@ export default function ChangePassword() {
                                 }}
                                 secureTextEntry
                                 style={[styles.input, oldPasswordError ? styles.inputError : null]}
+                                placeholderTextColor="#999"
                             />
                             {oldPasswordError ? <Text style={styles.errorText}>{oldPasswordError}</Text> : null}
                         </View>
@@ -134,6 +135,7 @@ export default function ChangePassword() {
                                     }
                                 }}
                                 secureTextEntry
+                                placeholderTextColor="#999"
                                 style={[styles.input, newPasswordError ? styles.inputError : null]}
                             />
                             {newPasswordError ? <Text style={styles.errorText}>{newPasswordError}</Text> : null}
@@ -154,6 +156,7 @@ export default function ChangePassword() {
                                     }
                                 }}
                                 secureTextEntry
+                                placeholderTextColor="#999"
                                 style={[styles.input, confirmPasswordError ? styles.inputError : null]}
                             />
                             {confirmPasswordError ? <Text style={styles.errorText}>{confirmPasswordError}</Text> : null}
@@ -227,6 +230,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         backgroundColor: "white",
         fontSize: 16,
+        color: "#333",
     },
     inputError: {
         borderColor: "#FF3B30",

@@ -121,6 +121,7 @@ export default function SignIn() {
                             keyboardType="email-address"
                             textContentType="emailAddress"
                             autoComplete="email"
+                            placeholderTextColor="#999"
                         />
                         {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
                     </View>
@@ -138,6 +139,7 @@ export default function SignIn() {
                             style={[styles.input, passwordError ? styles.inputError : null]}
                             textContentType="password"
                             autoComplete="password"
+                            placeholderTextColor="#999"
                         />
                         {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
                         <Text style={styles.passwordHint}>
@@ -216,6 +218,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         fontSize: 16,
         backgroundColor: "white",
+        color: "#333", // Add explicit text color
     },
     inputError: {
         borderColor: "red",

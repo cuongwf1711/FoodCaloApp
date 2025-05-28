@@ -142,6 +142,7 @@ export default function Verify() {
                             }}
                             style={[styles.input, otpError && styles.inputError]}
                             keyboardType="number-pad"
+                            placeholderTextColor="#999"
                         />
                         {otpError ? <Text style={styles.errorText}>{otpError}</Text> : null}
                         <Text style={styles.hint}>The verification code has been sent to your email.</Text>
@@ -167,6 +168,7 @@ export default function Verify() {
                             secureTextEntry
                             style={[styles.input, passwordError && styles.inputError]}
                             textContentType="newPassword"
+                            placeholderTextColor="#999"
                         />
                         {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
                         <Text style={styles.hint}>Password must be at least 8 characters with letters and numbers.</Text>
@@ -184,6 +186,7 @@ export default function Verify() {
                             secureTextEntry
                             style={[styles.input, confirmPasswordError && styles.inputError]}
                             textContentType="newPassword"
+                            placeholderTextColor="#999"
                         />
                         {confirmPasswordError ? <Text style={styles.errorText}>{confirmPasswordError}</Text> : null}
                     </View>
@@ -237,6 +240,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 12,
         fontSize: 16,
         backgroundColor: "white",
+        color: "#333", // Add explicit text color to ensure visibility on all platforms
     },
     inputError: { borderColor: "red" },
     errorText: { color: "red", fontSize: 14, marginTop: 4 },
