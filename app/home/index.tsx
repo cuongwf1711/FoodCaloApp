@@ -12,13 +12,14 @@ import {
     Animated,
     Easing,
     Image,
+    Modal,
     Platform,
     ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from "react-native"
 
 // Import shared utilities
@@ -272,7 +273,7 @@ type ImagePickerResult = {
     assets: ImageAsset[]
 }
 
-// Enhanced ImageModal with better web positioning and portal rendering
+// Enhanced ImageModal with proper Android Modal implementation
 const ImageModal: React.FC<{
     visible: boolean
     imageUri: string
@@ -304,9 +305,9 @@ const ImageModal: React.FC<{
         }
     }, [visible, onClose])
 
-    if (!visible) return null
-
     if (Platform.OS === "web") {
+        if (!visible) return null
+
         // Create portal to render modal at document.body level
         const modalContent = (
             <div
@@ -370,30 +371,43 @@ const ImageModal: React.FC<{
         return modalContent
     }
 
-    // Native version
+    // Native version using Modal component
     return (
-        <View style={{
-            position: "absolute",
-            top: 0, left: 0, right: 0, bottom: 0,
-            backgroundColor: "rgba(0,0,0,0.9)",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 999999,
-        }}>
-            <TouchableOpacity
-                style={{ position: "absolute", width: "100%", height: "100%" }}
-                onPress={onClose}
+        <Modal
+            visible={visible}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={onClose}
+            statusBarTranslucent={true}
+        >
+            <TouchableOpacity 
+                style={modalStyles.overlay}
                 activeOpacity={1}
-            />
-            <Image
-                source={{ uri: imageUri }}
-                style={{ width: "100%", height: "100%", resizeMode: "contain" }}
-            />
-        </View>
+                onPress={onClose}
+            >
+                {/* Close button */}
+                <TouchableOpacity
+                    style={modalStyles.closeButton}
+                    onPress={onClose}
+                    hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+                >
+                    <Text style={modalStyles.closeButtonText}>✕</Text>
+                </TouchableOpacity>
+
+                {/* Image container - Image should not respond to touches */}
+                <View style={modalStyles.imageContainer} pointerEvents="none">
+                    <Image
+                        source={{ uri: imageUri }}
+                        style={modalStyles.image}
+                        resizeMode="contain"
+                    />
+                </View>
+            </TouchableOpacity>
+        </Modal>
     )
 }
 
-// Enhanced EditModal with same behavior as ImageModal
+// Enhanced EditModal with same Modal approach for Android
 const EditModal: React.FC<{
     visible: boolean
     initialCalo: string
@@ -442,9 +456,9 @@ const EditModal: React.FC<{
         onSave(calories, comment)
     }
 
-    if (!visible) return null
-
     if (Platform.OS === "web") {
+        if (!visible) return null
+
         // Create portal to render modal at document.body level
         const modalContent = (
             <div
@@ -637,58 +651,66 @@ const EditModal: React.FC<{
         return modalContent
     }
 
-    // Native implementation
+    // Native implementation using Modal component
     return (
-        <View style={editModalStyles.overlay}>
-            <TouchableOpacity style={editModalStyles.backdrop} onPress={onCancel} activeOpacity={1} />
+        <Modal
+            visible={visible}
+            transparent={true}
+            animationType="slide"
+            onRequestClose={onCancel}
+            statusBarTranslucent={true}
+        >
+            <View style={editModalStyles.overlay}>
+                <TouchableOpacity style={editModalStyles.backdrop} onPress={onCancel} activeOpacity={1} />
 
-            <View style={editModalStyles.container}>
-                <View style={editModalStyles.modal}>
-                    <TouchableOpacity
-                        style={editModalStyles.closeButton}
-                        onPress={onCancel}
-                        hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-                    >
-                        <Text style={editModalStyles.closeButtonText}>✕</Text>
-                    </TouchableOpacity>
-
-                    <Text style={editModalStyles.title}>Edit Food Details</Text>
-
-                    <View style={editModalStyles.inputContainer}>
-                        <Text style={editModalStyles.label}>Calories:</Text>
-                        <TextInput
-                            style={editModalStyles.input}
-                            value={calories}
-                            onChangeText={setCalories}
-                            keyboardType="numeric"
-                            placeholder="Enter calories"
-                        />
-                    </View>
-
-                    <View style={editModalStyles.inputContainer}>
-                        <Text style={editModalStyles.label}>Comment:</Text>
-                        <TextInput
-                            style={[editModalStyles.input, editModalStyles.textArea]}
-                            value={comment}
-                            onChangeText={setComment}
-                            multiline
-                            numberOfLines={4}
-                            placeholder="Enter comment"
-                            textAlignVertical="top"
-                        />
-                    </View>
-
-                    <View style={editModalStyles.buttonContainer}>
-                        <TouchableOpacity style={editModalStyles.cancelButton} onPress={onCancel}>
-                            <Text style={editModalStyles.cancelButtonText}>Cancel</Text>
+                <View style={editModalStyles.container}>
+                    <View style={editModalStyles.modal}>
+                        <TouchableOpacity
+                            style={editModalStyles.closeButton}
+                            onPress={onCancel}
+                            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+                        >
+                            <Text style={editModalStyles.closeButtonText}>✕</Text>
                         </TouchableOpacity>
-                        <TouchableOpacity style={editModalStyles.saveButton} onPress={handleSave}>
-                            <Text style={editModalStyles.saveButtonText}>Save</Text>
-                        </TouchableOpacity>
+
+                        <Text style={editModalStyles.title}>Edit Food Details</Text>
+
+                        <View style={editModalStyles.inputContainer}>
+                            <Text style={editModalStyles.label}>Calories:</Text>
+                            <TextInput
+                                style={editModalStyles.input}
+                                value={calories}
+                                onChangeText={setCalories}
+                                keyboardType="numeric"
+                                placeholder="Enter calories"
+                            />
+                        </View>
+
+                        <View style={editModalStyles.inputContainer}>
+                            <Text style={editModalStyles.label}>Comment:</Text>
+                            <TextInput
+                                style={[editModalStyles.input, editModalStyles.textArea]}
+                                value={comment}
+                                onChangeText={setComment}
+                                multiline
+                                numberOfLines={4}
+                                placeholder="Enter comment"
+                                textAlignVertical="top"
+                            />
+                        </View>
+
+                        <View style={editModalStyles.buttonContainer}>
+                            <TouchableOpacity style={editModalStyles.cancelButton} onPress={onCancel}>
+                                <Text style={editModalStyles.cancelButtonText}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={editModalStyles.saveButton} onPress={handleSave}>
+                                <Text style={editModalStyles.saveButtonText}>Save</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 </View>
             </View>
-        </View>
+        </Modal>
     )
 }
 
@@ -1323,44 +1345,16 @@ const Index: React.FC = () => {
 
 const modalStyles = StyleSheet.create({
     overlay: {
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: "rgba(0, 0, 0, 0.9)",
-        zIndex: 1000,
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    backdrop: {
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-    },
-    container: {
         flex: 1,
+        backgroundColor: "rgba(0, 0, 0, 0.9)",
         justifyContent: "center",
         alignItems: "center",
-        padding: 20,
-    },
-    imageContainer: {
-        maxWidth: "90%",
-        maxHeight: "80%",
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    image: {
-        width: 350,
-        height: 350,
-        maxWidth: "100%",
-        maxHeight: "100%",
     },
     closeButton: {
         position: "absolute",
-        backgroundColor: "#fff",
+        top: 50,
+        right: 20,
+        backgroundColor: "rgba(255, 255, 255, 0.9)",
         borderRadius: 25,
         width: 50,
         height: 50,
@@ -1377,17 +1371,24 @@ const modalStyles = StyleSheet.create({
         fontWeight: "bold",
         color: "#333",
     },
+    imageContainer: {
+        width: "90%",
+        height: "80%",
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: "transparent",
+    },
+    image: {
+        width: "100%",
+        height: "100%",
+        backgroundColor: "transparent",
+    },
 })
 
 const editModalStyles = StyleSheet.create({
     overlay: {
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
+        flex: 1,
         backgroundColor: "rgba(0, 0, 0, 0.5)",
-        zIndex: 1000,
         justifyContent: "center",
         alignItems: "center",
     },
@@ -1466,7 +1467,6 @@ const editModalStyles = StyleSheet.create({
     buttonContainer: {
         flexDirection: "row",
         justifyContent: "flex-end",
-        gap: 12,
         marginTop: 24,
     },
     cancelButton: {
@@ -1476,6 +1476,7 @@ const editModalStyles = StyleSheet.create({
         borderColor: "#e1e5e9",
         borderRadius: 8,
         backgroundColor: "white",
+        marginRight: 12,
     },
     cancelButtonText: {
         color: "#666",
