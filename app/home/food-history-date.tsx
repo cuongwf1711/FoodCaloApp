@@ -76,11 +76,11 @@ if (typeof window !== "undefined" && Platform.OS === "web") {
 // Conditional ReactDOM import for web portals
 let ReactDOM: any;
 if (Platform.OS === 'web') {
-  try {
-    ReactDOM = require('react-dom');
-  } catch (e) {
-    console.warn('ReactDOM is not available. Web modal portal might not work.');
-  }
+    try {
+        ReactDOM = require('react-dom');
+    } catch (e) {
+        console.warn('ReactDOM is not available. Web modal portal might not work.');
+    }
 }
 
 interface FoodHistoryDateViewProps {
@@ -126,7 +126,7 @@ const modalStyles = StyleSheet.create({
     },
     fullImageNative: {
         borderRadius: 8,
-        width: 300, 
+        width: 300,
         height: 300,
     },
 })
@@ -138,23 +138,15 @@ const ImageModal: React.FC<{
     imageUri: string
     onClose: () => void
 }> = ({ visible, imageUri, onClose }) => {
-    // Animated values for zoom and pan (from index.tsx)
+    // Animated values for zoom only (remove pan completely)
     const scale = useRef(new Animated.Value(1)).current;
-    const translateX = useRef(new Animated.Value(0)).current;
-    const translateY = useRef(new Animated.Value(0)).current;
     const lastScale = useRef(1);
-    const lastTranslateX = useRef(0);
-    const lastTranslateY = useRef(0);
 
     useEffect(() => {
         if (visible) {
             // Reset to initial state when modal becomes visible
             scale.setValue(1);
-            translateX.setValue(0);
-            translateY.setValue(0);
             lastScale.current = 1;
-            lastTranslateX.current = 0;
-            lastTranslateY.current = 0;
         }
         const handleEscape = (event: KeyboardEvent) => {
             if (event.key === "Escape") {
@@ -165,7 +157,7 @@ const ImageModal: React.FC<{
             document.addEventListener("keydown", handleEscape);
             return () => document.removeEventListener("keydown", handleEscape);
         }
-    }, [visible, onClose, scale, translateX, translateY]);
+    }, [visible, onClose, scale]);
 
     const downloadImage = async () => {
         if (!imageUri) return;
@@ -184,12 +176,12 @@ const ImageModal: React.FC<{
                 let filename = urlParts[urlParts.length - 1].split('?')[0] || 'image'; // Remove query params
                 if (!filename.includes('.') && blob.type && blob.type.includes('/')) {
                     const extension = blob.type.split('/')[1];
-                     if (extension && !['*', 'octet-stream'].includes(extension)) {
+                    if (extension && !['*', 'octet-stream'].includes(extension)) {
                         filename += `.${extension}`;
                     }
                 }
                 link.download = filename;
-                
+
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -201,7 +193,7 @@ const ImageModal: React.FC<{
                     showMessage({ message: "Permission to access media library is required!" }, false);
                     return;
                 }
-                
+
                 let fileUriToSave = imageUri;
                 let temporaryFile = false;
 
@@ -210,7 +202,7 @@ const ImageModal: React.FC<{
                     const uriParts = imageUri.split('.');
                     const extension = uriParts.length > 1 ? uriParts.pop()?.split('?')[0] : 'jpg';
                     const tempFileName = `${randomName}.${extension}`;
-                    
+
                     const downloadResult = await FileSystem.downloadAsync(
                         imageUri,
                         FileSystem.documentDirectory + tempFileName
@@ -222,12 +214,12 @@ const ImageModal: React.FC<{
                     fileUriToSave = downloadResult.uri;
                     temporaryFile = true;
                 }
-                
+
                 await MediaLibrary.createAssetAsync(fileUriToSave);
                 showMessage({ message: "Image saved to gallery" }, true);
 
                 if (temporaryFile) {
-                     try {
+                    try {
                         await FileSystem.deleteAsync(fileUriToSave, { idempotent: true });
                     } catch (cleanupError) {
                         console.log('Cleanup error (non-critical):', cleanupError);
@@ -252,7 +244,7 @@ const ImageModal: React.FC<{
                 }}
                 onClick={onClose}
             >
-                <div 
+                <div
                     style={{ position: "relative", maxWidth: "90%", maxHeight: "90%", display: "flex", flexDirection: "column", alignItems: "center" }}
                     onClick={(e) => e.stopPropagation()}
                 >
@@ -287,9 +279,9 @@ const ImageModal: React.FC<{
         return modalContent;
     }
 
-    // Native part with Gesture Handler
+    // Native part with Gesture Handler (only pinch, no pan)
     if (GestureHandlerModule) { // Use the renamed variable
-        const { PinchGestureHandler, PanGestureHandler, State, GestureHandlerRootView } = GestureHandlerModule; // Destructure here
+        const { PinchGestureHandler, State, GestureHandlerRootView } = GestureHandlerModule; // Destructure here
 
         const onPinchEvent = Animated.event(
             [{ nativeEvent: { scale: scale } }],
@@ -303,29 +295,9 @@ const ImageModal: React.FC<{
             }
         };
 
-        const onPanEvent = Animated.event(
-            [{ nativeEvent: { translationX: translateX, translationY: translateY } }],
-            { useNativeDriver: true }
-        );
-
-        const onPanStateChange = (event: any) => {
-            if (event.nativeEvent.oldState === State.ACTIVE) {
-                lastTranslateX.current += event.nativeEvent.translationX;
-                lastTranslateY.current += event.nativeEvent.translationY;
-                translateX.setValue(lastTranslateX.current);
-                translateY.setValue(lastTranslateY.current);
-            }
-        };
-
         const onDoubleTap = () => {
-            Animated.parallel([
-                Animated.spring(scale, { toValue: 1, useNativeDriver: true }),
-                Animated.spring(translateX, { toValue: 0, useNativeDriver: true }),
-                Animated.spring(translateY, { toValue: 0, useNativeDriver: true }),
-            ]).start();
+            Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
             lastScale.current = 1;
-            lastTranslateX.current = 0;
-            lastTranslateY.current = 0;
         };
 
         return (
@@ -353,43 +325,27 @@ const ImageModal: React.FC<{
                         </View>
 
                         <View style={modalStyles.imageGestureContainer} pointerEvents="box-none">
-                            <PanGestureHandler
-                                onGestureEvent={onPanEvent}
-                                onHandlerStateChange={onPanStateChange}
+                            <PinchGestureHandler
+                                onGestureEvent={onPinchEvent}
+                                onHandlerStateChange={onPinchStateChange}
                             >
-                                <Animated.View>
-                                    <PinchGestureHandler
-                                        onGestureEvent={onPinchEvent}
-                                        onHandlerStateChange={onPinchStateChange}
-                                    >
-                                        <Animated.View>
-                                            <TouchableOpacity onPress={onDoubleTap} activeOpacity={1}>
-                                                <Animated.Image
-                                                    source={{ uri: imageUri }}
-                                                    style={[
-                                                        modalStyles.fullImageNative,
-                                                        {
-                                                            transform: [
-                                                                { scale: scale },
-                                                                { translateX: translateX },
-                                                                { translateY: translateY },
-                                                            ],
-                                                        },
-                                                    ]}
-                                                    resizeMode="contain"
-                                                />
-                                            </TouchableOpacity>
-                                        </Animated.View>
-                                    </PinchGestureHandler>
+                                <Animated.View style={{ transform: [{ scale }] }}>
+                                    <TouchableOpacity onPress={onDoubleTap} activeOpacity={1}>
+                                        <Image
+                                            source={{ uri: imageUri }}
+                                            style={modalStyles.fullImageNative}
+                                            resizeMode="contain"
+                                        />
+                                    </TouchableOpacity>
                                 </Animated.View>
-                            </PanGestureHandler>
+                            </PinchGestureHandler>
                         </View>
                     </View>
                 </GestureHandlerRootView>
             </Modal>
         );
     }
-    
+
     // Fallback Native part (no gestures)
     return (
         <Modal
@@ -410,12 +366,11 @@ const ImageModal: React.FC<{
                         <Ionicons name="download-outline" size={24} color="#333" />
                     </TouchableOpacity>
                     <TouchableOpacity style={modalStyles.iconButton} onPress={onClose}>
-                        {/* Corrected: Ionicons inside TouchableOpacity */}
                         <Ionicons name="close-outline" size={28} color="#333" />
                     </TouchableOpacity>
                 </View>
                 <View style={modalStyles.imageGestureContainer} pointerEvents="box-none">
-                     <Image
+                    <Image
                         source={{ uri: imageUri }}
                         style={modalStyles.fullImageNative}
                         resizeMode="contain"
@@ -960,7 +915,7 @@ export const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
                 >
                     <View style={[sharedStyles.foodCard, isDeleting && { opacity: 0.9 }]}>
                         {/* Delete Loading Overlay */}
-                        {isDeleting && <DeleteLoadingOverlay/>}
+                        {isDeleting && <DeleteLoadingOverlay />}
 
                         <View style={sharedStyles.foodCardHeader}>
                             <Text style={sharedStyles.foodName}>{item.predictName}</Text>
@@ -1075,7 +1030,7 @@ export const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
     if (isLoading && !isInitialized) {
         return (
             <View style={sharedStyles.container}>
-                <EnhancedLoadingOverlay/>
+                <EnhancedLoadingOverlay />
             </View>
         )
     }
@@ -1150,7 +1105,7 @@ export const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
             )}
 
             {/* Loading overlay for data changes */}
-            {(isDataChanging || isSortChanging) && <EnhancedLoadingOverlay/>}
+            {(isDataChanging || isSortChanging) && <EnhancedLoadingOverlay />}
 
             <ImageModal visible={modalVisible} imageUri={modalImageUri} onClose={closeImageModal} />
             {editingItem && (
