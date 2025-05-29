@@ -53,7 +53,7 @@ if (typeof window !== "undefined" && Platform.OS === "web") {
 }
 
 // Enhanced Loading Component with better animations
-const EnhancedLoadingOverlay: React.FC<{ message?: string }> = ({ message = "Processing image..." }) => {
+const EnhancedLoadingOverlay: React.FC = () => {
     const [fadeAnim] = useState(new Animated.Value(0))
     const [scaleAnim] = useState(new Animated.Value(0.8))
 
@@ -100,7 +100,8 @@ const EnhancedLoadingOverlay: React.FC<{ message?: string }> = ({ message = "Pro
                         flexDirection: "column",
                         alignItems: "center",
                         boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-                        minWidth: "200px",
+                        minWidth: "60px",
+                        minHeight: "60px",
                         animation: "pulse 2s infinite",
                     }}
                 >
@@ -112,18 +113,8 @@ const EnhancedLoadingOverlay: React.FC<{ message?: string }> = ({ message = "Pro
                             borderTop: "4px solid #3498db",
                             borderRadius: "50%",
                             animation: "spin 1s linear infinite",
-                            marginBottom: "16px",
                         }}
                     />
-                    <div
-                        style={{
-                            fontSize: "16px",
-                            color: "#666",
-                            fontWeight: "500",
-                        }}
-                    >
-                        {message}
-                    </div>
                 </div>
             </div>
         )
@@ -161,7 +152,8 @@ const EnhancedLoadingOverlay: React.FC<{ message?: string }> = ({ message = "Pro
                         shadowOpacity: 0.15,
                         shadowRadius: 20,
                         elevation: 8,
-                        minWidth: 200,
+                        minWidth: 60,
+                        minHeight: 60,
                     },
                     {
                         transform: [{ scale: scaleAnim }],
@@ -169,12 +161,6 @@ const EnhancedLoadingOverlay: React.FC<{ message?: string }> = ({ message = "Pro
                 ]}
             >
                 <ActivityIndicator size="large" color="#3498db" />
-                <Text style={{
-                    marginTop: 16,
-                    fontSize: 16,
-                    color: "#666",
-                    fontWeight: "500",
-                }}>{message}</Text>
             </Animated.View>
         </Animated.View>
     )
@@ -1159,7 +1145,13 @@ const Index: React.FC = () => {
                             onPress={processImage}
                             buttonType="success"
                         >
-                            <Text style={styles.buttonText}>{isProcessing ? "Processing..." : "Analyze"}</Text>
+                            {isProcessing ? (
+                                <View style={styles.buttonLoadingContainer}>
+                                    <ActivityIndicator size="small" color="#fff" style={styles.buttonLoader} />
+                                </View>
+                            ) : (
+                                <Text style={styles.buttonText}>Analyze</Text>
+                            )}
                         </AnimatedButton>
 
                         <AnimatedButton
@@ -1176,7 +1168,7 @@ const Index: React.FC = () => {
                 {/* Results section - Show loading or results */}
                 {isProcessing ? (
                     <View style={[sharedStyles.foodCard, styles.loadingResultCard]}>
-                        <EnhancedLoadingOverlay message="Analyzing your food image..." />
+                        <EnhancedLoadingOverlay />
                     </View>
                 ) : isDeleting && result ? (
                     <Animated.View
@@ -1207,7 +1199,7 @@ const Index: React.FC = () => {
                             },
                         ]}
                     >
-                        <EnhancedLoadingOverlay message="Deleting result..." />
+                        <EnhancedLoadingOverlay />
                     </Animated.View>
                 ) : result ? (
                     <Animated.View
@@ -1633,6 +1625,13 @@ const styles = StyleSheet.create({
         fontSize: 14,
         fontWeight: "600",
         textAlign: "center",
+    },
+    buttonLoadingContainer: {
+        alignItems: "center",
+        justifyContent: "center",
+    },
+    buttonLoader: {
+        // Add any specific styling for button loader if needed
     },
     loadingResultCard: {
         minHeight: 200,
