@@ -1,7 +1,10 @@
 "use client"
 
-import type React from "react"
+import { Ionicons } from "@expo/vector-icons"
+import React from "react"
+import { Platform } from "react-native"
 
+import { MAX_CALORIES, MAX_COMMENT_LENGTH } from "@/constants/general_constants"
 import { URL_FOOD_CALO_ESTIMATOR, URL_USER_PROFILE } from "@/constants/url_constants"
 import { deleteData, getData, patchData } from "@/context/request_context"
 import { showMessage } from "@/utils/showMessage"
@@ -11,15 +14,20 @@ import {
     Dimensions,
     Image,
     Modal,
-    Platform,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    TouchableWithoutFeedback,
     View,
-    type FlatList,
+    type FlatList
 } from "react-native"
+
+// Add ReactDOM import for web portal
+let ReactDOM: any
+if (Platform.OS === "web") {
+    ReactDOM = require("react-dom")
+}
 
 // Common Types
 export interface FoodItem {
@@ -455,7 +463,7 @@ export const ImageModal: React.FC<{
                             boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
                         }}
                     >
-                        ✕
+                        ×
                     </button>
                 </div>
             </div>
@@ -493,7 +501,7 @@ export const ImageModal: React.FC<{
                         onPress={onClose}
                         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                     >
-                        <Text style={styles.closeButtonText}>✕</Text>
+                        <Ionicons name="close" size={18} color="#333" />
                     </TouchableOpacity>
                 </TouchableOpacity>
             </TouchableOpacity>
@@ -501,72 +509,258 @@ export const ImageModal: React.FC<{
     )
 }
 
+// Enhanced EditModal with character limits and fixed sizing
 export const EditModal: React.FC<{
     visible: boolean
     initialCalo: string
     initialComment: string
-    onSave: (calo: string, comment: string) => void
+    onSave: (calories: string, comment: string) => void
     onCancel: () => void
 }> = ({ visible, initialCalo, initialComment, onSave, onCancel }) => {
-    const [editedCalo, setEditedCalo] = useState(initialCalo)
-    const [editedComment, setEditedComment] = useState(initialComment)
+    const [calories, setCalories] = useState(initialCalo)
+    const [comment, setComment] = useState(initialComment)
 
-    useEffect(() => {
-        setEditedCalo(initialCalo)
-        setEditedComment(initialComment)
-    }, [initialCalo, initialComment, visible])
+    // Reset values when modal becomes visible
+    React.useEffect(() => {
+        if (visible) {
+            setCalories(initialCalo)
+            setComment(initialComment)
+        }
+    }, [visible, initialCalo, initialComment])
 
-    const handleSave = () => {
-        onSave(editedCalo, editedComment)
+    React.useEffect(() => {
+        if (Platform.OS === "web") {
+            if (visible) {
+                // Prevent scrolling on the background
+                document.body.style.overflow = "hidden"
+                document.body.style.position = "fixed"
+                document.body.style.width = "100%"
+
+                // Add escape key listener
+                const handleEscape = (e: KeyboardEvent) => {
+                    if (e.key === "Escape") {
+                        onCancel()
+                    }
+                }
+                document.addEventListener("keydown", handleEscape)
+
+                return () => {
+                    document.body.style.overflow = ""
+                    document.body.style.position = ""
+                    document.body.style.width = ""
+                    document.removeEventListener("keydown", handleEscape)
+                }
+            }
+        }
+    }, [visible, onCancel])
+
+    const handleCaloriesChange = (value: string) => {
+        // Remove non-numeric characters except for empty string
+        const numericValue = value.replace(/[^0-9]/g, '')
+        
+        // Check if the numeric value exceeds MAX_CALORIES
+        if (numericValue === '' || Number(numericValue) <= MAX_CALORIES) {
+            setCalories(numericValue)
+        }
     }
 
-    if (!visible) return null
+    const handleCommentChange = (value: string) => {
+        // Limit comment length
+        if (value.length <= MAX_COMMENT_LENGTH) {
+            setComment(value)
+        }
+    }
+
+    const handleSave = () => {
+        // Validate calories is not empty and is a valid number
+        if (!calories.trim() || isNaN(Number(calories)) || Number(calories) <= 0) {
+            if (Platform.OS === "web") {
+                alert("Please enter a valid number of calories greater than 0.")
+            } else {
+                Alert.alert("Invalid Input", "Please enter a valid number of calories greater than 0.")
+            }
+            return
+        }
+
+        onSave(calories, comment.trim())
+    }
+
+    const remainingCommentChars = MAX_COMMENT_LENGTH - comment.length
 
     if (Platform.OS === "web") {
-        return (
-            <div style={webModalStyles.overlay} onClick={onCancel}>
-                <div style={webModalStyles.editContent} onClick={(e) => e.stopPropagation()}>
-                    <h3 style={{ marginBottom: "15px", fontSize: "18px" }}>Edit Food Item</h3>
+        if (!visible) return null
 
-                    <div style={{ marginBottom: "15px" }}>
-                        <label style={{ display: "block", marginBottom: "5px" }}>Calories:</label>
+        // Create portal to render modal at document.body level
+        const modalContent = (
+            <div
+                style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    width: "100vw",
+                    height: "100vh",
+                    backgroundColor: "rgba(0, 0, 0, 0.5)",
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    zIndex: 999999,
+                    margin: 0,
+                    padding: "20px",
+                    boxSizing: "border-box",
+                }}
+                onClick={onCancel}
+            >
+                <div
+                    style={{
+                        backgroundColor: "white",
+                        borderRadius: "12px",
+                        padding: "24px",
+                        width: "500px",
+                        maxWidth: "90vw",
+                        height: "auto",
+                        maxHeight: "80vh",
+                        boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
+                        position: "relative",
+                        display: "flex",
+                        flexDirection: "column",
+                        overflow: "hidden",
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    {/* Close button */}
+                    <button
+                        onClick={onCancel}
+                        style={{
+                            position: "absolute",
+                            top: "12px",
+                            right: "12px",
+                            backgroundColor: "transparent",
+                            border: "none",
+                            fontSize: "20px",
+                            color: "#666",
+                            cursor: "pointer",
+                            width: "30px",
+                            height: "30px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            borderRadius: "50%",
+                            transition: "all 0.2s ease",
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = "#f0f0f0"
+                            e.currentTarget.style.color = "#333"
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = "transparent"
+                            e.currentTarget.style.color = "#666"
+                        }}
+                    >
+                        ×
+                    </button>
+
+                    <h3 style={{ margin: "0 0 20px 0", fontSize: "18px", fontWeight: "600", color: "#333" }}>
+                        Edit Food Details
+                    </h3>
+
+                    <div style={{ marginBottom: "16px" }}>
+                        <label
+                            style={{ display: "block", marginBottom: "8px", fontSize: "14px", fontWeight: "500", color: "#555" }}
+                        >
+                            Calories: <span style={{ color: "#e74c3c" }}>*</span>
+                        </label>
                         <input
-                            type="number"
-                            value={editedCalo}
-                            onChange={(e) => setEditedCalo(e.target.value)}
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
+                            value={calories}
+                            onChange={(e) => handleCaloriesChange(e.target.value)}
+                            placeholder="Enter calories"
                             style={{
                                 width: "100%",
-                                padding: "8px",
-                                borderRadius: "4px",
-                                border: "1px solid #ddd",
+                                padding: "12px",
+                                border: "2px solid #e1e5e9",
+                                borderRadius: "8px",
+                                fontSize: "16px",
+                                outline: "none",
+                                transition: "border-color 0.2s ease",
+                                boxSizing: "border-box",
+                                color: "#333",
+                            }}
+                            onFocus={(e) => {
+                                e.target.style.borderColor = "#3498db"
+                            }}
+                            onBlur={(e) => {
+                                e.target.style.borderColor = "#e1e5e9"
                             }}
                         />
                     </div>
 
-                    <div style={{ marginBottom: "20px" }}>
-                        <label style={{ display: "block", marginBottom: "5px" }}>Comment:</label>
+                    <div style={{ marginBottom: "24px", flex: 1, display: "flex", flexDirection: "column" }}>
+                        <label
+                            style={{ display: "block", marginBottom: "8px", fontSize: "14px", fontWeight: "500", color: "#555" }}
+                        >
+                            Comment:
+                        </label>
                         <textarea
-                            value={editedComment}
-                            onChange={(e) => setEditedComment(e.target.value)}
+                            value={comment}
+                            onChange={(e) => handleCommentChange(e.target.value)}
+                            rows={4}
+                            placeholder="Enter comment (optional)"
                             style={{
                                 width: "100%",
-                                padding: "8px",
-                                borderRadius: "4px",
-                                border: "1px solid #ddd",
-                                minHeight: "80px",
+                                padding: "12px",
+                                border: "2px solid #e1e5e9",
+                                borderRadius: "8px",
+                                fontSize: "16px",
+                                outline: "none",
+                                transition: "border-color 0.2s ease",
+                                resize: "none",
+                                height: "120px",
+                                overflow: "auto",
+                                boxSizing: "border-box",
+                                fontFamily: "inherit",
+                            }}
+                            onFocus={(e) => {
+                                e.target.style.borderColor = "#3498db"
+                            }}
+                            onBlur={(e) => {
+                                e.target.style.borderColor = "#e1e5e9"
                             }}
                         />
+                        <div style={{ 
+                            fontSize: "12px", 
+                            color: remainingCommentChars < 20 ? "#e74c3c" : "#666", 
+                            marginTop: "4px",
+                            textAlign: "right"
+                        }}>
+                            {remainingCommentChars} characters remaining
+                        </div>
                     </div>
 
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", flexShrink: 0 }}>
                         <button
                             onClick={onCancel}
                             style={{
-                                padding: "8px 16px",
-                                borderRadius: "4px",
-                                border: "1px solid #ddd",
-                                background: "#f5f5f5",
+                                padding: "12px 24px",
+                                border: "2px solid #e1e5e9",
+                                borderRadius: "8px",
+                                backgroundColor: "white",
+                                color: "#666",
+                                fontSize: "14px",
+                                fontWeight: "500",
                                 cursor: "pointer",
+                                transition: "all 0.2s ease",
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = "#f8f9fa"
+                                e.currentTarget.style.borderColor = "#d1d5db"
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = "white"
+                                e.currentTarget.style.borderColor = "#e1e5e9"
                             }}
                         >
                             Cancel
@@ -574,12 +768,21 @@ export const EditModal: React.FC<{
                         <button
                             onClick={handleSave}
                             style={{
-                                padding: "8px 16px",
-                                borderRadius: "4px",
+                                padding: "12px 24px",
                                 border: "none",
-                                background: "#3498db",
+                                borderRadius: "8px",
+                                backgroundColor: "#3498db",
                                 color: "white",
+                                fontSize: "14px",
+                                fontWeight: "500",
                                 cursor: "pointer",
+                                transition: "all 0.2s ease",
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = "#2980b9"
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = "#3498db"
                             }}
                         >
                             Save
@@ -588,49 +791,239 @@ export const EditModal: React.FC<{
                 </div>
             </div>
         )
+
+        // Use React portal to render outside of current component tree
+        if (typeof document !== "undefined") {
+            const portalRoot = document.body
+            return ReactDOM.createPortal(modalContent, portalRoot)
+        }
+
+        return modalContent
     }
 
+    // Native implementation using Modal component
     return (
-        <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
-            <TouchableOpacity style={styles.modalOverlay} onPress={onCancel} activeOpacity={1}>
-                <TouchableWithoutFeedback>
-                    <View style={styles.editModalContent}>
-                        <Text style={styles.editModalTitle}>Edit Food Item</Text>
+        <Modal
+            visible={visible}
+            transparent={true}
+            animationType="slide"
+            onRequestClose={onCancel}
+            statusBarTranslucent={true}
+        >
+            <View style={editModalStyles.overlay}>
+                <TouchableOpacity style={editModalStyles.backdrop} onPress={onCancel} activeOpacity={1} />
 
-                        <View style={styles.editInputGroup}>
-                            <Text style={styles.editInputLabel}>Calories:</Text>
+                <View style={editModalStyles.container}>
+                    <View style={editModalStyles.modal}>
+                        <TouchableOpacity
+                            style={editModalStyles.closeButton}
+                            onPress={onCancel}
+                            hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+                        >
+                            <Ionicons name="close" size={18} color="#666" />
+                        </TouchableOpacity>
+
+                        <Text style={editModalStyles.title}>Edit Food Details</Text>
+
+                        <View style={editModalStyles.inputContainer}>
+                            <Text style={editModalStyles.label}>
+                                Calories: <Text style={editModalStyles.required}>*</Text>
+                            </Text>
                             <TextInput
-                                style={styles.editInput}
-                                value={editedCalo}
-                                onChangeText={setEditedCalo}
+                                style={editModalStyles.input}
+                                value={calories}
+                                onChangeText={handleCaloriesChange}
                                 keyboardType="numeric"
+                                placeholder="Enter calories"
+                                placeholderTextColor={"#999"}
+                                maxLength={MAX_CALORIES.toString().length}
                             />
                         </View>
 
-                        <View style={styles.editInputGroup}>
-                            <Text style={styles.editInputLabel}>Comment:</Text>
-                            <TextInput
-                                style={[styles.editInput, styles.editTextarea]}
-                                value={editedComment}
-                                onChangeText={setEditedComment}
-                                multiline
-                            />
+                        <View style={editModalStyles.inputContainer}>
+                            <Text style={editModalStyles.label}>Comment:</Text>
+                            <View style={editModalStyles.textAreaContainer}>
+                                <ScrollView 
+                                    style={editModalStyles.textAreaScrollView}
+                                    showsVerticalScrollIndicator={true}
+                                    nestedScrollEnabled={true}
+                                >
+                                    <TextInput
+                                        style={[editModalStyles.input, editModalStyles.textArea]}
+                                        value={comment}
+                                        onChangeText={handleCommentChange}
+                                        multiline
+                                        placeholder="Enter comment (optional)"
+                                        textAlignVertical="top"
+                                        placeholderTextColor={"#999"}
+                                        maxLength={MAX_COMMENT_LENGTH}
+                                        scrollEnabled={false}
+                                    />
+                                </ScrollView>
+                            </View>
+                            <Text style={[
+                                editModalStyles.charCount,
+                                remainingCommentChars < 20 && editModalStyles.charCountWarning
+                            ]}>
+                                {remainingCommentChars} characters remaining
+                            </Text>
                         </View>
 
-                        <View style={styles.editButtonGroup}>
-                            <TouchableOpacity style={styles.cancelButton} onPress={onCancel}>
-                                <Text style={styles.cancelButtonText}>Cancel</Text>
+                        <View style={editModalStyles.buttonContainer}>
+                            <TouchableOpacity style={editModalStyles.cancelButton} onPress={onCancel}>
+                                <Text style={editModalStyles.cancelButtonText}>Cancel</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-                                <Text style={styles.saveButtonText}>Save</Text>
+                            <TouchableOpacity style={editModalStyles.saveButton} onPress={handleSave}>
+                                <Text style={editModalStyles.saveButtonText}>Save</Text>
                             </TouchableOpacity>
                         </View>
                     </View>
-                </TouchableWithoutFeedback>
-            </TouchableOpacity>
+                </View>
+            </View>
         </Modal>
     )
 }
+
+const editModalStyles = StyleSheet.create({
+    overlay: {
+        flex: 1,
+        backgroundColor: "rgba(0, 0, 0, 0.5)",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    backdrop: {
+        position: "absolute",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+    },
+    container: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        padding: 20,
+    },
+    modal: {
+        backgroundColor: "white",
+        borderRadius: 12,
+        padding: 24,
+        width: 800,
+        maxWidth: "90%",
+        height: 480,
+        maxHeight: "80%",
+        shadowColor: "#000",
+        shadowOpacity: 0.2,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+        elevation: 10,
+        position: "relative",
+    },
+    closeButton: {
+        position: "absolute",
+        top: 12,
+        right: 12,
+        width: 30,
+        height: 30,
+        borderRadius: 15,
+        justifyContent: "center",
+        alignItems: "center",
+        backgroundColor: "transparent",
+        zIndex: 1001,
+    },
+    closeButtonText: {
+        fontSize: 18,
+        color: "#666",
+        fontWeight: "bold",
+    },
+    title: {
+        fontSize: 18,
+        fontWeight: "600",
+        color: "#333",
+        marginBottom: 20,
+        marginRight: 40,
+    },
+    inputContainer: {
+        marginBottom: 16,
+    },
+    label: {
+        fontSize: 14,
+        fontWeight: "500",
+        color: "#555",
+        marginBottom: 8,
+    },
+    required: {
+        color: "#e74c3c",
+    },
+    input: {
+        borderWidth: 2,
+        borderColor: "#e1e5e9",
+        borderRadius: 8,
+        padding: 12,
+        fontSize: 16,
+        backgroundColor: "white",
+        color: "#333",
+    },
+    textAreaContainer: {
+        height: 150,
+        borderWidth: 2,
+        borderColor: "#e1e5e9",
+        borderRadius: 8,
+        backgroundColor: "white",
+    },
+    textAreaScrollView: {
+        flex: 1,
+    },
+    textArea: {
+        height: 120,
+        textAlignVertical: "top",
+        borderWidth: 0,
+        margin: 0,
+    },
+    charCount: {
+        fontSize: 12,
+        color: "#666",
+        marginTop: 4,
+        textAlign: "right",
+    },
+    charCountWarning: {
+        color: "#e74c3c",
+    },
+    buttonContainer: {
+        flexDirection: "row",
+        justifyContent: "flex-end",
+        marginTop: 24,
+        position: "absolute",
+        bottom: 24,
+        right: 24,
+        left: 24,
+    },
+    cancelButton: {
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+        borderWidth: 2,
+        borderColor: "#e1e5e9",
+        borderRadius: 8,
+        backgroundColor: "white",
+        marginRight: 12,
+    },
+    cancelButtonText: {
+        color: "#666",
+        fontSize: 14,
+        fontWeight: "500",
+    },
+    saveButton: {
+        paddingVertical: 12,
+        paddingHorizontal: 24,
+        borderRadius: 8,
+        backgroundColor: "#3498db",
+    },
+    saveButtonText: {
+        color: "white",
+        fontSize: 14,
+        fontWeight: "500",
+    },
+})
 
 // Fixed SortingDropdown with disabled state support
 export const SortingDropdown: React.FC<{
@@ -694,7 +1087,11 @@ export const SortingDropdown: React.FC<{
                 disabled={disabled}
             >
                 <Text style={[styles.dropdownButtonText, disabled && styles.dropdownButtonTextDisabled]}>{selectedLabel}</Text>
-                <Text style={[styles.dropdownIcon, disabled && styles.dropdownIconDisabled]}>{isOpen ? "▲" : "▼"}</Text>
+                <Ionicons 
+                    name={isOpen ? "chevron-up" : "chevron-down"} 
+                    size={12} 
+                    color={disabled ? "#ccc" : "#666"} 
+                />
             </TouchableOpacity>
 
             <Modal
@@ -724,7 +1121,7 @@ export const SortingDropdown: React.FC<{
                                 >
                                     {option.label}
                                 </Text>
-                                {value === option.value && <Text style={styles.dropdownModalCheckmark}>✓</Text>}
+                                {value === option.value && <Ionicons name="checkmark" size={16} color="#3498db" />}
                             </TouchableOpacity>
                         ))}
                     </View>
@@ -790,7 +1187,7 @@ export const FilterDropdown: React.FC<{
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
                 <Text style={styles.dropdownButtonText}>{selectedLabel}</Text>
-                <Text style={styles.dropdownIcon}>{isOpen ? "▲" : "▼"}</Text>
+                <Ionicons name={isOpen ? "chevron-up" : "chevron-down"} size={12} color="#666" />
             </TouchableOpacity>
 
             <Modal visible={isOpen} transparent={true} animationType="fade" onRequestClose={() => setIsOpen(false)}>
@@ -815,7 +1212,7 @@ export const FilterDropdown: React.FC<{
                                 >
                                     {option.label}
                                 </Text>
-                                {value === option.value && <Text style={styles.dropdownModalCheckmark}>✓</Text>}
+                                {value === option.value && <Ionicons name="checkmark" size={16} color="#3498db" />}
                             </TouchableOpacity>
                         ))}
                     </View>
@@ -882,7 +1279,7 @@ export const UnitDropdown: React.FC<{
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
                 <Text style={styles.dropdownButtonText}>{selectedLabel}</Text>
-                <Text style={styles.dropdownIcon}>{isOpen ? "▲" : "▼"}</Text>
+                <Ionicons name={isOpen ? "chevron-up" : "chevron-down"} size={12} color="#666" />
             </TouchableOpacity>
 
             <Modal visible={isOpen} transparent={true} animationType="fade" onRequestClose={() => setIsOpen(false)}>
@@ -907,7 +1304,7 @@ export const UnitDropdown: React.FC<{
                                 >
                                     {option.label}
                                 </Text>
-                                {value === option.value && <Text style={styles.dropdownModalCheckmark}>✓</Text>}
+                                {value === option.value && <Ionicons name="checkmark" size={16} color="#3498db" />}
                             </TouchableOpacity>
                         ))}
                     </View>
@@ -1014,7 +1411,7 @@ export const DatePicker: React.FC<{
         <View style={styles.datePickerContainer}>
             <TouchableOpacity style={styles.datePickerButton} onPress={() => setIsOpen(!isOpen)} activeOpacity={0.7}>
                 <Text style={styles.datePickerButtonText}>{formatDisplayDate(selectedDate)}</Text>
-                <Text style={styles.datePickerIcon}>📅</Text>
+                <Ionicons name="calendar-outline" size={14} color="#666" />
             </TouchableOpacity>
 
             <Modal visible={isOpen} transparent={true} animationType="slide" onRequestClose={() => setIsOpen(false)}>
@@ -1108,7 +1505,11 @@ export const WeekInput: React.FC<{
                 onPress={handleDecrease}
                 disabled={weeksAgo === 0}
             >
-                <Text style={[styles.weekStepperButtonText, weeksAgo === 0 && styles.weekStepperButtonTextDisabled]}>-</Text>
+                <Ionicons 
+                    name="remove" 
+                    size={16} 
+                    color={weeksAgo === 0 ? "#ccc" : "#333"} 
+                />
             </TouchableOpacity>
 
             <TextInput
@@ -1120,7 +1521,7 @@ export const WeekInput: React.FC<{
             />
 
             <TouchableOpacity style={styles.weekStepperButton} onPress={handleIncrease}>
-                <Text style={styles.weekStepperButtonText}>+</Text>
+                <Ionicons name="add" size={16} color="#333" />
             </TouchableOpacity>
         </View>
     )
@@ -1165,7 +1566,7 @@ export const MonthPicker: React.FC<{
         <View style={styles.monthPickerContainer}>
             <TouchableOpacity style={styles.monthPickerButton} onPress={() => setIsOpen(!isOpen)} activeOpacity={0.7}>
                 <Text style={styles.monthPickerButtonText}>{formatDisplayMonth(selectedMonth)}</Text>
-                <Text style={styles.monthPickerIcon}>📅</Text>
+                <Ionicons name="calendar-outline" size={14} color="#666" />
             </TouchableOpacity>
 
             <Modal visible={isOpen} transparent={true} animationType="slide" onRequestClose={() => setIsOpen(false)}>
@@ -1270,7 +1671,7 @@ export const renderSharedFoodItem = (
                                 ✎
                             </div>
                         ) : (
-                            <Text style={[styles.editButtonText, { color: isDeleting ? "#ccc" : "#3498db" }]}>✎</Text>
+                            <Ionicons name="create-outline" size={18} color={isDeleting ? "#ccc" : "#3498db"} />
                         )}
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -1290,12 +1691,12 @@ export const renderSharedFoodItem = (
                                     ⟳
                                 </div>
                             ) : (
-                                <Text style={[styles.deleteButtonText, { fontSize: 18 }]}>⟳</Text>
+                                <Ionicons name="reload-outline" size={18} color="#e74c3c" />
                             )
                         ) : Platform.OS === "web" ? (
                             <div style={{ color: "#e74c3c", cursor: "pointer", fontSize: "18px" }}>🗑</div>
                         ) : (
-                            <Text style={styles.deleteButtonText}>🗑</Text>
+                            <Ionicons name="trash-outline" size={18} color="#e74c3c" />
                         )}
                     </TouchableOpacity>
                 </View>
@@ -1386,8 +1787,6 @@ export const webModalStyles = {
     },
 }
 
-const isWeb = Platform.OS === "web"
-
 // Updated styles with disabled states
 export const styles = StyleSheet.create({
     // Dropdown disabled states
@@ -1409,7 +1808,7 @@ export const styles = StyleSheet.create({
         flex: 1,
     },
     header: {
-        paddingTop: isWeb ? 20 : 60,
+        paddingTop: 20,
         paddingBottom: 15,
         paddingHorizontal: 20,
         backgroundColor: "#FFFFFF",

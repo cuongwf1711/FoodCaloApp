@@ -1,5 +1,6 @@
 "use client"
 
+import { Ionicons } from "@expo/vector-icons"
 import type React from "react"
 
 import { useCallback, useEffect, useRef, useState } from "react"
@@ -380,7 +381,7 @@ const ImageModal: React.FC<{
                             boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
                         }}
                     >
-                        ✕
+                        ×
                     </button>
                 </div>
             </div>
@@ -399,7 +400,7 @@ const ImageModal: React.FC<{
                     onPress={onClose}
                     hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
                 >
-                    <Text style={modalStyles.closeButtonText}>✕</Text>
+                    <Ionicons name="close" size={20} color="#333" />
                 </TouchableOpacity>
             </View>
         </View>
@@ -589,7 +590,7 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
                                         ✎
                                     </div>
                                 ) : (
-                                    <Text style={[sharedStyles.editButtonText, { color: isDeleting ? "#ccc" : "#3498db" }]}>✎</Text>
+                                    <Ionicons name="create-outline" size={18} color={isDeleting ? "#ccc" : "#3498db"} />
                                 )}
                             </TouchableOpacity>
                             <TouchableOpacity
@@ -599,8 +600,10 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
                             >
                                 {Platform.OS === "web" ? (
                                     <div style={{ color: "#e74c3c", cursor: isDeleting ? "not-allowed" : "pointer", fontSize: "18px" }}>🗑</div>
+                                ) : isDeleting ? (
+                                    <Ionicons name="reload-outline" size={18} color="#e74c3c" />
                                 ) : (
-                                    <Text style={sharedStyles.deleteButtonText}>🗑</Text>
+                                    <Ionicons name="trash-outline" size={18} color="#e74c3c" />
                                 )}
                             </TouchableOpacity>
                         </View>
@@ -741,7 +744,7 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
                     {Platform.OS === "web" ? (
                         <div style={{ color: "#fff", fontSize: "20px" }}>↑</div>
                     ) : (
-                        <Text style={sharedStyles.scrollToTopButtonText}>↑</Text>
+                        <Ionicons name="chevron-up" size={20} color="#fff" />
                     )}
                 </TouchableOpacity>
             )}
