@@ -693,6 +693,7 @@ const EditModal: React.FC<{
                                 outline: "none",
                                 transition: "border-color 0.2s ease",
                                 boxSizing: "border-box",
+                                color: "#999",
                             }}
                             onFocus={(e) => {
                                 e.target.style.borderColor = "#3498db"
@@ -827,6 +828,7 @@ const EditModal: React.FC<{
                                 onChangeText={setCalories}
                                 keyboardType="numeric"
                                 placeholder="Enter calories"
+                                placeholderTextColor={"#999"}
                             />
                         </View>
 
@@ -840,6 +842,7 @@ const EditModal: React.FC<{
                                 numberOfLines={4}
                                 placeholder="Enter comment"
                                 textAlignVertical="top"
+                                placeholderTextColor={"#999"}
                             />
                         </View>
 
