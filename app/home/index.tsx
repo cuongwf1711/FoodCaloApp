@@ -2,6 +2,7 @@
 
 import React from "react"
 
+import { MAX_CALORIES, MAX_COMMENT_LENGTH } from "@/constants/general_constants"
 import { URL_FOOD_CALO_ESTIMATOR } from "@/constants/url_constants"
 import { deleteData, patchData, postData } from "@/context/request_context"
 import { showMessage } from "@/utils/showMessage"
@@ -551,7 +552,7 @@ const ImageModal: React.FC<{
     )
 }
 
-// Enhanced EditModal with same Modal approach for Android
+// Enhanced EditModal with character limits and fixed sizing
 const EditModal: React.FC<{
     visible: boolean
     initialCalo: string
@@ -596,9 +597,38 @@ const EditModal: React.FC<{
         }
     }, [visible, onCancel])
 
-    const handleSave = () => {
-        onSave(calories, comment)
+    const handleCaloriesChange = (value: string) => {
+        // Remove non-numeric characters except for empty string
+        const numericValue = value.replace(/[^0-9]/g, '')
+        
+        // Check if the numeric value exceeds MAX_CALORIES
+        if (numericValue === '' || Number(numericValue) <= MAX_CALORIES) {
+            setCalories(numericValue)
+        }
     }
+
+    const handleCommentChange = (value: string) => {
+        // Limit comment length
+        if (value.length <= MAX_COMMENT_LENGTH) {
+            setComment(value)
+        }
+    }
+
+    const handleSave = () => {
+        // Validate calories is not empty and is a valid number
+        if (!calories.trim() || isNaN(Number(calories)) || Number(calories) <= 0) {
+            if (Platform.OS === "web") {
+                alert("Please enter a valid number of calories greater than 0.")
+            } else {
+                Alert.alert("Invalid Input", "Please enter a valid number of calories greater than 0.")
+            }
+            return
+        }
+
+        onSave(calories, comment.trim())
+    }
+
+    const remainingCommentChars = MAX_COMMENT_LENGTH - comment.length
 
     if (Platform.OS === "web") {
         if (!visible) return null
@@ -630,11 +660,15 @@ const EditModal: React.FC<{
                         backgroundColor: "white",
                         borderRadius: "12px",
                         padding: "24px",
-                        maxWidth: "500px",
-                        width: "100%",
+                        width: "500px",
+                        maxWidth: "90vw",
+                        height: "auto",
                         maxHeight: "80vh",
                         boxShadow: "0 10px 25px rgba(0,0,0,0.2)",
                         position: "relative",
+                        display: "flex",
+                        flexDirection: "column",
+                        overflow: "hidden",
                     }}
                     onClick={(e) => e.stopPropagation()}
                 >
@@ -678,12 +712,15 @@ const EditModal: React.FC<{
                         <label
                             style={{ display: "block", marginBottom: "8px", fontSize: "14px", fontWeight: "500", color: "#555" }}
                         >
-                            Calories:
+                            Calories: <span style={{ color: "#e74c3c" }}>*</span>
                         </label>
                         <input
-                            type="number"
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
                             value={calories}
-                            onChange={(e) => setCalories(e.target.value)}
+                            onChange={(e) => handleCaloriesChange(e.target.value)}
+                            placeholder="Enter calories"
                             style={{
                                 width: "100%",
                                 padding: "12px",
@@ -693,7 +730,7 @@ const EditModal: React.FC<{
                                 outline: "none",
                                 transition: "border-color 0.2s ease",
                                 boxSizing: "border-box",
-                                color: "#999",
+                                color: "#333",
                             }}
                             onFocus={(e) => {
                                 e.target.style.borderColor = "#3498db"
@@ -704,7 +741,7 @@ const EditModal: React.FC<{
                         />
                     </div>
 
-                    <div style={{ marginBottom: "24px" }}>
+                    <div style={{ marginBottom: "24px", flex: 1, display: "flex", flexDirection: "column" }}>
                         <label
                             style={{ display: "block", marginBottom: "8px", fontSize: "14px", fontWeight: "500", color: "#555" }}
                         >
@@ -712,8 +749,9 @@ const EditModal: React.FC<{
                         </label>
                         <textarea
                             value={comment}
-                            onChange={(e) => setComment(e.target.value)}
+                            onChange={(e) => handleCommentChange(e.target.value)}
                             rows={4}
+                            placeholder="Enter comment (optional)"
                             style={{
                                 width: "100%",
                                 padding: "12px",
@@ -722,8 +760,9 @@ const EditModal: React.FC<{
                                 fontSize: "16px",
                                 outline: "none",
                                 transition: "border-color 0.2s ease",
-                                resize: "vertical",
-                                minHeight: "100px",
+                                resize: "none",
+                                height: "120px",
+                                overflow: "auto",
                                 boxSizing: "border-box",
                                 fontFamily: "inherit",
                             }}
@@ -734,9 +773,17 @@ const EditModal: React.FC<{
                                 e.target.style.borderColor = "#e1e5e9"
                             }}
                         />
+                        <div style={{ 
+                            fontSize: "12px", 
+                            color: remainingCommentChars < 20 ? "#e74c3c" : "#666", 
+                            marginTop: "4px",
+                            textAlign: "right"
+                        }}>
+                            {remainingCommentChars} characters remaining
+                        </div>
                     </div>
 
-                    <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
+                    <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end", flexShrink: 0 }}>
                         <button
                             onClick={onCancel}
                             style={{
@@ -765,6 +812,7 @@ const EditModal: React.FC<{
                             onClick={handleSave}
                             style={{
                                 padding: "12px 24px",
+                                border: "none",
                                 borderRadius: "8px",
                                 backgroundColor: "#3498db",
                                 color: "white",
@@ -821,29 +869,47 @@ const EditModal: React.FC<{
                         <Text style={editModalStyles.title}>Edit Food Details</Text>
 
                         <View style={editModalStyles.inputContainer}>
-                            <Text style={editModalStyles.label}>Calories:</Text>
+                            <Text style={editModalStyles.label}>
+                                Calories: <Text style={editModalStyles.required}>*</Text>
+                            </Text>
                             <TextInput
                                 style={editModalStyles.input}
                                 value={calories}
-                                onChangeText={setCalories}
+                                onChangeText={handleCaloriesChange}
                                 keyboardType="numeric"
                                 placeholder="Enter calories"
                                 placeholderTextColor={"#999"}
+                                maxLength={MAX_CALORIES.toString().length}
                             />
                         </View>
 
                         <View style={editModalStyles.inputContainer}>
                             <Text style={editModalStyles.label}>Comment:</Text>
-                            <TextInput
-                                style={[editModalStyles.input, editModalStyles.textArea]}
-                                value={comment}
-                                onChangeText={setComment}
-                                multiline
-                                numberOfLines={4}
-                                placeholder="Enter comment"
-                                textAlignVertical="top"
-                                placeholderTextColor={"#999"}
-                            />
+                            <View style={editModalStyles.textAreaContainer}>
+                                <ScrollView 
+                                    style={editModalStyles.textAreaScrollView}
+                                    showsVerticalScrollIndicator={true}
+                                    nestedScrollEnabled={true}
+                                >
+                                    <TextInput
+                                        style={[editModalStyles.input, editModalStyles.textArea]}
+                                        value={comment}
+                                        onChangeText={handleCommentChange}
+                                        multiline
+                                        placeholder="Enter comment (optional)"
+                                        textAlignVertical="top"
+                                        placeholderTextColor={"#999"}
+                                        maxLength={MAX_COMMENT_LENGTH}
+                                        scrollEnabled={false}
+                                    />
+                                </ScrollView>
+                            </View>
+                            <Text style={[
+                                editModalStyles.charCount,
+                                remainingCommentChars < 20 && editModalStyles.charCountWarning
+                            ]}>
+                                {remainingCommentChars} characters remaining
+                            </Text>
                         </View>
 
                         <View style={editModalStyles.buttonContainer}>
@@ -1546,8 +1612,9 @@ const editModalStyles = StyleSheet.create({
         backgroundColor: "white",
         borderRadius: 12,
         padding: 24,
-        maxWidth: 500,
-        width: "100%",
+        width: 800,
+        maxWidth: "90%",
+        height: 480,
         maxHeight: "80%",
         shadowColor: "#000",
         shadowOpacity: 0.2,
@@ -1589,6 +1656,9 @@ const editModalStyles = StyleSheet.create({
         color: "#555",
         marginBottom: 8,
     },
+    required: {
+        color: "#e74c3c",
+    },
     input: {
         borderWidth: 2,
         borderColor: "#e1e5e9",
@@ -1596,15 +1666,46 @@ const editModalStyles = StyleSheet.create({
         padding: 12,
         fontSize: 16,
         backgroundColor: "white",
+        color: "#333",
+    },
+    textAreaContainer: {
+        height: 150,
+        borderWidth: 2,
+        borderColor: "#e1e5e9",
+        borderRadius: 8,
+        backgroundColor: "white",
+    },
+    textAreaScrollView: {
+        flex: 1,
     },
     textArea: {
-        height: 100,
+        height: 120,
         textAlignVertical: "top",
+        borderWidth: 0,
+        margin: 0,
+    },
+    hint: {
+        fontSize: 12,
+        color: "#666",
+        marginTop: 4,
+    },
+    charCount: {
+        fontSize: 12,
+        color: "#666",
+        marginTop: 4,
+        textAlign: "right",
+    },
+    charCountWarning: {
+        color: "#e74c3c",
     },
     buttonContainer: {
         flexDirection: "row",
         justifyContent: "flex-end",
         marginTop: 24,
+        position: "absolute",
+        bottom: 24,
+        right: 24,
+        left: 24,
     },
     cancelButton: {
         paddingVertical: 12,
