@@ -274,40 +274,32 @@ type ImagePickerResult = {
     assets: ImageAsset[]
 }
 
-// Enhanced ImageModal with proper Android Modal implementation and pinch-to-zoom
+// Enhanced ImageModal with proper Android Modal implementation and pinch-to-zoom only
 const ImageModal: React.FC<{
     visible: boolean
     imageUri: string
     onClose: () => void
 }> = ({ visible, imageUri, onClose }) => {
-    // Animated values for zoom and pan
+    // Animated values for zoom only (remove pan completely)
     const scale = useRef(new Animated.Value(1)).current
-    const translateX = useRef(new Animated.Value(0)).current
-    const translateY = useRef(new Animated.Value(0)).current
     const lastScale = useRef(1)
-    const lastTranslateX = useRef(0)
-    const lastTranslateY = useRef(0)
 
-    // Reset zoom and pan when modal opens/closes
+    // Reset zoom when modal opens/closes
     React.useEffect(() => {
         if (visible) {
             // Reset to initial state
             scale.setValue(1)
-            translateX.setValue(0)
-            translateY.setValue(0)
             lastScale.current = 1
-            lastTranslateX.current = 0
-            lastTranslateY.current = 0
         }
     }, [visible])
 
-    // Create gesture handlers for native platforms
+    // Create gesture handlers for native platforms (pinch only)
     const createGestureHandlers = () => {
         if (!GestureHandler || Platform.OS === "web") {
             return null
         }
 
-        const { PinchGestureHandler, PanGestureHandler, State } = GestureHandler
+        const { PinchGestureHandler, State } = GestureHandler
 
         const onPinchEvent = Animated.event(
             [{ nativeEvent: { scale: scale } }],
@@ -321,49 +313,20 @@ const ImageModal: React.FC<{
             }
         }
 
-        const onPanEvent = Animated.event(
-            [{ nativeEvent: { translationX: translateX, translationY: translateY } }],
-            { useNativeDriver: true }
-        )
-
-        const onPanStateChange = (event: any) => {
-            if (event.nativeEvent.oldState === State.ACTIVE) {
-                lastTranslateX.current += event.nativeEvent.translationX
-                lastTranslateY.current += event.nativeEvent.translationY
-                translateX.setValue(lastTranslateX.current)
-                translateY.setValue(lastTranslateY.current)
-            }
-        }
-
         // Double tap to reset zoom
         const onDoubleTap = () => {
-            Animated.parallel([
-                Animated.spring(scale, {
-                    toValue: 1,
-                    useNativeDriver: true,
-                }),
-                Animated.spring(translateX, {
-                    toValue: 0,
-                    useNativeDriver: true,
-                }),
-                Animated.spring(translateY, {
-                    toValue: 0,
-                    useNativeDriver: true,
-                }),
-            ]).start()
+            Animated.spring(scale, {
+                toValue: 1,
+                useNativeDriver: true,
+            }).start()
             
             lastScale.current = 1
-            lastTranslateX.current = 0
-            lastTranslateY.current = 0
         }
 
         return {
             PinchGestureHandler,
-            PanGestureHandler,
             onPinchEvent,
             onPinchStateChange,
-            onPanEvent,
-            onPanStateChange,
             onDoubleTap,
         }
     }
@@ -603,15 +566,12 @@ const ImageModal: React.FC<{
         return modalContent
     }
 
-    // Native version using Modal component with gesture support
+    // Native version using Modal component with gesture support (pinch only)
     if (gestureHandlers) {
         const {
             PinchGestureHandler,
-            PanGestureHandler,
             onPinchEvent,
             onPinchStateChange,
-            onPanEvent,
-            onPanStateChange,
             onDoubleTap,
         } = gestureHandlers
 
@@ -655,49 +615,25 @@ const ImageModal: React.FC<{
                             </TouchableOpacity>
                         </View>
 
-                        {/* Image container with gesture support */}
+                        {/* Image container */}
                         <View style={modalStyles.imageContainer} pointerEvents="box-none">
-                            <PanGestureHandler
-                                onGestureEvent={onPanEvent}
-                                onHandlerStateChange={onPanStateChange}
-                                minPointers={1}
-                                maxPointers={1}
-                                avgTouches={true}
-                                simultaneousHandlers={[]}
+                            <PinchGestureHandler
+                                onGestureEvent={onPinchEvent}
+                                onHandlerStateChange={onPinchStateChange}
                             >
-                                <Animated.View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                                    <PinchGestureHandler
-                                        onGestureEvent={onPinchEvent}
-                                        onHandlerStateChange={onPinchStateChange}
-                                        simultaneousHandlers={[]}
-                                    >
-                                        <Animated.View style={{ alignItems: 'center', justifyContent: 'center' }}>
-                                            <TouchableOpacity
-                                                onPress={onDoubleTap}
-                                                activeOpacity={1}
-                                            >
-                                                <Animated.Image
-                                                    source={{ uri: imageUri }}
-                                                    style={[
-                                                        {
-                                                            width: 300,
-                                                            height: 300,
-                                                        },
-                                                        {
-                                                            transform: [
-                                                                { scale: scale },
-                                                                { translateX: translateX },
-                                                                { translateY: translateY },
-                                                            ],
-                                                        },
-                                                    ]}
-                                                    resizeMode="contain"
-                                                />
-                                            </TouchableOpacity>
-                                        </Animated.View>
-                                    </PinchGestureHandler>
+                                <Animated.View style={{ transform: [{ scale }] }}>
+                                    <TouchableOpacity onPress={onDoubleTap} activeOpacity={1}>
+                                        <Image
+                                            source={{ uri: imageUri }}
+                                            style={{
+                                                width: 300,
+                                                height: 300,
+                                            }}
+                                            resizeMode="contain"
+                                        />
+                                    </TouchableOpacity>
                                 </Animated.View>
-                            </PanGestureHandler>
+                            </PinchGestureHandler>
                         </View>
                     </View>
                 </GestureHandlerRootView>
