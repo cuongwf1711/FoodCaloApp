@@ -196,6 +196,7 @@ let ImagePicker: any
 let AsyncStorage: any
 let FileSystem: any
 let MediaLibrary: any
+let GestureHandler: any
 
 // Add ReactDOM import for web portal
 let ReactDOM: any
@@ -258,6 +259,14 @@ if (Platform.OS === "web") {
     AsyncStorage = require("@react-native-async-storage/async-storage").default
     FileSystem = require("expo-file-system")
     MediaLibrary = require("expo-media-library")
+    
+    // Import gesture handler for native platforms
+    try {
+        GestureHandler = require("react-native-gesture-handler")
+    } catch (error) {
+        console.warn("react-native-gesture-handler not available")
+        GestureHandler = null
+    }
 }
 
 type ImagePickerResult = {
@@ -265,12 +274,102 @@ type ImagePickerResult = {
     assets: ImageAsset[]
 }
 
-// Enhanced ImageModal with proper Android Modal implementation
+// Enhanced ImageModal with proper Android Modal implementation and pinch-to-zoom
 const ImageModal: React.FC<{
     visible: boolean
     imageUri: string
     onClose: () => void
 }> = ({ visible, imageUri, onClose }) => {
+    // Animated values for zoom and pan
+    const scale = useRef(new Animated.Value(1)).current
+    const translateX = useRef(new Animated.Value(0)).current
+    const translateY = useRef(new Animated.Value(0)).current
+    const lastScale = useRef(1)
+    const lastTranslateX = useRef(0)
+    const lastTranslateY = useRef(0)
+
+    // Reset zoom and pan when modal opens/closes
+    React.useEffect(() => {
+        if (visible) {
+            // Reset to initial state
+            scale.setValue(1)
+            translateX.setValue(0)
+            translateY.setValue(0)
+            lastScale.current = 1
+            lastTranslateX.current = 0
+            lastTranslateY.current = 0
+        }
+    }, [visible])
+
+    // Create gesture handlers for native platforms
+    const createGestureHandlers = () => {
+        if (!GestureHandler || Platform.OS === "web") {
+            return null
+        }
+
+        const { PinchGestureHandler, PanGestureHandler, State } = GestureHandler
+
+        const onPinchEvent = Animated.event(
+            [{ nativeEvent: { scale: scale } }],
+            { useNativeDriver: true }
+        )
+
+        const onPinchStateChange = (event: any) => {
+            if (event.nativeEvent.oldState === State.ACTIVE) {
+                lastScale.current *= event.nativeEvent.scale
+                scale.setValue(lastScale.current)
+            }
+        }
+
+        const onPanEvent = Animated.event(
+            [{ nativeEvent: { translationX: translateX, translationY: translateY } }],
+            { useNativeDriver: true }
+        )
+
+        const onPanStateChange = (event: any) => {
+            if (event.nativeEvent.oldState === State.ACTIVE) {
+                lastTranslateX.current += event.nativeEvent.translationX
+                lastTranslateY.current += event.nativeEvent.translationY
+                translateX.setValue(lastTranslateX.current)
+                translateY.setValue(lastTranslateY.current)
+            }
+        }
+
+        // Double tap to reset zoom
+        const onDoubleTap = () => {
+            Animated.parallel([
+                Animated.spring(scale, {
+                    toValue: 1,
+                    useNativeDriver: true,
+                }),
+                Animated.spring(translateX, {
+                    toValue: 0,
+                    useNativeDriver: true,
+                }),
+                Animated.spring(translateY, {
+                    toValue: 0,
+                    useNativeDriver: true,
+                }),
+            ]).start()
+            
+            lastScale.current = 1
+            lastTranslateX.current = 0
+            lastTranslateY.current = 0
+        }
+
+        return {
+            PinchGestureHandler,
+            PanGestureHandler,
+            onPinchEvent,
+            onPinchStateChange,
+            onPanEvent,
+            onPanStateChange,
+            onDoubleTap,
+        }
+    }
+
+    const gestureHandlers = createGestureHandlers()
+
     React.useEffect(() => {
         if (Platform.OS === "web") {
             if (visible) {
@@ -504,7 +603,109 @@ const ImageModal: React.FC<{
         return modalContent
     }
 
-    // Native version using Modal component
+    // Native version using Modal component with gesture support
+    if (gestureHandlers) {
+        const {
+            PinchGestureHandler,
+            PanGestureHandler,
+            onPinchEvent,
+            onPinchStateChange,
+            onPanEvent,
+            onPanStateChange,
+            onDoubleTap,
+        } = gestureHandlers
+
+        const { GestureHandlerRootView } = GestureHandler
+
+        return (
+            <Modal
+                visible={visible}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={onClose}
+                statusBarTranslucent={true}
+            >
+                <GestureHandlerRootView style={{ flex: 1 }}>
+                    <View style={modalStyles.overlay}>
+                        {/* Background touchable area */}
+                        <TouchableOpacity 
+                            style={StyleSheet.absoluteFill}
+                            activeOpacity={1}
+                            onPress={onClose}
+                        />
+
+                        {/* Button container */}
+                        <View style={modalStyles.buttonContainer}>
+                            {/* Download button */}
+                            <TouchableOpacity
+                                style={[modalStyles.actionButton, modalStyles.downloadButton]}
+                                onPress={downloadImage}
+                                hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+                            >
+                                <Ionicons name="download-outline" size={24} color="#333" />
+                            </TouchableOpacity>
+
+                            {/* Close button */}
+                            <TouchableOpacity
+                                style={[modalStyles.actionButton, modalStyles.closeButton]}
+                                onPress={onClose}
+                                hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+                            >
+                                <Ionicons name="close" size={24} color="#333" />
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Image container with gesture support */}
+                        <View style={modalStyles.imageContainer} pointerEvents="box-none">
+                            <PanGestureHandler
+                                onGestureEvent={onPanEvent}
+                                onHandlerStateChange={onPanStateChange}
+                                minPointers={1}
+                                maxPointers={1}
+                                avgTouches={true}
+                                simultaneousHandlers={[]}
+                            >
+                                <Animated.View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                                    <PinchGestureHandler
+                                        onGestureEvent={onPinchEvent}
+                                        onHandlerStateChange={onPinchStateChange}
+                                        simultaneousHandlers={[]}
+                                    >
+                                        <Animated.View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                                            <TouchableOpacity
+                                                onPress={onDoubleTap}
+                                                activeOpacity={1}
+                                            >
+                                                <Animated.Image
+                                                    source={{ uri: imageUri }}
+                                                    style={[
+                                                        {
+                                                            width: 300,
+                                                            height: 300,
+                                                        },
+                                                        {
+                                                            transform: [
+                                                                { scale: scale },
+                                                                { translateX: translateX },
+                                                                { translateY: translateY },
+                                                            ],
+                                                        },
+                                                    ]}
+                                                    resizeMode="contain"
+                                                />
+                                            </TouchableOpacity>
+                                        </Animated.View>
+                                    </PinchGestureHandler>
+                                </Animated.View>
+                            </PanGestureHandler>
+                        </View>
+                    </View>
+                </GestureHandlerRootView>
+            </Modal>
+        )
+    }
+
+    // Fallback native version without gesture support
     return (
         <Modal
             visible={visible}
@@ -513,11 +714,14 @@ const ImageModal: React.FC<{
             onRequestClose={onClose}
             statusBarTranslucent={true}
         >
-            <TouchableOpacity 
-                style={modalStyles.overlay}
-                activeOpacity={1}
-                onPress={onClose}
-            >
+            <View style={modalStyles.overlay}>
+                {/* Background touchable area */}
+                <TouchableOpacity 
+                    style={StyleSheet.absoluteFill}
+                    activeOpacity={1}
+                    onPress={onClose}
+                />
+
                 {/* Button container */}
                 <View style={modalStyles.buttonContainer}>
                     {/* Download button */}
@@ -539,15 +743,18 @@ const ImageModal: React.FC<{
                     </TouchableOpacity>
                 </View>
 
-                {/* Image container - Image should not respond to touches */}
-                <View style={modalStyles.imageContainer} pointerEvents="none">
+                {/* Image container */}
+                <View style={modalStyles.imageContainer} pointerEvents="box-none">
                     <Image
                         source={{ uri: imageUri }}
-                        style={modalStyles.image}
+                        style={{
+                            width: 300,
+                            height: 300,
+                        }}
                         resizeMode="contain"
                     />
                 </View>
-            </TouchableOpacity>
+            </View>
         </Modal>
     )
 }
@@ -1575,11 +1782,10 @@ const modalStyles = StyleSheet.create({
         color: "#333",
     },
     imageContainer: {
-        width: "90%",
-        height: "80%",
+        flex: 1,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "transparent",
+        zIndex: 1000,
     },
     image: {
         width: "100%",
