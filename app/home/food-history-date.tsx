@@ -1,37 +1,51 @@
 "use client"
 
-import { Ionicons } from "@expo/vector-icons"
-import type React from "react"
-
-import { useCallback, useEffect, useRef, useState } from "react"
+import { Ionicons } from "@expo/vector-icons";
+import type React from "react";
+import { useCallback, useEffect, useRef, useState } from "react"; // Added React hooks
 import {
     ActivityIndicator,
     Animated,
     Easing,
     FlatList,
     Image,
-    Platform,
+    Modal,
     RefreshControl,
     StyleSheet,
     Text,
     TouchableOpacity,
-    View,
-} from "react-native"
+    View
+} from "react-native"; // Added React Native components
 
-// Import shared utilities
+import { showMessage } from "@/utils/showMessage";
+import * as FileSystem from 'expo-file-system';
+import * as MediaLibrary from 'expo-media-library';
+import { Platform } from "react-native";
+// Added imports from food-history-utils
 import {
     DatePicker,
     EditModal,
     type FoodItem,
-    MonthPicker,
-    type SortOption,
-    type TimeUnit,
-    UnitDropdown,
-    WeekInput,
     formatDate,
+    MonthPicker,
     styles as sharedStyles,
+    SortOption,
+    type TimeUnit, // Import sharedStyles
+    UnitDropdown,
     useFoodHistory,
-} from "@/utils/food-history-utils"
+    WeekInput,
+} from "@/utils/food-history-utils";
+
+// Platform-specific module imports for gesture handling
+let GestureHandlerModule: any; // Renamed to avoid conflict
+if (Platform.OS !== "web") {
+    try {
+        GestureHandlerModule = require("react-native-gesture-handler");
+    } catch (error) {
+        console.warn("react-native-gesture-handler not available. Pinch-to-zoom will not work.");
+        GestureHandlerModule = null;
+    }
+}
 
 // Add CSS animation for web spinning effect - only on client side
 if (typeof window !== "undefined" && Platform.OS === "web") {
@@ -59,6 +73,16 @@ if (typeof window !== "undefined" && Platform.OS === "web") {
     document.head.appendChild(style)
 }
 
+// Conditional ReactDOM import for web portals
+let ReactDOM: any;
+if (Platform.OS === 'web') {
+  try {
+    ReactDOM = require('react-dom');
+  } catch (e) {
+    console.warn('ReactDOM is not available. Web modal portal might not work.');
+  }
+}
+
 interface FoodHistoryDateViewProps {
     sortOption: SortOption
     onSortChange: (sortOption: SortOption) => void
@@ -66,149 +90,341 @@ interface FoodHistoryDateViewProps {
     onRegisterRefreshTrigger?: (triggerFn: () => void) => void
 }
 
-// Simple ImageModal for Android compatibility
+// Define modalStyles BEFORE ImageModal component
+const modalStyles = StyleSheet.create({
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: "rgba(0, 0, 0, 0.9)",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    topRightButtonContainer: {
+        position: 'absolute',
+        top: Platform.OS === 'ios' ? 60 : 40,
+        right: 20,
+        flexDirection: 'row',
+        zIndex: 10,
+        gap: 15,
+    },
+    iconButton: {
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        borderRadius: 25,
+        width: 50,
+        height: 50,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: "#000",
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
+        elevation: 8,
+    },
+    imageGestureContainer: {
+        flex: 1,
+        width: "100%",
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    fullImageNative: {
+        borderRadius: 8,
+        width: 300, 
+        height: 300,
+    },
+})
+
+// New ImageModal (inspired by index.tsx and food-history-utils.tsx)
+// This is the same modal as in food-history-all.tsx
 const ImageModal: React.FC<{
     visible: boolean
     imageUri: string
     onClose: () => void
 }> = ({ visible, imageUri, onClose }) => {
-    const [imageLoading, setImageLoading] = useState(true)
+    // Animated values for zoom and pan (from index.tsx)
+    const scale = useRef(new Animated.Value(1)).current;
+    const translateX = useRef(new Animated.Value(0)).current;
+    const translateY = useRef(new Animated.Value(0)).current;
+    const lastScale = useRef(1);
+    const lastTranslateX = useRef(0);
+    const lastTranslateY = useRef(0);
 
-    // Add ESC key support for web
-    useEffect(() => {
-        const handleEscape = (event: KeyboardEvent) => {
-            if (event.key === "Escape") {
-                onClose()
-            }
-        }
-
-        if (visible && Platform.OS === "web") {
-            document.addEventListener("keydown", handleEscape)
-            return () => document.removeEventListener("keydown", handleEscape)
-        }
-    }, [visible, onClose])
-
-    // Reset loading when modal opens
     useEffect(() => {
         if (visible) {
-            setImageLoading(true)
+            // Reset to initial state when modal becomes visible
+            scale.setValue(1);
+            translateX.setValue(0);
+            translateY.setValue(0);
+            lastScale.current = 1;
+            lastTranslateX.current = 0;
+            lastTranslateY.current = 0;
         }
-    }, [visible])
+        const handleEscape = (event: KeyboardEvent) => {
+            if (event.key === "Escape") {
+                onClose();
+            }
+        };
+        if (visible && Platform.OS === "web") {
+            document.addEventListener("keydown", handleEscape);
+            return () => document.removeEventListener("keydown", handleEscape);
+        }
+    }, [visible, onClose, scale, translateX, translateY]);
 
-    if (!visible) return null
+    const downloadImage = async () => {
+        if (!imageUri) return;
+        try {
+            if (Platform.OS === "web") {
+                const response = await fetch(imageUri);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+
+                const urlParts = imageUri.split('/');
+                let filename = urlParts[urlParts.length - 1].split('?')[0] || 'image'; // Remove query params
+                if (!filename.includes('.') && blob.type && blob.type.includes('/')) {
+                    const extension = blob.type.split('/')[1];
+                     if (extension && !['*', 'octet-stream'].includes(extension)) {
+                        filename += `.${extension}`;
+                    }
+                }
+                link.download = filename;
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(url);
+                showMessage({ message: "Image downloaded successfully" }, true);
+            } else { // Native
+                const { status } = await MediaLibrary.requestPermissionsAsync();
+                if (status !== "granted") {
+                    showMessage({ message: "Permission to access media library is required!" }, false);
+                    return;
+                }
+                
+                let fileUriToSave = imageUri;
+                let temporaryFile = false;
+
+                if (!imageUri.startsWith('file://')) {
+                    const randomName = Math.random().toString(36).substring(7);
+                    const uriParts = imageUri.split('.');
+                    const extension = uriParts.length > 1 ? uriParts.pop()?.split('?')[0] : 'jpg';
+                    const tempFileName = `${randomName}.${extension}`;
+                    
+                    const downloadResult = await FileSystem.downloadAsync(
+                        imageUri,
+                        FileSystem.documentDirectory + tempFileName
+                    );
+                    if (downloadResult.status !== 200) {
+                        showMessage({ message: "Failed to download image" }, false);
+                        return;
+                    }
+                    fileUriToSave = downloadResult.uri;
+                    temporaryFile = true;
+                }
+                
+                await MediaLibrary.createAssetAsync(fileUriToSave);
+                showMessage({ message: "Image saved to gallery" }, true);
+
+                if (temporaryFile) {
+                     try {
+                        await FileSystem.deleteAsync(fileUriToSave, { idempotent: true });
+                    } catch (cleanupError) {
+                        console.log('Cleanup error (non-critical):', cleanupError);
+                    }
+                }
+            }
+        } catch (error: any) {
+            console.error('Download error:', error);
+            showMessage({ message: `Error downloading image: ${error.message || 'Unknown error'}` }, false);
+        }
+    };
+
+    if (!visible) return null;
 
     if (Platform.OS === "web") {
-        return (
+        const modalContent = (
             <div
                 style={{
-                    position: "fixed",
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: "rgba(0, 0, 0, 0.9)",
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    zIndex: 10000,
-                    animation: "fadeInUp 0.3s ease-out",
+                    position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: "rgba(0,0,0,0.9)", display: "flex",
+                    justifyContent: "center", alignItems: "center", zIndex: 100000,
                 }}
                 onClick={onClose}
             >
-                <div style={{ position: "relative", maxWidth: "90%", maxHeight: "90%" }} onClick={(e) => e.stopPropagation()}>
-                    {imageLoading && (
-                        <div
-                            style={{
-                                position: "absolute",
-                                top: "50%",
-                                left: "50%",
-                                transform: "translate(-50%, -50%)",
-                                zIndex: 1,
-                            }}
-                        >
-                            <div
-                                style={{
-                                    width: "40px",
-                                    height: "40px",
-                                    border: "4px solid #f3f3f3",
-                                    borderTop: "4px solid #3498db",
-                                    borderRadius: "50%",
-                                    animation: "spin 1s linear infinite",
-                                }}
-                            />
-                        </div>
-                    )}
+                <div 
+                    style={{ position: "relative", maxWidth: "90%", maxHeight: "90%", display: "flex", flexDirection: "column", alignItems: "center" }}
+                    onClick={(e) => e.stopPropagation()}
+                >
                     <img
                         src={imageUri || "/placeholder.svg"}
                         alt="Full size"
-                        style={{
-                            maxWidth: "100%",
-                            maxHeight: "90vh",
-                            borderRadius: "8px",
-                            objectFit: "contain",
-                            opacity: imageLoading ? 0.3 : 1,
-                            transition: "opacity 0.3s ease",
-                        }}
-                        onLoad={() => setImageLoading(false)}
-                        onError={() => setImageLoading(false)}
+                        style={{ maxWidth: "100%", maxHeight: "calc(90vh - 50px)", borderRadius: 8, objectFit: "contain" }}
                     />
-                    <button
-                        onClick={onClose}
-                        style={{
-                            position: "absolute",
-                            top: "-10px",
-                            right: "-10px",
-                            backgroundColor: "#fff",
-                            border: "none",
-                            borderRadius: "20px",
-                            width: "40px",
-                            height: "40px",
-                            fontSize: "18px",
-                            fontWeight: "bold",
-                            color: "#333",
-                            cursor: "pointer",
-                            boxShadow: "0 2px 10px rgba(0,0,0,0.3)",
-                            transition: "transform 0.2s ease",
-                        }}
-                        onMouseEnter={(e) => ((e.target as HTMLElement).style.transform = "scale(1.1)")}
-                        onMouseLeave={(e) => ((e.target as HTMLElement).style.transform = "scale(1)")}
-                    >
-                        ×
-                    </button>
+                    <div style={{
+                        display: "flex", gap: "10px", zIndex: 100001,
+                        padding: "10px", backgroundColor: "rgba(0,0,0,0.5)", borderRadius: "0 0 8px 8px", marginTop: "auto"
+                    }}>
+                        <button
+                            onClick={downloadImage}
+                            style={{ padding: '8px 12px', background: '#fff', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer' }}
+                        >
+                            Download
+                        </button>
+                        <button
+                            onClick={onClose}
+                            style={{ padding: '8px 12px', background: '#fff', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                        >
+                            Close
+                        </button>
+                    </div>
                 </div>
             </div>
-        )
+        );
+        if (typeof document !== "undefined" && ReactDOM) {
+            return ReactDOM.createPortal(modalContent, document.body);
+        }
+        return modalContent;
     }
 
-    return (
-        <Animated.View style={modalStyles.overlay}>
-            <TouchableOpacity style={modalStyles.backdrop} onPress={onClose} activeOpacity={1} />
-            <View style={modalStyles.container}>
-                <View style={modalStyles.imageContainer}>
-                    {imageLoading && (
-                        <View style={modalStyles.imageLoader}>
-                            <ActivityIndicator size="large" color="#3498db" />
+    // Native part with Gesture Handler
+    if (GestureHandlerModule) { // Use the renamed variable
+        const { PinchGestureHandler, PanGestureHandler, State, GestureHandlerRootView } = GestureHandlerModule; // Destructure here
+
+        const onPinchEvent = Animated.event(
+            [{ nativeEvent: { scale: scale } }],
+            { useNativeDriver: true }
+        );
+
+        const onPinchStateChange = (event: any) => {
+            if (event.nativeEvent.oldState === State.ACTIVE) {
+                lastScale.current *= event.nativeEvent.scale;
+                scale.setValue(lastScale.current);
+            }
+        };
+
+        const onPanEvent = Animated.event(
+            [{ nativeEvent: { translationX: translateX, translationY: translateY } }],
+            { useNativeDriver: true }
+        );
+
+        const onPanStateChange = (event: any) => {
+            if (event.nativeEvent.oldState === State.ACTIVE) {
+                lastTranslateX.current += event.nativeEvent.translationX;
+                lastTranslateY.current += event.nativeEvent.translationY;
+                translateX.setValue(lastTranslateX.current);
+                translateY.setValue(lastTranslateY.current);
+            }
+        };
+
+        const onDoubleTap = () => {
+            Animated.parallel([
+                Animated.spring(scale, { toValue: 1, useNativeDriver: true }),
+                Animated.spring(translateX, { toValue: 0, useNativeDriver: true }),
+                Animated.spring(translateY, { toValue: 0, useNativeDriver: true }),
+            ]).start();
+            lastScale.current = 1;
+            lastTranslateX.current = 0;
+            lastTranslateY.current = 0;
+        };
+
+        return (
+            <Modal
+                visible={visible}
+                transparent={true}
+                animationType="fade"
+                onRequestClose={onClose}
+                statusBarTranslucent={true}
+            >
+                <GestureHandlerRootView style={{ flex: 1 }}>
+                    <View style={modalStyles.modalOverlay}>
+                        <TouchableOpacity
+                            style={StyleSheet.absoluteFill}
+                            activeOpacity={1}
+                            onPress={onClose}
+                        />
+                        <View style={modalStyles.topRightButtonContainer}>
+                            <TouchableOpacity style={modalStyles.iconButton} onPress={downloadImage}>
+                                <Ionicons name="download-outline" size={24} color="#333" />
+                            </TouchableOpacity>
+                            <TouchableOpacity style={modalStyles.iconButton} onPress={onClose}>
+                                <Ionicons name="close-outline" size={28} color="#333" />
+                            </TouchableOpacity>
                         </View>
-                    )}
-                    <Image
+
+                        <View style={modalStyles.imageGestureContainer} pointerEvents="box-none">
+                            <PanGestureHandler
+                                onGestureEvent={onPanEvent}
+                                onHandlerStateChange={onPanStateChange}
+                            >
+                                <Animated.View>
+                                    <PinchGestureHandler
+                                        onGestureEvent={onPinchEvent}
+                                        onHandlerStateChange={onPinchStateChange}
+                                    >
+                                        <Animated.View>
+                                            <TouchableOpacity onPress={onDoubleTap} activeOpacity={1}>
+                                                <Animated.Image
+                                                    source={{ uri: imageUri }}
+                                                    style={[
+                                                        modalStyles.fullImageNative,
+                                                        {
+                                                            transform: [
+                                                                { scale: scale },
+                                                                { translateX: translateX },
+                                                                { translateY: translateY },
+                                                            ],
+                                                        },
+                                                    ]}
+                                                    resizeMode="contain"
+                                                />
+                                            </TouchableOpacity>
+                                        </Animated.View>
+                                    </PinchGestureHandler>
+                                </Animated.View>
+                            </PanGestureHandler>
+                        </View>
+                    </View>
+                </GestureHandlerRootView>
+            </Modal>
+        );
+    }
+    
+    // Fallback Native part (no gestures)
+    return (
+        <Modal
+            visible={visible}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={onClose}
+            statusBarTranslucent={true}
+        >
+            <View style={modalStyles.modalOverlay}>
+                <TouchableOpacity
+                    style={StyleSheet.absoluteFill}
+                    activeOpacity={1}
+                    onPress={onClose}
+                />
+                <View style={modalStyles.topRightButtonContainer}>
+                    <TouchableOpacity style={modalStyles.iconButton} onPress={downloadImage}>
+                        <Ionicons name="download-outline" size={24} color="#333" />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={modalStyles.iconButton} onPress={onClose}>
+                        {/* Corrected: Ionicons inside TouchableOpacity */}
+                        <Ionicons name="close-outline" size={28} color="#333" />
+                    </TouchableOpacity>
+                </View>
+                <View style={modalStyles.imageGestureContainer} pointerEvents="box-none">
+                     <Image
                         source={{ uri: imageUri }}
-                        style={[modalStyles.image, { opacity: imageLoading ? 0.3 : 1 }]}
+                        style={modalStyles.fullImageNative}
                         resizeMode="contain"
-                        onLoad={() => setImageLoading(false)}
-                        onError={() => setImageLoading(false)}
                     />
                 </View>
-                <TouchableOpacity
-                    style={modalStyles.closeButton}
-                    onPress={onClose}
-                    hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
-                >
-                    <Ionicons name="close" size={20} color="#333" />
-                </TouchableOpacity>
             </View>
-        </Animated.View>
-    )
-}
+        </Modal>
+    );
+};
 
 // Enhanced Loading Component with better animations
 const EnhancedLoadingOverlay: React.FC<{ message?: string }> = ({ message = "Loading data..." }) => {
@@ -949,74 +1165,6 @@ export const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
         </View>
     )
 }
-
-const modalStyles = StyleSheet.create({
-    overlay: {
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: "rgba(0, 0, 0, 0.9)",
-        zIndex: 10000,
-        justifyContent: "center",
-        alignItems: "center",
-    },
-    backdrop: {
-        position: "absolute",
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-    },
-    container: {
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        padding: 20,
-    },
-    imageContainer: {
-        maxWidth: "90%",
-        maxHeight: "80%",
-        justifyContent: "center",
-        alignItems: "center",
-        position: "relative",
-    },
-    image: {
-        width: 350,
-        height: 350,
-        maxWidth: "100%",
-        maxHeight: "100%",
-    },
-    imageLoader: {
-        position: "absolute",
-        top: "50%",
-        left: "50%",
-        transform: [{ translateX: -20 }, { translateY: -20 }],
-        zIndex: 1,
-    },
-    closeButton: {
-        position: "absolute",
-        top: 40,
-        right: 20,
-        backgroundColor: "#fff",
-        borderRadius: 25,
-        width: 50,
-        height: 50,
-        justifyContent: "center",
-        alignItems: "center",
-        shadowColor: "#000",
-        shadowOpacity: 0.3,
-        shadowRadius: 5,
-        elevation: 8,
-        zIndex: 10001,
-    },
-    closeButtonText: {
-        fontSize: 20,
-        fontWeight: "bold",
-        color: "#333",
-    },
-})
 
 const compactStyles = StyleSheet.create({
     compactContainer: {

@@ -2073,10 +2073,13 @@ export const styles = StyleSheet.create({
     imageContainer: {
         justifyContent: "center",
         alignItems: "center",
+        width: '100%', // Added width
+        height: '100%', // Added height
     },
     fullImage: {
         borderRadius: 8,
-        resizeMode: "contain",
+        // resizeMode: "contain", // This is already on the Image component itself
+        width: '100%', // Added width
     },
     closeButton: {
         position: "absolute",
