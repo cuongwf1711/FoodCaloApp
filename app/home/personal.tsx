@@ -533,7 +533,7 @@ const Personal = () => {
                                 <View style={styles.calorieInfoRow}>
                                     <Text style={styles.calorieTitle}>Calories Consumed</Text>
                                     <Text style={styles.calorieValue} numberOfLines={1} adjustsFontSizeToFit>
-                                        {profile.totalCalories.toFixed(0)} / {formatDecimalDisplay(profile.calorieLimit)}
+                                        {formatDecimalDisplay(profile.totalCalories)} / {formatDecimalDisplay(profile.calorieLimit)}
                                     </Text>
                                 </View>
 
