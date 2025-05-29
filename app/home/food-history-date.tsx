@@ -666,11 +666,13 @@ export const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
             if (success) {
                 setIsEditing(false)
                 setEditingItem(null)
-                // Hide scroll-to-top button after edit
+                // Hide scroll-to-top button after edit and refresh data like all view
                 setShowScrollToTop(false)
+                // Call API refresh like in all view
+                fetchData(true, undefined, false)
             }
         },
-        [editingItem, saveEditedItem],
+        [editingItem, saveEditedItem, fetchData],
     )
 
     // Cancel editing
@@ -770,8 +772,10 @@ export const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
                                     style={[sharedStyles.deleteButton, isDeleting && { opacity: 0.5 }]}
                                     onPress={async () => {
                                         await handleDeleteItem(item.id)
-                                        // Hide scroll-to-top button after delete
+                                        // Hide scroll-to-top button after delete and refresh data like all view
                                         setShowScrollToTop(false)
+                                        // Call API refresh like in all view
+                                        fetchData(true, undefined, false)
                                     }}
                                     disabled={isDeleting}
                                 >
@@ -826,7 +830,7 @@ export const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
                 </Animated.View>
             )
         },
-        [openImageModal, handleDeleteItem, startEditing, listFadeAnim, listSlideAnim],
+        [openImageModal, handleDeleteItem, startEditing, listFadeAnim, listSlideAnim, fetchData],
     )
 
     // Enhanced empty state with animation
