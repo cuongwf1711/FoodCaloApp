@@ -666,6 +666,8 @@ export const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
             if (success) {
                 setIsEditing(false)
                 setEditingItem(null)
+                // Hide scroll-to-top button after edit
+                setShowScrollToTop(false)
             }
         },
         [editingItem, saveEditedItem],
@@ -766,7 +768,11 @@ export const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     style={[sharedStyles.deleteButton, isDeleting && { opacity: 0.5 }]}
-                                    onPress={() => handleDeleteItem(item.id)}
+                                    onPress={async () => {
+                                        await handleDeleteItem(item.id)
+                                        // Hide scroll-to-top button after delete
+                                        setShowScrollToTop(false)
+                                    }}
                                     disabled={isDeleting}
                                 >
                                     {Platform.OS === "web" ? (

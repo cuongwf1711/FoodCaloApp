@@ -538,6 +538,8 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
             if (success) {
                 setIsEditing(false)
                 setEditingItem(null)
+                // Hide scroll-to-top button after edit
+                setShowScrollToTop(false)
             }
         },
         [editingItem, saveEditedItem],
@@ -595,7 +597,11 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
                             </TouchableOpacity>
                             <TouchableOpacity
                                 style={[sharedStyles.deleteButton, isDeleting && { opacity: 0.5 }]}
-                                onPress={() => handleDeleteItem(item.id)}
+                                onPress={async () => {
+                                    await handleDeleteItem(item.id)
+                                    // Hide scroll-to-top button after delete
+                                    setShowScrollToTop(false)
+                                }}
                                 disabled={isDeleting}
                             >
                                 {Platform.OS === "web" ? (
