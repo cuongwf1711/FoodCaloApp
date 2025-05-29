@@ -251,7 +251,9 @@ const FoodHistoryScreen: React.FC = () => {
               </View>
               <View style={styles.totalCaloriesSection}>
                 <Text style={styles.sectionLabel}>Total Calo:</Text>
-                <Text style={styles.totalCaloriesValue}>{totalCalories}</Text>
+                <Text style={styles.totalCaloriesValue} numberOfLines={1} adjustsFontSizeToFit>
+                  {formatDecimalDisplay(totalCalories)}
+                </Text>
               </View>
             </View>
 
@@ -362,6 +364,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
+    flexShrink: 1,
     justifyContent: "flex-end",
   },
   filterSection: {
