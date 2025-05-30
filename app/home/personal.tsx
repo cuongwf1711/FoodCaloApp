@@ -401,8 +401,8 @@ const Personal = () => {
     // Determine progress bar color based on percentage
     const getProgressColor = () => {
         const percentage = calculateCaloriePercentage()
-        if (percentage < 70) return "#4caf50" // Green - good
-        if (percentage < 90) return "#ff9800" // Orange - warning
+        if (percentage < 80) return "#4caf50" // Green - good
+        if (percentage < 100) return "#ff9800" // Orange - warning
         return "#f44336" // Red - exceeded
     }
 
