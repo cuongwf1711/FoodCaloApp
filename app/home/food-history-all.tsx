@@ -477,6 +477,58 @@ const ImageModal: React.FC<{
                 }}
                 onClick={onClose}
             >
+                {/* Top right buttons container */}
+                <div style={{
+                    position: "absolute",
+                    top: "50px",
+                    right: "20px",
+                    display: "flex",
+                    gap: "15px",
+                    zIndex: 100001,
+                }}>
+                    <button
+                        onClick={downloadImage}
+                        style={{
+                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                            borderRadius: '25px',
+                            width: '50px',
+                            height: '50px',
+                            border: 'none',
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            cursor: 'pointer',
+                            boxShadow: '0 2px 5px rgba(0,0,0,0.3)',
+                        }}
+                    >
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="7,10 12,15 17,10"/>
+                            <line x1="12" y1="15" x2="12" y2="3"/>
+                        </svg>
+                    </button>
+                    <button
+                        onClick={onClose}
+                        style={{
+                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                            borderRadius: '25px',
+                            width: '50px',
+                            height: '50px',
+                            border: 'none',
+                            display: 'flex',
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                            cursor: 'pointer',
+                            boxShadow: '0 2px 5px rgba(0,0,0,0.3)',
+                        }}
+                    >
+                        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                    </button>
+                </div>
+
                 <div
                     style={{ position: "relative", maxWidth: "90%", maxHeight: "90%", display: "flex", flexDirection: "column", alignItems: "center" }}
                     onClick={(e) => e.stopPropagation()}
@@ -486,23 +538,6 @@ const ImageModal: React.FC<{
                         alt="Full size"
                         style={{ maxWidth: "100%", maxHeight: "calc(90vh - 50px)", borderRadius: 8, objectFit: "contain" }}
                     />
-                    <div style={{
-                        display: "flex", gap: "10px", zIndex: 100001,
-                        padding: "10px", backgroundColor: "rgba(0,0,0,0.5)", borderRadius: "0 0 8px 8px", marginTop: "auto"
-                    }}>
-                        <button
-                            onClick={downloadImage}
-                            style={{ padding: '8px 12px', background: '#fff', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer' }}
-                        >
-                            Download
-                        </button>
-                        <button
-                            onClick={onClose}
-                            style={{ padding: '8px 12px', background: '#fff', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
-                        >
-                            Close
-                        </button>
-                    </div>
                 </div>
             </div>
         );
