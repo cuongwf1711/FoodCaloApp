@@ -656,7 +656,7 @@ const DeleteLoadingOverlay: React.FC<{ message?: string }> = ({ message = "Delet
  * Enhanced Component to display food history filtered by date
  * Now includes loading animations and smooth transitions
  */
-export const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
+const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
     sortOption,
     onSortChange,
     onDataChange,
@@ -1225,3 +1225,9 @@ const compactStyles = StyleSheet.create({
         position: "relative",
     },
 })
+
+// Change from named export to default export
+export default FoodHistoryDateView;
+
+// Also keep named export for backward compatibility
+export { FoodHistoryDateView };
