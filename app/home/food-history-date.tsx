@@ -101,7 +101,7 @@ const modalStyles = StyleSheet.create({
     },
     topRightButtonContainer: {
         position: 'absolute',
-        top: Platform.OS === 'ios' ? 60 : 40,
+        top: 50,
         right: 20,
         flexDirection: 'row',
         zIndex: 10,

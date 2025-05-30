@@ -333,7 +333,7 @@ const modalStyles = StyleSheet.create({
     },
     topRightButtonContainer: {
         position: 'absolute',
-        top: Platform.OS === 'ios' ? 60 : 40, // Adjust for status bar
+        top: 50, // Adjust for status bar
         right: 20,
         flexDirection: 'row',
         zIndex: 10,
