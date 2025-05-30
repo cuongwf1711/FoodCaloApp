@@ -5,6 +5,7 @@ import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react"; // Added React hooks
 import {
     ActivityIndicator,
+    Alert,
     Animated,
     Easing,
     FlatList,
@@ -15,7 +16,7 @@ import {
     Text,
     TouchableOpacity,
     View
-} from "react-native"; // Added React Native components
+} from "react-native"; // Added Alert
 
 import { showMessage } from "@/utils/showMessage";
 import * as FileSystem from 'expo-file-system';
@@ -863,6 +864,42 @@ export const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
         flatListRef.current?.scrollToOffset({ offset: 0, animated: true })
     }, [])
 
+    // Handle delete with confirmation
+    const handleDeleteWithConfirmation = useCallback(async (item: FoodItem) => {
+        if (Platform.OS === "web") {
+            const confirmed = window.confirm(`Are you sure you want to delete "${item.predictName}"?`);
+            if (confirmed) {
+                await handleDeleteItem(item.id);
+                // Hide scroll-to-top button after delete and refresh data
+                setShowScrollToTop(false);
+                // Call API refresh
+                fetchData(true, undefined, false);
+            }
+        } else {
+            Alert.alert(
+                "Delete Food Item",
+                `Are you sure you want to delete "${item.predictName}"?`,
+                [
+                    {
+                        text: "Cancel",
+                        style: "cancel",
+                    },
+                    {
+                        text: "Delete",
+                        style: "destructive",
+                        onPress: async () => {
+                            await handleDeleteItem(item.id);
+                            // Hide scroll-to-top button after delete and refresh data
+                            setShowScrollToTop(false);
+                            // Call API refresh
+                            fetchData(true, undefined, false);
+                        },
+                    },
+                ],
+            );
+        }
+    }, [handleDeleteItem, fetchData]);
+
     // Enhanced compact time unit selector with loading states
     const renderCompactTimeSelector = () => {
         return (
@@ -941,13 +978,7 @@ export const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     style={[sharedStyles.deleteButton, isDeleting && { opacity: 0.5 }]}
-                                    onPress={async () => {
-                                        await handleDeleteItem(item.id)
-                                        // Hide scroll-to-top button after delete and refresh data like all view
-                                        setShowScrollToTop(false)
-                                        // Call API refresh like in all view
-                                        fetchData(true, undefined, false)
-                                    }}
+                                    onPress={() => handleDeleteWithConfirmation(item)}
                                     disabled={isDeleting}
                                 >
                                     {Platform.OS === "web" ? (
@@ -1001,7 +1032,7 @@ export const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
                 </Animated.View>
             )
         },
-        [openImageModal, handleDeleteItem, startEditing, listFadeAnim, listSlideAnim, fetchData],
+        [openImageModal, handleDeleteItem, startEditing, listFadeAnim, listSlideAnim, fetchData, handleDeleteWithConfirmation],
     )
 
     // Enhanced empty state with animation
@@ -1159,5 +1190,3 @@ const compactStyles = StyleSheet.create({
         position: "relative",
     },
 })
-
-export default FoodHistoryDateView
