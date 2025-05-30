@@ -270,9 +270,9 @@ const ImageModal: React.FC<{
                         }}
                     >
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                            <polyline points="7,10 12,15 17,10"/>
-                            <line x1="12" y1="15" x2="12" y2="3"/>
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                            <polyline points="7,10 12,15 17,10" />
+                            <line x1="12" y1="15" x2="12" y2="3" />
                         </svg>
                     </button>
                     <button
@@ -291,8 +291,8 @@ const ImageModal: React.FC<{
                         }}
                     >
                         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="2">
-                            <line x1="18" y1="6" x2="6" y2="18"/>
-                            <line x1="6" y1="6" x2="18" y2="18"/>
+                            <line x1="18" y1="6" x2="6" y2="18" />
+                            <line x1="6" y1="6" x2="18" y2="18" />
                         </svg>
                     </button>
                 </div>
@@ -823,6 +823,10 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
     // Handle time unit change with animation
     const handleTimeUnitChange = useCallback((unit: TimeUnit) => {
         setTimeUnit(unit)
+        // Reset weeks to 0 when switching to week unit
+        if (unit === "week") {
+            setWeeksAgo(0)
+        }
     }, [])
 
     // Handle date change with animation
@@ -1231,3 +1235,4 @@ export default FoodHistoryDateView;
 
 // Also keep named export for backward compatibility
 export { FoodHistoryDateView };
+

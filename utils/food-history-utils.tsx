@@ -1521,14 +1521,80 @@ export const WeekInput: React.FC<{
     }
 
     const handleIncrease = () => {
-        onWeekChange(weeksAgo + 1)
+        const newValue = weeksAgo + 1
+        if (newValue <= 9999) {
+            onWeekChange(newValue)
+        }
     }
 
     const handleTextChange = (text: string) => {
         const num = Number.parseInt(text) || 0
-        if (num >= 0) {
+        if (num >= 0 && num <= 9999) {
             onWeekChange(num)
         }
+    }
+
+    if (Platform.OS === "web") {
+        return (
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <button
+                    onClick={handleDecrease}
+                    disabled={weeksAgo === 0}
+                    style={{
+                        padding: "8px 12px",
+                        borderRadius: "6px",
+                        backgroundColor: weeksAgo === 0 ? "#f5f5f5" : "#fff",
+                        border: "1px solid #e1e1e1",
+                        cursor: weeksAgo === 0 ? "not-allowed" : "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                    }}
+                >
+                    <span style={{ color: weeksAgo === 0 ? "#ccc" : "#333", fontSize: "16px" }}>−</span>
+                </button>
+
+                <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={weeksAgo.toString()}
+                    onChange={(e) => handleTextChange(e.target.value)}
+                    style={{
+                        width: "60px",
+                        padding: "8px",
+                        borderRadius: "6px",
+                        backgroundColor: "#fff",
+                        border: "1px solid #e1e1e1",
+                        fontSize: "14px",
+                        color: "#333",
+                        textAlign: "center",
+                        outline: "none",
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                    }}
+                    maxLength={4}
+                />
+
+                <button
+                    onClick={handleIncrease}
+                    disabled={weeksAgo >= 9999}
+                    style={{
+                        padding: "8px 12px",
+                        borderRadius: "6px",
+                        backgroundColor: weeksAgo >= 9999 ? "#f5f5f5" : "#fff",
+                        border: "1px solid #e1e1e1",
+                        cursor: weeksAgo >= 9999 ? "not-allowed" : "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                    }}
+                >
+                    <span style={{ color: weeksAgo >= 9999 ? "#ccc" : "#333", fontSize: "16px" }}>+</span>
+                </button>
+            </div>
+        )
     }
 
     return (
@@ -1551,10 +1617,19 @@ export const WeekInput: React.FC<{
                 onChangeText={handleTextChange}
                 keyboardType="number-pad"
                 textAlign="center"
+                maxLength={4}
             />
 
-            <TouchableOpacity style={styles.weekStepperButton} onPress={handleIncrease}>
-                <Ionicons name="add" size={16} color="#333" />
+            <TouchableOpacity 
+                style={[styles.weekStepperButton, weeksAgo >= 9999 && styles.weekStepperButtonDisabled]} 
+                onPress={handleIncrease}
+                disabled={weeksAgo >= 9999}
+            >
+                <Ionicons 
+                    name="add" 
+                    size={16} 
+                    color={weeksAgo >= 9999 ? "#ccc" : "#333"} 
+                />
             </TouchableOpacity>
         </View>
     )
@@ -2306,7 +2381,7 @@ export const styles = StyleSheet.create({
     },
     loadingCard: {
         backgroundColor: "#fff",
-        borderRadius: 12,
+        borderRadius:  12,
         padding: 20,
         alignItems: "center",
         shadowColor: "#000",
