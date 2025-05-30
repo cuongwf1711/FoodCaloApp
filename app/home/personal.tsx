@@ -812,6 +812,11 @@ const Personal = () => {
                                 {isEditing && <Text style={styles.calculatedText}> (length x width)</Text>}
                             </Text>
                         </View>
+
+                        {/* Calorie unit note */}
+                        <View style={styles.noteContainer}>
+                            <Text style={styles.noteText}>Note: Calorie values are displayed in kilocalories (kcal)</Text>
+                        </View>
                     </View>
 
                     {isEditing && (
@@ -1182,6 +1187,18 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: "#666",
         fontStyle: "italic",
+    },
+    noteContainer: {
+        marginTop: 16,
+        padding: 12,
+        backgroundColor: "#f0f8ff",
+        borderRadius: 8,
+    },
+    noteText: {
+        fontSize: 12,
+        color: "#666",
+        fontStyle: "italic",
+        textAlign: "center",
     },
 })
 
