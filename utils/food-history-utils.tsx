@@ -7,6 +7,7 @@ import { Platform } from "react-native"
 import { MAX_CALORIES, MAX_COMMENT_LENGTH } from "@/constants/general_constants"
 import { URL_FOOD_CALO_ESTIMATOR, URL_USER_PROFILE } from "@/constants/url_constants"
 import { deleteData, getData, patchData } from "@/context/request_context"
+import { Colors } from "@/styles/colors"
 import { showMessage } from "@/utils/showMessage"
 import { useCallback, useEffect, useRef, useState } from "react"
 import {
@@ -1823,7 +1824,7 @@ export const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 24,
         fontWeight: "bold",
-        color: "#2c3e50",
+        color: Colors.darkGray,
     },
     headerRightSection: {
         flexDirection: "row",
@@ -1836,13 +1837,13 @@ export const styles = StyleSheet.create({
     },
     calorieLimitLabel: {
         fontSize: 14,
-        color: "#666666",
+        color: Colors.mediumGray,
         marginRight: 5,
     },
     calorieLimitValue: {
         fontSize: 14,
         fontWeight: "bold",
-        color: "#3498db",
+        color: Colors.primary,
     },
     filterWrapper: {
         flexDirection: "row",
@@ -1850,7 +1851,7 @@ export const styles = StyleSheet.create({
     },
     filterText: {
         fontSize: 14,
-        color: "#666666",
+        color: Colors.mediumGray,
         marginRight: 10,
     },
     infoRow: {
@@ -2284,7 +2285,7 @@ export const styles = StyleSheet.create({
         minWidth: 200,
     },
     loadingOverlayText: {
-        marginTop: 12,
+        marginTop:  12,
         fontSize: 16,
         color: "#666",
         fontWeight: "500",

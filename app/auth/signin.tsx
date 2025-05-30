@@ -5,6 +5,7 @@ import { FORGOT_PASSWORD_ROUTE, SIGNUP_ROUTE } from "@/constants/router_constant
 import { ACCESS_TOKEN, REFRESH_TOKEN, USER_EMAIL } from "@/constants/token_constants"
 import { AuthContext } from "@/context/AuthContext"
 import { postData } from "@/context/request_context"
+import { Colors } from "@/styles/colors"
 import { showMessage } from "@/utils/showMessage"
 import { getEmailErrorMessage, getPasswordErrorMessage } from "@/utils/validation"
 import AsyncStorage from "@react-native-async-storage/async-storage"
@@ -195,10 +196,11 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         marginBottom: 8,
         textAlign: "center",
+        color: Colors.darkGray,
     },
     subtitle: {
         fontSize: 16,
-        color: "#666",
+        color: Colors.mediumGray,
         marginBottom: 24,
         textAlign: "center",
     },
@@ -213,12 +215,12 @@ const styles = StyleSheet.create({
     input: {
         height: 50,
         borderWidth: 1,
-        borderColor: "#ddd",
+        borderColor: Colors.borderGray,
         borderRadius: 8,
         paddingHorizontal: 12,
         fontSize: 16,
-        backgroundColor: "white",
-        color: "#333", // Add explicit text color
+        backgroundColor: Colors.backgroundWhite,
+        color: Colors.darkGray,
     },
     inputError: {
         borderColor: "red",
@@ -234,7 +236,7 @@ const styles = StyleSheet.create({
         marginTop: 4,
     },
     signInButton: {
-        backgroundColor: "#007AFF",
+        backgroundColor: Colors.info,
         height: 50,
         borderRadius: 8,
         justifyContent: "center",
@@ -245,7 +247,7 @@ const styles = StyleSheet.create({
         backgroundColor: "#007AFF80",
     },
     signInButtonText: {
-        color: "white",
+        color: Colors.backgroundWhite,
         fontSize: 16,
         fontWeight: "600",
     },

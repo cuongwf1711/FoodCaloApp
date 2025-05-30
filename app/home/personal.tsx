@@ -3,6 +3,7 @@
 import { URL_USER_PROFILE } from "@/constants/url_constants"
 import { getData, patchData } from "@/context/request_context"
 import { useTabReload } from "@/hooks/use-tab-reload"
+import { Colors } from "@/styles/colors"
 import { showMessage } from "@/utils/showMessage"
 import { StatusBar } from "expo-status-bar"
 import { useEffect, useRef, useState } from "react"
@@ -859,7 +860,7 @@ const Personal = () => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: "#f5f5f5",
+        backgroundColor: Colors.lightGray,
     },
     keyboardAvoidingView: {
         flex: 1,
@@ -885,7 +886,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 24,
         fontWeight: "bold",
-        color: "#333",
+        color: Colors.darkGray,
     },
     reloadingText: {
         fontSize: 14,
@@ -951,7 +952,7 @@ const styles = StyleSheet.create({
     calorieValue: {
         fontSize: 16,
         fontWeight: "bold",
-        color: "#0066cc",
+        color: Colors.primary,
         flex: 1,
         textAlign: "right",
     },
@@ -965,7 +966,7 @@ const styles = StyleSheet.create({
     },
     progressBarContainer: {
         height: 24,
-        backgroundColor: "#e0e0e0",
+        backgroundColor: Colors.borderGray,
         borderRadius: 12,
         overflow: "hidden",
         position: "relative",

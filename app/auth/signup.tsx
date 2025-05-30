@@ -3,6 +3,7 @@
 // app/signup.tsx
 import { SIGNIN_ROUTE, VERIFY_ROUTE } from "@/constants/router_constants"
 import { postData } from "@/context/request_context"
+import { Colors } from "@/styles/colors"
 import { showMessage } from "@/utils/showMessage"
 import { getEmailErrorMessage } from "@/utils/validation"
 import { useRouter } from "expo-router"
@@ -128,13 +129,13 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         marginBottom: 8,
         textAlign: "center",
+        color: Colors.darkGray,
     },
     subtitle: {
         fontSize: 16,
-        color: "#666",
+        color: Colors.mediumGray,
         marginBottom: 24,
         textAlign: "center",
-        lineHeight: 22,
     },
     formGroup: {
         marginBottom: 16,
@@ -147,11 +148,11 @@ const styles = StyleSheet.create({
     input: {
         height: 50,
         borderWidth: 1,
-        borderColor: "#ddd",
+        borderColor: Colors.borderGray,
         borderRadius: 8,
         paddingHorizontal: 12,
         fontSize: 16,
-        backgroundColor: "white",
+        backgroundColor: Colors.backgroundWhite,
     },
     inputError: {
         borderColor: "red",
@@ -167,7 +168,7 @@ const styles = StyleSheet.create({
         marginTop: 4,
     },
     continueButton: {
-        backgroundColor: "#007AFF",
+        backgroundColor: Colors.info,
         height: 50,
         borderRadius: 8,
         justifyContent: "center",
@@ -178,7 +179,7 @@ const styles = StyleSheet.create({
         backgroundColor: "#007AFF80",
     },
     continueButtonText: {
-        color: "white",
+        color: Colors.backgroundWhite,
         fontSize: 16,
         fontWeight: "600",
     },

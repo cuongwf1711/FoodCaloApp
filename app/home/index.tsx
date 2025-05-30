@@ -26,6 +26,7 @@ import {
 
 // Import shared utilities
 import { useTabReload } from "@/hooks/use-tab-reload"
+import { Colors } from "@/styles/colors"
 import { formatDate, styles as sharedStyles } from "@/utils/food-history-utils"
 
 // Add CSS animation for web spinning effect - only on client side
@@ -1752,7 +1753,7 @@ const editModalStyles = StyleSheet.create({
     },
     modal: {
         backgroundColor: "white",
-        borderRadius: 12,
+        borderRadius: "12px",
         padding: 24,
         width: 800,
         maxWidth: "90%",
@@ -1867,10 +1868,10 @@ const editModalStyles = StyleSheet.create({
         paddingVertical: 12,
         paddingHorizontal: 24,
         borderRadius: 8,
-        backgroundColor: "#3498db",
+        backgroundColor: Colors.primary,
     },
     saveButtonText: {
-        color: "white",
+        color: Colors.backgroundWhite,
         fontSize: 14,
         fontWeight: "500",
     },
@@ -1891,12 +1892,12 @@ const styles = StyleSheet.create({
         fontSize: 24,
         fontWeight: "700",
         textAlign: "center",
-        color: "#2c3e50",
+        color: Colors.darkGray,
         marginBottom: 8,
     },
     headerSubtitle: {
         fontSize: 16,
-        color: "#6c757d",
+        color: Colors.mediumGray,
         textAlign: "center",
         lineHeight: 22,
     },
