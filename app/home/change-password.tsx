@@ -51,6 +51,9 @@ export default function ChangePassword() {
         if (passwordErrorMsg) {
             setNewPasswordError(passwordErrorMsg)
             isValid = false
+        } else if (oldPassword && newPassword === oldPassword) {
+            setNewPasswordError("New password must be different from current password")
+            isValid = false
         } else {
             setNewPasswordError("")
         }
@@ -133,6 +136,10 @@ export default function ChangePassword() {
                                     if (confirmPasswordError && text === confirmPassword) {
                                         setConfirmPasswordError("")
                                     }
+                                    // Clear error if new password is different from old password
+                                    if (oldPassword && text !== oldPassword && newPasswordError.includes("different from current")) {
+                                        setNewPasswordError("")
+                                    }
                                 }}
                                 secureTextEntry
                                 placeholderTextColor="#999"
@@ -140,7 +147,7 @@ export default function ChangePassword() {
                             />
                             {newPasswordError ? <Text style={styles.errorText}>{newPasswordError}</Text> : null}
                             <Text style={styles.passwordHint}>
-                                Password must be at least 8 characters and include both letters and numbers
+                                Password must be at least 8 characters, include both letters and numbers, and be different from your current password
                             </Text>
                         </View>
 
