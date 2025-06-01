@@ -1,7 +1,7 @@
 "use client"
 
-import { Ionicons } from "@expo/vector-icons"
-import React from "react"
+import { Ionicons } from "@expo/vector-icons";
+import React from "react";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"; // Added useMemo
 import {
@@ -17,7 +17,7 @@ import {
     Text,
     TouchableOpacity,
     View
-} from "react-native"
+} from "react-native";
 
 // Import shared utilities
 import {
@@ -27,11 +27,11 @@ import {
     formatDate,
     styles as sharedStyles,
     useFoodHistory,
-} from "@/utils/food-history-utils"
+} from "@/utils/food-history-utils";
 
-import { showMessage } from "@/utils/showMessage"
-import * as FileSystem from 'expo-file-system'
-import * as MediaLibrary from 'expo-media-library'
+import { showMessage } from "@/utils/showMessage";
+import * as FileSystem from 'expo-file-system';
+import * as MediaLibrary from 'expo-media-library';
 
 // Conditional ReactDOM import for web portals
 let ReactDOM: any;
@@ -1030,7 +1030,7 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
                         tintColor="#3498db"
                     />
                 }
-                extraData={updateCounter}
+                // Removed extraData={updateCounter}
             />
 
             {showScrollToTop && (
