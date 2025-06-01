@@ -3,7 +3,7 @@
 import { Ionicons } from "@expo/vector-icons"
 import React from "react"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"; // Added useMemo
 import {
     ActivityIndicator,
     Animated,
@@ -805,6 +805,19 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
     const isInitialMountRef = useRef(true)
     const lastFetchTimeRef = useRef(0)
 
+    // Memoize unique food items to prevent duplicate keys in FlatList
+    const uniqueFoodItems = useMemo(() => {
+        const seenIds = new Set<string>();
+        return foodItems.filter(item => {
+            if (seenIds.has(item.id)) {
+                console.warn(`Duplicate item ID found and removed: ${item.id}`); // Optional: for debugging
+                return false;
+            }
+            seenIds.add(item.id);
+            return true;
+        });
+    }, [foodItems]);
+
     // Initial data load - only run once on mount
     useEffect(() => {
         if (isInitialMountRef.current) {
@@ -946,14 +959,14 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
 
     // Render end of list message
     const renderEndOfList = useCallback(() => {
-        if (isLoadingMore || hasMore || foodItems.length === 0) return null
+        if (isLoadingMore || hasMore || uniqueFoodItems.length === 0) return null; // Use uniqueFoodItems.length
 
         return (
             <View style={sharedStyles.endOfListContainer}>
                 <Text style={sharedStyles.endOfListText}>No more items to load</Text>
             </View>
         )
-    }, [isLoadingMore, hasMore, foodItems.length])
+    }, [isLoadingMore, hasMore, uniqueFoodItems.length]); // Use uniqueFoodItems.length
 
     // Render empty state
     const renderEmpty = useCallback(() => {
@@ -993,7 +1006,7 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
         <View style={sharedStyles.container}>
             <FlatList
                 ref={flatListRef}
-                data={foodItems}
+                data={uniqueFoodItems} // Use uniqueFoodItems instead of foodItems
                 renderItem={renderFoodItem}
                 keyExtractor={(item) => item.id}
                 contentContainerStyle={sharedStyles.listContainer}
