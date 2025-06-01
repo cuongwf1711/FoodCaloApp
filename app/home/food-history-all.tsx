@@ -783,9 +783,11 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
                 setEditingItem(null)
                 // Hide scroll-to-top button after edit
                 setShowScrollToTop(false)
+                // Refresh data after successful edit
+                fetchFoodHistory(1, true)
             }
         },
-        [editingItem, saveEditedItem],
+        [editingItem, saveEditedItem, fetchFoodHistory],
     )
 
     // Cancel editing
