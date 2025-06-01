@@ -1,7 +1,7 @@
 "use client"
 
 import { Ionicons } from "@expo/vector-icons"
-import type React from "react"
+import React from "react"
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import {
@@ -650,6 +650,110 @@ const ImageModal: React.FC<{
 };
 
 
+// Define props for the FoodHistoryItem component
+interface FoodHistoryItemProps {
+    item: FoodItem;
+    onOpenImageModal: (uri: string) => void;
+    onDeleteItemPress: (itemId: string) => Promise<void>;
+    onStartEditing: (item: FoodItem) => void;
+}
+
+// Memoized FoodHistoryItem component
+const FoodHistoryItem: React.FC<FoodHistoryItemProps> = React.memo(({
+    item,
+    onOpenImageModal,
+    onDeleteItemPress,
+    onStartEditing
+}) => {
+    const formattedDate = formatDate(item.createdAt);
+    const isDeleting = item.isDeleting || false;
+
+    return (
+        <View style={[sharedStyles.foodCard, isDeleting && { opacity: 0.9 }]}>
+            {/* Delete Loading Overlay */}
+            {isDeleting && <DeleteLoadingOverlay />}
+
+            <View style={sharedStyles.foodCardHeader}>
+                <Text style={sharedStyles.foodName}>{item.predictName}</Text>
+                <View style={sharedStyles.actionButtons}>
+                    <TouchableOpacity
+                        style={sharedStyles.editButton}
+                        onPress={() => onStartEditing(item)}
+                        disabled={isDeleting}
+                    >
+                        {Platform.OS === "web" ? (
+                            <div
+                                style={{
+                                    color: isDeleting ? "#ccc" : "#3498db",
+                                    cursor: isDeleting ? "not-allowed" : "pointer",
+                                    fontSize: "18px",
+                                }}
+                            >
+                                ✎
+                            </div>
+                        ) : (
+                            <Ionicons name="create-outline" size={18} color={isDeleting ? "#ccc" : "#3498db"} />
+                        )}
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[sharedStyles.deleteButton, isDeleting && { opacity: 0.5 }]}
+                        onPress={async () => {
+                            await onDeleteItemPress(item.id);
+                        }}
+                        disabled={isDeleting}
+                    >
+                        {Platform.OS === "web" ? (
+                            <div style={{ color: "#e74c3c", cursor: isDeleting ? "not-allowed" : "pointer", fontSize: "18px" }}>🗑</div>
+                        ) : isDeleting ? (
+                            <Ionicons name="reload-outline" size={18} color="#e74c3c" />
+                        ) : (
+                            <Ionicons name="trash-outline" size={18} color="#e74c3c" />
+                        )}
+                    </TouchableOpacity>
+                </View>
+            </View>
+            <Text style={sharedStyles.foodCalories}>{item.calo} calories</Text>
+
+            <View style={sharedStyles.imagesContainer}>
+                <TouchableOpacity
+                    style={sharedStyles.imageWrapper}
+                    onPress={() => onOpenImageModal(item.publicUrl.originImage)}
+                    activeOpacity={0.9}
+                    disabled={isDeleting}
+                >
+                    <Image
+                        source={{ uri: item.publicUrl.originImage }}
+                        style={sharedStyles.thumbnailImage}
+                        resizeMode="contain"
+                    />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={sharedStyles.imageWrapper}
+                    onPress={() => onOpenImageModal(item.publicUrl.segmentationImage)}
+                    activeOpacity={0.9}
+                    disabled={isDeleting}
+                >
+                    <Image
+                        source={{ uri: item.publicUrl.segmentationImage }}
+                        style={sharedStyles.thumbnailImage}
+                        resizeMode="contain"
+                    />
+                </TouchableOpacity>
+            </View>
+
+            <Text style={sharedStyles.foodDate}>{formattedDate}</Text>
+            <Text style={sharedStyles.confidenceText}>Confidence: {item.confidencePercentage}</Text>
+
+            <View style={sharedStyles.commentContainer}>
+                <Text style={sharedStyles.commentLabel}>Notes:</Text>
+                <Text style={sharedStyles.foodComment}>{item.comment ? item.comment : "No notes"}</Text>
+            </View>
+        </View>
+    );
+});
+
+
 /**
  * Component to display all food history items
  * Supports sorting, pagination, and item editing/deletion
@@ -680,6 +784,7 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
     // UI state management
     const [modalVisible, setModalVisible] = useState(false)
     const [modalImageUri, setModalImageUri] = useState("")
+
     const [editingItem, setEditingItem] = useState<FoodItem | null>(null)
     const [isEditing, setIsEditing] = useState(false)
     const [showScrollToTop, setShowScrollToTop] = useState(false)
@@ -807,99 +912,24 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
         flatListRef.current?.scrollToOffset({ offset: 0, animated: true })
     }, [])
 
+    // Callback for deleting an item, to be passed to FoodHistoryItem
+    const handleDeleteItemPress = useCallback(async (itemId: string) => {
+        await handleDeleteItem(itemId); // handleDeleteItem from useFoodHistory
+        // Hide scroll-to-top button after delete
+        setShowScrollToTop(false);
+    }, [handleDeleteItem]); // Depends on handleDeleteItem from useFoodHistory
+
     // Enhanced render food item with new delete effect
     const renderFoodItem = useCallback(
-        ({ item }: { item: FoodItem }) => {
-            const formattedDate = formatDate(item.createdAt)
-            const isDeleting = item.isDeleting || false
-
-            return (
-                <View style={[sharedStyles.foodCard, isDeleting && { opacity: 0.9 }]}>
-                    {/* Delete Loading Overlay */}
-                    {isDeleting && <DeleteLoadingOverlay />}
-
-                    <View style={sharedStyles.foodCardHeader}>
-                        <Text style={sharedStyles.foodName}>{item.predictName}</Text>
-                        <View style={sharedStyles.actionButtons}>
-                            <TouchableOpacity
-                                style={sharedStyles.editButton}
-                                onPress={() => startEditing(item)}
-                                disabled={isDeleting}
-                            >
-                                {Platform.OS === "web" ? (
-                                    <div
-                                        style={{
-                                            color: isDeleting ? "#ccc" : "#3498db",
-                                            cursor: isDeleting ? "not-allowed" : "pointer",
-                                            fontSize: "18px",
-                                        }}
-                                    >
-                                        ✎
-                                    </div>
-                                ) : (
-                                    <Ionicons name="create-outline" size={18} color={isDeleting ? "#ccc" : "#3498db"} />
-                                )}
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[sharedStyles.deleteButton, isDeleting && { opacity: 0.5 }]}
-                                onPress={async () => {
-                                    await handleDeleteItem(item.id)
-                                    // Hide scroll-to-top button after delete
-                                    setShowScrollToTop(false)
-                                }}
-                                disabled={isDeleting}
-                            >
-                                {Platform.OS === "web" ? (
-                                    <div style={{ color: "#e74c3c", cursor: isDeleting ? "not-allowed" : "pointer", fontSize: "18px" }}>🗑</div>
-                                ) : isDeleting ? (
-                                    <Ionicons name="reload-outline" size={18} color="#e74c3c" />
-                                ) : (
-                                    <Ionicons name="trash-outline" size={18} color="#e74c3c" />
-                                )}
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                    <Text style={sharedStyles.foodCalories}>{item.calo} calories</Text>
-
-                    <View style={sharedStyles.imagesContainer}>
-                        <TouchableOpacity
-                            style={sharedStyles.imageWrapper}
-                            onPress={() => openImageModal(item.publicUrl.originImage)}
-                            activeOpacity={0.9}
-                            disabled={isDeleting}
-                        >
-                            <Image
-                                source={{ uri: item.publicUrl.originImage }}
-                                style={sharedStyles.thumbnailImage}
-                                resizeMode="contain"
-                            />
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={sharedStyles.imageWrapper}
-                            onPress={() => openImageModal(item.publicUrl.segmentationImage)}
-                            activeOpacity={0.9}
-                            disabled={isDeleting}
-                        >
-                            <Image
-                                source={{ uri: item.publicUrl.segmentationImage }}
-                                style={sharedStyles.thumbnailImage}
-                                resizeMode="contain"
-                            />
-                        </TouchableOpacity>
-                    </View>
-
-                    <Text style={sharedStyles.foodDate}>{formattedDate}</Text>
-                    <Text style={sharedStyles.confidenceText}>Confidence: {item.confidencePercentage}</Text>
-
-                    <View style={sharedStyles.commentContainer}>
-                        <Text style={sharedStyles.commentLabel}>Notes:</Text>
-                        <Text style={sharedStyles.foodComment}>{item.comment ? item.comment : "No notes"}</Text>
-                    </View>
-                </View>
-            )
-        },
-        [openImageModal, handleDeleteItem, startEditing],
+        ({ item }: { item: FoodItem }) => (
+            <FoodHistoryItem
+                item={item}
+                onOpenImageModal={openImageModal}
+                onDeleteItemPress={handleDeleteItemPress}
+                onStartEditing={startEditing}
+            />
+        ),
+        [openImageModal, handleDeleteItemPress, startEditing], // Dependencies for the renderItem callback
     )
 
     // Render footer (loading indicator for pagination)
