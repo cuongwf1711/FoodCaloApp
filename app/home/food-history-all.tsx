@@ -706,7 +706,7 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
             fetchFoodHistory(1, true)
             isInitialMountRef.current = false
         }
-    }, [])
+    }, [fetchFoodHistory]) // Modified dependency array for clarity, original was empty
 
     // Add useEffect mới để register refresh trigger:
     useEffect(() => {
@@ -960,7 +960,7 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
     }
 
     return (
-        <View style={sharedStyles.container} key={updateCounter}>
+        <View style={sharedStyles.container}>
             <FlatList
                 ref={flatListRef}
                 data={foodItems}
