@@ -384,7 +384,7 @@ const ImageModal: React.FC<{
                 document.body.removeChild(link)
                 window.URL.revokeObjectURL(url)
                 
-                showMessage({ message: "Image downloaded successfully" }, true)
+                // showMessage({ message: "Image downloaded successfully" }, true)
             } else {
                 // Native download implementation
                 const { status } = await MediaLibrary.requestPermissionsAsync()
@@ -392,14 +392,12 @@ const ImageModal: React.FC<{
                     showMessage({ message: "Permission required to save images" }, true)
                     return
                 }
-
-                let sourceUri = imageUri
                 
                 // Check if it's a local file URI or remote URL
                 if (imageUri.startsWith('file://') || (!imageUri.startsWith('http://') && !imageUri.startsWith('https://'))) {
                     // It's a local file, copy directly to gallery
                     try {
-                        const asset = await MediaLibrary.createAssetAsync(imageUri)
+                        await MediaLibrary.createAssetAsync(imageUri)
                         showMessage({ message: "Image saved to gallery" }, true)
                         return
                     } catch (localError) {
@@ -420,7 +418,7 @@ const ImageModal: React.FC<{
                     
                     if (downloadResult.status === 200) {
                         // Save to device gallery using MediaLibrary
-                        const asset = await MediaLibrary.createAssetAsync(downloadResult.uri)
+                        await MediaLibrary.createAssetAsync(downloadResult.uri)
                         showMessage({ message: "Image saved to gallery" }, true)
                         
                         // Clean up the temporary file
