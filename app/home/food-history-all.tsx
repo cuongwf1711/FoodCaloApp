@@ -982,8 +982,6 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
     // Callback for deleting an item, to be passed to FoodHistoryItem
     const handleDeleteItemPress = useCallback(async (itemId: string) => {
         await handleDeleteItem(itemId); // handleDeleteItem from useFoodHistory
-        // Hide scroll-to-top button after delete
-        setShowScrollToTop(false);
     }, [handleDeleteItem]); // Depends on handleDeleteItem from useFoodHistory
 
     // Enhanced render food item with new delete effect
