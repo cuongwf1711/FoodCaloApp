@@ -162,8 +162,7 @@ export const useFoodHistory = (
                     case "lowest-calories":
                         orderingParam = "&ordering=calo"
                         break
-                }
-
+                }                
                 let apiUrl = URL_FOOD_CALO_ESTIMATOR + "?"
 
                 if (timeUnit) {
@@ -177,6 +176,9 @@ export const useFoodHistory = (
                         case "month":
                             apiUrl += `month=${monthParam}${orderingParam}`
                             break
+                    }
+                    if (pageNum > 1) {
+                        apiUrl += `&page=${pageNum}`
                     }
                 } else {
                     apiUrl += `page=${pageNum}${orderingParam}`
@@ -1768,44 +1770,14 @@ export const renderSharedFoodItem = (
                 <Text style={styles.foodName}>{item.predictName}</Text>
                 <View style={styles.actionButtons}>
                     <TouchableOpacity style={styles.editButton} onPress={() => startEditing(item)} disabled={isDeleting}>
-                        {Platform.OS === "web" ? (
-                            <div
-                                style={{
-                                    color: isDeleting ? "#ccc" : "#3498db",
-                                    cursor: isDeleting ? "not-allowed" : "pointer",
-                                    fontSize: "18px",
-                                }}
-                            >
-                                ✎
-                            </div>
-                        ) : (
-                            <Ionicons name="create-outline" size={18} color={isDeleting ? "#ccc" : "#3498db"} />
-                        )}
+                        <Ionicons name="create-outline" size={18} color={isDeleting ? "#ccc" : "#3498db"} />
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={[styles.deleteButton, isDeleting && { opacity: 0.5 }]}
                         onPress={() => handleDeleteItem(item.id)}
                         disabled={isDeleting}
                     >
-                        {isDeleting ? (
-                            Platform.OS === "web" ? (
-                                <div
-                                    style={{
-                                        fontSize: "18px",
-                                        animation: "spin 1s linear infinite",
-                                        display: "inline-block",
-                                    }}
-                                >
-                                    ⟳
-                                </div>
-                            ) : (
-                                <Ionicons name="reload-outline" size={18} color="#e74c3c" />
-                            )
-                        ) : Platform.OS === "web" ? (
-                            <div style={{ color: "#e74c3c", cursor: "pointer", fontSize: "18px" }}>🗑</div>
-                        ) : (
-                            <Ionicons name="trash-outline" size={18} color="#e74c3c" />
-                        )}
+                        {isDeleting ? <Ionicons name="reload-outline" size={18} color="#e74c3c" /> : <Ionicons name="trash-outline" size={18} color="#e74c3c" />}
                     </TouchableOpacity>
                 </View>
             </View>

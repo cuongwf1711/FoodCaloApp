@@ -1001,28 +1001,14 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
                                     onPress={() => startEditing(item)}
                                     disabled={isDeleting}
                                 >
-                                    {Platform.OS === "web" ? (
-                                        <div
-                                            style={{
-                                                color: isDeleting ? "#ccc" : "#3498db",
-                                                cursor: isDeleting ? "not-allowed" : "pointer",
-                                                fontSize: "18px",
-                                            }}
-                                        >
-                                            ✎
-                                        </div>
-                                    ) : (
-                                        <Ionicons name="create-outline" size={18} color={isDeleting ? "#ccc" : "#3498db"} />
-                                    )}
+                                    <Ionicons name="create-outline" size={18} color={isDeleting ? "#ccc" : "#3498db"} />
                                 </TouchableOpacity>
                                 <TouchableOpacity
                                     style={[sharedStyles.deleteButton, isDeleting && { opacity: 0.5 }]}
                                     onPress={() => handleDeleteWithConfirmation(item)}
                                     disabled={isDeleting}
                                 >
-                                    {Platform.OS === "web" ? (
-                                        <div style={{ color: "#e74c3c", cursor: isDeleting ? "not-allowed" : "pointer", fontSize: "18px" }}>🗑</div>
-                                    ) : isDeleting ? (
+                                    {isDeleting ? (
                                         <Ionicons name="reload-outline" size={18} color="#e74c3c" />
                                     ) : (
                                         <Ionicons name="trash-outline" size={18} color="#e74c3c" />
@@ -1165,11 +1151,7 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
                         onPress={scrollToTop}
                         activeOpacity={0.8}
                     >
-                        {Platform.OS === "web" ? (
-                            <div style={{ color: "#fff", fontSize: "20px" }}>↑</div>
-                        ) : (
-                            <Ionicons name="chevron-up" size={20} color="#fff" />
-                        )}
+                        <Ionicons name="chevron-up" size={20} color="#fff" />
                     </TouchableOpacity>
                 </Animated.View>
             )}
