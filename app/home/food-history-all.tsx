@@ -1073,15 +1073,15 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
         <View style={sharedStyles.container}>
             <FlatList
                 ref={flatListRef}
-                data={uniqueFoodItems} // Use uniqueFoodItems instead of foodItems
+                data={uniqueFoodItems}
                 renderItem={renderFoodItem}
-                keyExtractor={keyExtractor} // Use the stable keyExtractor
+                keyExtractor={keyExtractor}
                 contentContainerStyle={sharedStyles.listContainer}
                 showsVerticalScrollIndicator={false}
                 ListEmptyComponent={renderEmpty}
-                ListFooterComponent={listFooterComponentRenderer} // Use stable renderer
+                ListFooterComponent={listFooterComponentRenderer}
                 onEndReached={handleLoadMore}
-                onEndReachedThreshold={0.3} // Consider adjusting if items are tall
+                onEndReachedThreshold={0.3}
                 onScroll={handleScroll}
                 scrollEventThrottle={16}
                 refreshControl={
@@ -1092,13 +1092,12 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
                         tintColor="#3498db"
                     />
                 }
-                // Performance props
-                initialNumToRender={10} // Adjust based on typical item visibility
-                maxToRenderPerBatch={10} // How many items to render in each batch
-                windowSize={21} // Default is 21. Reduce if items are very tall/complex to save memory.
-                                 // Increase if scrolling is jumpy and items are light.
-                removeClippedSubviews={true} // Experimental: Can improve performance but may have side effects
-                // Removed extraData={updateCounter} // Generally not needed if data prop and item memoization are correct
+                initialNumToRender={10}
+                maxToRenderPerBatch={10}
+                windowSize={21}
+                removeClippedSubviews={true}
+                updateCellsBatchingPeriod={50} // Reduce batching period for smoother updates
+                disableVirtualization={false} // Ensure virtualization is enabled
             />
 
             {showScrollToTop && (
