@@ -658,6 +658,45 @@ interface FoodHistoryItemProps {
     onStartEditing: (item: FoodItem) => void;
 }
 
+// Custom comparison function for FoodHistoryItem
+const areFoodHistoryItemsEqual = (prevProps: Readonly<FoodHistoryItemProps>, nextProps: Readonly<FoodHistoryItemProps>): boolean => {
+    if (prevProps.item === nextProps.item &&
+        prevProps.onOpenImageModal === nextProps.onOpenImageModal &&
+        prevProps.onDeleteItemPress === nextProps.onDeleteItemPress &&
+        prevProps.onStartEditing === nextProps.onStartEditing) {
+        return true;
+    }
+
+    if (
+        prevProps.onOpenImageModal !== nextProps.onOpenImageModal ||
+        prevProps.onDeleteItemPress !== nextProps.onDeleteItemPress ||
+        prevProps.onStartEditing !== nextProps.onStartEditing
+    ) {
+        return false;
+    }
+
+    const pItem = prevProps.item;
+    const nItem = nextProps.item;
+
+    // Robustly compare createdAt (handles Date objects or primitives)
+    // Since FoodItem.createdAt is string, direct comparison is fine.
+    // const createdAtEqual = (
+    //     pItem.createdAt instanceof Date && nItem.createdAt instanceof Date ?
+    //     pItem.createdAt.getTime() === nItem.createdAt.getTime() :
+    //     pItem.createdAt === nItem.createdAt
+    // );
+
+    return pItem.id === nItem.id &&
+        pItem.predictName === nItem.predictName &&
+        pItem.calo === nItem.calo &&
+        pItem.comment === nItem.comment &&
+        pItem.createdAt === nItem.createdAt && // Direct comparison for string
+        pItem.confidencePercentage === nItem.confidencePercentage &&
+        pItem.isDeleting === nItem.isDeleting &&
+        pItem.publicUrl.originImage === nItem.publicUrl.originImage &&
+        pItem.publicUrl.segmentationImage === nItem.publicUrl.segmentationImage;
+};
+
 // Memoized FoodHistoryItem component
 const FoodHistoryItem: React.FC<FoodHistoryItemProps> = React.memo(({
     item,
@@ -665,8 +704,25 @@ const FoodHistoryItem: React.FC<FoodHistoryItemProps> = React.memo(({
     onDeleteItemPress,
     onStartEditing
 }) => {
-    const formattedDate = formatDate(item.createdAt);
+    const formattedDate = useMemo(() => formatDate(item.createdAt), [item.createdAt]);
     const isDeleting = item.isDeleting || false;
+
+    const handleStartEditing = useCallback(() => {
+        onStartEditing(item);
+    }, [onStartEditing, item]);
+
+    const handleDeletePress = useCallback(async () => {
+        // Ensure item.id is stable or use item directly if the whole item is needed for context
+        await onDeleteItemPress(item.id);
+    }, [onDeleteItemPress, item.id]); // Assuming item.id is sufficient and stable
+
+    const handleOpenOriginImage = useCallback(() => {
+        onOpenImageModal(item.publicUrl.originImage);
+    }, [onOpenImageModal, item.publicUrl.originImage]);
+
+    const handleOpenSegmentationImage = useCallback(() => {
+        onOpenImageModal(item.publicUrl.segmentationImage);
+    }, [onOpenImageModal, item.publicUrl.segmentationImage]);
 
     return (
         <View style={[sharedStyles.foodCard, isDeleting && { opacity: 0.9 }]}>
@@ -678,7 +734,7 @@ const FoodHistoryItem: React.FC<FoodHistoryItemProps> = React.memo(({
                 <View style={sharedStyles.actionButtons}>
                     <TouchableOpacity
                         style={sharedStyles.editButton}
-                        onPress={() => onStartEditing(item)}
+                        onPress={handleStartEditing}
                         disabled={isDeleting}
                     >
                         {Platform.OS === "web" ? (
@@ -697,9 +753,7 @@ const FoodHistoryItem: React.FC<FoodHistoryItemProps> = React.memo(({
                     </TouchableOpacity>
                     <TouchableOpacity
                         style={[sharedStyles.deleteButton, isDeleting && { opacity: 0.5 }]}
-                        onPress={async () => {
-                            await onDeleteItemPress(item.id);
-                        }}
+                        onPress={handleDeletePress}
                         disabled={isDeleting}
                     >
                         {Platform.OS === "web" ? (
@@ -717,7 +771,7 @@ const FoodHistoryItem: React.FC<FoodHistoryItemProps> = React.memo(({
             <View style={sharedStyles.imagesContainer}>
                 <TouchableOpacity
                     style={sharedStyles.imageWrapper}
-                    onPress={() => onOpenImageModal(item.publicUrl.originImage)}
+                    onPress={handleOpenOriginImage}
                     activeOpacity={0.9}
                     disabled={isDeleting}
                 >
@@ -730,7 +784,7 @@ const FoodHistoryItem: React.FC<FoodHistoryItemProps> = React.memo(({
 
                 <TouchableOpacity
                     style={sharedStyles.imageWrapper}
-                    onPress={() => onOpenImageModal(item.publicUrl.segmentationImage)}
+                    onPress={handleOpenSegmentationImage}
                     activeOpacity={0.9}
                     disabled={isDeleting}
                 >
@@ -751,7 +805,7 @@ const FoodHistoryItem: React.FC<FoodHistoryItemProps> = React.memo(({
             </View>
         </View>
     );
-});
+}, areFoodHistoryItemsEqual);
 
 
 /**
@@ -795,12 +849,12 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
     const [isSortChanging, setIsSortChanging] = useState(false)
 
     // FIXED: Simplified force re-render for Android compatibility
-    const [, forceUpdate] = useState({})
-    useEffect(() => {
-        if (Platform.OS === "android") {
-            forceUpdate({})
-        }
-    }, [updateCounter, totalCalories])
+    // const [, forceUpdate] = useState({})
+    // useEffect(() => {
+    //     if (Platform.OS === "android") {
+    //         forceUpdate({})
+    //     }
+    // }, [updateCounter, totalCalories])
 
     const isInitialMountRef = useRef(true)
     const lastFetchTimeRef = useRef(0)
@@ -810,7 +864,7 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
         const seenIds = new Set<string>();
         return foodItems.filter(item => {
             if (seenIds.has(item.id)) {
-                console.warn(`Duplicate item ID found and removed: ${item.id}`); // Optional: for debugging
+                // console.warn(`Duplicate item ID found and removed: ${item.id}`); // Optional: for debugging
                 return false;
             }
             seenIds.add(item.id);
@@ -945,6 +999,9 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
         [openImageModal, handleDeleteItemPress, startEditing], // Dependencies for the renderItem callback
     )
 
+    // Stable keyExtractor
+    const keyExtractor = useCallback((item: FoodItem) => item.id, []);
+
     // Render footer (loading indicator for pagination)
     const renderFooter = useCallback(() => {
         if (!isLoadingMore) return null
@@ -967,6 +1024,18 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
             </View>
         )
     }, [isLoadingMore, hasMore, uniqueFoodItems.length]); // Use uniqueFoodItems.length
+
+    // Stable ListFooterComponent renderer
+    const listFooterComponentRenderer = useCallback(() => {
+        // renderFooter and renderEndOfList are already memoized.
+        // This function's reference will be stable if renderFooter and renderEndOfList references are stable.
+        return (
+            <>
+                {renderFooter()}
+                {renderEndOfList()}
+            </>
+        );
+    }, [renderFooter, renderEndOfList]);
 
     // Render empty state
     const renderEmpty = useCallback(() => {
@@ -1008,18 +1077,13 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
                 ref={flatListRef}
                 data={uniqueFoodItems} // Use uniqueFoodItems instead of foodItems
                 renderItem={renderFoodItem}
-                keyExtractor={(item) => item.id}
+                keyExtractor={keyExtractor} // Use the stable keyExtractor
                 contentContainerStyle={sharedStyles.listContainer}
                 showsVerticalScrollIndicator={false}
                 ListEmptyComponent={renderEmpty}
-                ListFooterComponent={() => (
-                    <>
-                        {renderFooter()}
-                        {renderEndOfList()}
-                    </>
-                )}
+                ListFooterComponent={listFooterComponentRenderer} // Use stable renderer
                 onEndReached={handleLoadMore}
-                onEndReachedThreshold={0.3}
+                onEndReachedThreshold={0.3} // Consider adjusting if items are tall
                 onScroll={handleScroll}
                 scrollEventThrottle={16}
                 refreshControl={
@@ -1030,7 +1094,13 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
                         tintColor="#3498db"
                     />
                 }
-                // Removed extraData={updateCounter}
+                // Performance props
+                initialNumToRender={10} // Adjust based on typical item visibility
+                maxToRenderPerBatch={10} // How many items to render in each batch
+                windowSize={21} // Default is 21. Reduce if items are very tall/complex to save memory.
+                                 // Increase if scrolling is jumpy and items are light.
+                removeClippedSubviews={true} // Experimental: Can improve performance but may have side effects
+                // Removed extraData={updateCounter} // Generally not needed if data prop and item memoization are correct
             />
 
             {showScrollToTop && (
