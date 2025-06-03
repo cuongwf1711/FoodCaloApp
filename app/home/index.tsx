@@ -1174,8 +1174,11 @@ const Index: React.FC = () => {
     })
 
     // Centralized function to clear all state like reset
-    const clearAllState = () => {
-        setSelectedImage(null)
+    const clearAllState = (setSelectedImageNull:boolean = true) => {
+        if(setSelectedImageNull)
+        {
+            setSelectedImage(null)
+        }
         setResult(null)
         setModalVisible(false)
         setModalImageUri("")
@@ -1254,7 +1257,7 @@ const Index: React.FC = () => {
                     }),
                 ]).start(() => {
                     // Clear everything like reset
-                    clearAllState()
+                    clearAllState(false)
                 })
             } else {
                 // Reset animation and clear everything if delete failed
