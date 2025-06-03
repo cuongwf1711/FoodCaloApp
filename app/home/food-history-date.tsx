@@ -791,10 +791,11 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
     // Initial data load - only run once on mount
     useEffect(() => {
         if (!isInitialized) {
-            fetchData(false, undefined, false)
-            setIsInitialized(true)
+            // Ensure only page 1 is fetched on initial load
+            fetchFoodHistory(1, true, undefined, timeUnit, selectedDate, weeksAgo, selectedMonth);
+            setIsInitialized(true);
         }
-    }, [fetchData, isInitialized])
+    }, [fetchFoodHistory, isInitialized, timeUnit, selectedDate, weeksAgo, selectedMonth])
 
     // FIXED: Register refresh trigger function
     useEffect(() => {
@@ -855,9 +856,10 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
     // Enhanced refresh with better feedback
     const handleRefresh = useCallback(() => {
         if (!isRefreshing) {
-            fetchData(true, undefined, false)
+            // Reset page to 1 and ensure only page 1 is fetched
+            fetchFoodHistory(1, true, sortOption, timeUnit, selectedDate, weeksAgo, selectedMonth)
         }
-    }, [fetchData, isRefreshing])
+    }, [fetchFoodHistory, isRefreshing, sortOption, timeUnit, selectedDate, weeksAgo, selectedMonth])
 
     // Open image modal
     const openImageModal = useCallback((uri: string) => {
@@ -918,10 +920,11 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
 
     // Handle load more function for pagination
     const handleLoadMore = useCallback(() => {
-        if (!isLoadingMore && hasMore && !isLoading) {
-            fetchFoodHistory(page + 1, false, sortOption, timeUnit, selectedDate, weeksAgo, selectedMonth);
+        if (!isLoadingMore && hasMore && !isRefreshing) {
+            // Fetch next page only when not refreshing
+            fetchFoodHistory(page + 1, false, sortOption, timeUnit, selectedDate, weeksAgo, selectedMonth)
         }
-    }, [isLoadingMore, hasMore, isLoading, fetchFoodHistory, page, sortOption, timeUnit, selectedDate, weeksAgo, selectedMonth]);
+    }, [isLoadingMore, hasMore, isRefreshing, fetchFoodHistory, page, sortOption, timeUnit, selectedDate, weeksAgo, selectedMonth])
 
     // Enhanced compact time unit selector with loading states
     const renderCompactTimeSelector = () => {

@@ -852,10 +852,11 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
     // Initial data load - only run once on mount
     useEffect(() => {
         if (isInitialMountRef.current) {
-            fetchFoodHistory(1, true)
-            isInitialMountRef.current = false
+            // Ensure only page 1 is fetched on initial load
+            fetchFoodHistory(1, true);
+            isInitialMountRef.current = false;
         }
-    }, [fetchFoodHistory]) // Modified dependency array for clarity, original was empty
+    }, [fetchFoodHistory])
 
     // Add useEffect mới để register refresh trigger:
     useEffect(() => {
@@ -891,15 +892,14 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
     // Handle refresh (pull to refresh)
     const handleRefresh = useCallback(() => {
         if (!isRefreshing) {
-            // Force a complete refresh
+            // Reset page to 1 and ensure only page 1 is fetched
             fetchFoodHistory(1, true)
         }
-        setShowScrollToTop(false)
     }, [fetchFoodHistory, isRefreshing])
 
-    // Handle pagination when scrolling to bottom
     const handleLoadMore = useCallback(() => {
         if (!isLoadingMore && hasMore && !isRefreshing) {
+            // Fetch next page only when not refreshing
             fetchFoodHistory(page + 1)
         }
     }, [fetchFoodHistory, isLoadingMore, hasMore, isRefreshing, page])
