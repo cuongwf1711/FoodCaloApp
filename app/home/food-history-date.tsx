@@ -1081,7 +1081,7 @@ const FoodItemCard: React.FC<FoodItemCardProps> = React.memo(
                             </TouchableOpacity>
                         </View>
                     </View>
-                    <Text style={sharedStyles.foodCalories}>{item.calo} calories</Text>
+                    <Text style={sharedStyles.foodCalories}>{item.calo} kilocalories</Text>
 
                     <View style={sharedStyles.imagesContainer}>
                         <TouchableOpacity

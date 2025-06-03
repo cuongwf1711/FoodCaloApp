@@ -389,7 +389,6 @@ const Personal = () => {
         return option ? option.label : "Day"
     }
 
-    // Calculate percentage of calories consumed
     const calculateCaloriePercentage = () => {
         if (!profile?.totalCalories || !profile?.calorieLimit || profile.calorieLimit === 0) {
             return 0
@@ -528,7 +527,6 @@ const Personal = () => {
                     </View>
 
                     <View style={styles.formContainer}>
-                        {/* Display total calories and progress bar */}
                         {!isEditing && profile?.totalCalories !== undefined && (
                             <View style={styles.calorieProgressContainer}>
                                 <View style={styles.calorieInfoRow}>

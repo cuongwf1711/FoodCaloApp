@@ -196,7 +196,6 @@ export const useFoodHistory = (
                     setFoodItems((prev) => [...prev, ...newItems])
                 }
 
-                // FIXED: Always update total calories
                 setTotalCalories(newTotalCalories)
 
                 setHasMore(response.data.next !== null)
@@ -606,12 +605,11 @@ export const EditModal: React.FC<{
     }
 
     const handleSave = () => {
-        // Validate calories is not empty and is a valid number
         if (!calories.trim() || isNaN(Number(calories)) || Number(calories) <= 0) {
             if (Platform.OS === "web") {
-                alert("Please enter a valid number of calories greater than 0.")
+                alert("Please enter a valid number of kilocalories greater than 0.")
             } else {
-                Alert.alert("Invalid Input", "Please enter a valid number of calories greater than 0.")
+                Alert.alert("Invalid Input", "Please enter a valid number of kilocalories greater than 0.")
             }
             return
         }
@@ -711,7 +709,7 @@ export const EditModal: React.FC<{
                             pattern="[0-9]*"
                             value={calories}
                             onChange={(e) => handleCaloriesChange(e.target.value)}
-                            placeholder="Enter calories"
+                            placeholder="Enter kilocalories"
                             style={{
                                 width: "100%",
                                 padding: "12px",
@@ -868,7 +866,7 @@ export const EditModal: React.FC<{
                                 value={calories}
                                 onChangeText={handleCaloriesChange}
                                 keyboardType="numeric"
-                                placeholder="Enter calories"
+                                placeholder="Enter kilocalories"
                                 placeholderTextColor={"#999"}
                                 maxLength={MAX_CALORIES.toString().length}
                             />
@@ -1780,7 +1778,7 @@ export const renderSharedFoodItem = (
                     </TouchableOpacity>
                 </View>
             </View>
-            <Text style={styles.foodCalories}>{item.calo} calories</Text>
+            <Text style={styles.foodCalories}>{item.calo} kilocalories</Text>
 
             <View style={styles.imagesContainer}>
                 <TouchableOpacity

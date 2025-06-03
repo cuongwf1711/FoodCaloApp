@@ -53,24 +53,18 @@ const FoodHistoryScreen: React.FC = () => {
   const [totalCalories, setTotalCalories] = useState(0)
   const [sortOption, setSortOption] = useState<SortOption>("newest")
 
-  // Track if we have any data to determine if dropdowns should be disabled
   const [hasData, setHasData] = useState(true)
 
-  // Simple animation states for dropdowns
   const [sortScaleAnim] = useState(new Animated.Value(1))
   const [filterScaleAnim] = useState(new Animated.Value(1))
 
-  // Use shared hook for user profile
   const { userProfile, fetchUserProfile } = useUserProfile()
 
-  // FIXED: Use ref to track refresh state and prevent double calls
   const isRefreshingRef = useRef(false)
   const childRefreshTriggerRef = useRef<(() => void) | undefined>(undefined)
 
-  // FIXED: Improved data change handler without race conditions
   const handleDataChange = useCallback((calories: number, itemCount?: number) => {
 
-    // Use functional updates to prevent race conditions
     setTotalCalories((prevCalories) => {
       return calories
     })
@@ -80,10 +74,8 @@ const FoodHistoryScreen: React.FC = () => {
     setHasData(hasDataNow)
   }, [])
 
-  // FIXED: Improved tab reload without double API calls
   const { isReloading, animatedStyle } = useTabReload("history", {
     onReload: async () => {
-      // Prevent double refresh
       if (isRefreshingRef.current) {
         return
       }
@@ -91,13 +83,11 @@ const FoodHistoryScreen: React.FC = () => {
       isRefreshingRef.current = true
 
       try {
-        // Reset filters and UI state but NOT totalCalories
         setTimeFilter("all")
         setCurrentView("all")
         setSortOption("newest")
         setHasData(true)
 
-        // Reset animations smoothly
         fadeAnim.setValue(1)
         slideAnim.setValue(0)
         sortScaleAnim.setValue(1)
