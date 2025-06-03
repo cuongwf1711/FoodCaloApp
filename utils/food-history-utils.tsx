@@ -491,8 +491,7 @@ export const ImageModal: React.FC<{
 
                 <div style={{ position: "relative", maxWidth: "90%", maxHeight: "90%" }} onClick={(e) => e.stopPropagation()}>
                     <img
-                        src={imageUri || "/placeholder.svg"}
-                        alt="Full size"
+                        src={imageUri}
                         style={{
                             maxWidth: "100%",
                             maxHeight: "90vh",
@@ -2270,8 +2269,6 @@ export const styles = StyleSheet.create({
         flexDirection: "row",
     },
     loadingMoreText: {
-        marginLeft: 8,
-        fontSize: 14,
         color: "#666",
     },
     emptyContainer: {

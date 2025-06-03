@@ -543,8 +543,7 @@ const ImageModal: React.FC<{
 
                 <img
                     onClick={(e) => e.stopPropagation()}
-                    src={imageUri || "/placeholder.svg"}
-                    alt="Full size"
+                    src={imageUri}
                     style={{
                         maxWidth: "100%",
                         maxHeight: "90%",

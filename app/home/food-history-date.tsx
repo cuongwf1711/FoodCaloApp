@@ -1,16 +1,15 @@
 "use client"
 
 import { Ionicons } from "@expo/vector-icons";
-import type React from "react";
-import { useCallback, useEffect, useRef, useState } from "react"; // Added React hooks
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ActivityIndicator,
-    Alert,
     Animated,
     Easing,
     FlatList,
     Image,
     Modal,
+    Platform,
     RefreshControl,
     StyleSheet,
     Text,
@@ -21,7 +20,6 @@ import {
 import { showMessage } from "@/utils/showMessage";
 import * as FileSystem from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library';
-import { Platform } from "react-native";
 // Added imports from food-history-utils
 import {
     DatePicker,
@@ -187,7 +185,7 @@ const ImageModal: React.FC<{
                 link.click();
                 document.body.removeChild(link);
                 window.URL.revokeObjectURL(url);
-                showMessage({ message: "Image downloaded successfully" }, true);
+                // showMessage({ message: "Image downloaded successfully" }, true);
             } else { // Native
                 const { status } = await MediaLibrary.requestPermissionsAsync();
                 if (status !== "granted") {
@@ -302,8 +300,7 @@ const ImageModal: React.FC<{
                     onClick={(e) => e.stopPropagation()}
                 >
                     <img
-                        src={imageUri || "/placeholder.svg"}
-                        alt="Full size"
+                        src={imageUri}
                         style={{ maxWidth: "100%", maxHeight: "calc(90vh - 50px)", borderRadius: 8, objectFit: "contain" }}
                     />
                 </div>
@@ -661,7 +658,7 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
     onSortChange,
     onDataChange,
     onRegisterRefreshTrigger,
-}) => {
+}) => {    
     const {
         foodItems,
         isLoading,
@@ -673,6 +670,9 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
         handleSortChange,
         isSortChanging,
         scrollToTop: scrollToTopUtil,
+        isLoadingMore,
+        hasMore,
+        page, // This 'page' is from useFoodHistory, representing the current page number.
     } = useFoodHistory("newest", sortOption, onDataChange)
 
     // UI state management
@@ -710,7 +710,7 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
     const [isInitialized, setIsInitialized] = useState(false)
 
     // Function to get time period label
-    const getTimePeriodLabel = () => {
+    const getTimePeriodLabel = useCallback(() => {
         switch (timeUnit) {
             case "day":
                 const [y1, m1, d1] = selectedDate.split("-")
@@ -723,7 +723,7 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
             default:
                 return "Food History"
         }
-    }
+    }, [timeUnit, selectedDate, weeksAgo, selectedMonth])
 
     // Enhanced fetch data with animations
     const fetchData = useCallback(
@@ -747,6 +747,9 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
             }
 
             try {
+                // Always fetch page 1 when fetchData is called, as it implies a new dataset or a refresh.
+                // The 'refresh' parameter is passed to the hook to indicate if it's a hard refresh
+                // (e.g. pull-to-refresh) or if new filters/sort are applied (also starting from page 1).
                 await fetchFoodHistory(1, refresh, sortOpt, timeUnit, selectedDate, weeksAgo, selectedMonth)
 
                 if (showAnimation && !refresh) {
@@ -777,6 +780,11 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
                 listSlideAnim.setValue(0)
             }
         },
+        // 'page' is removed from dependencies because fetchData always requests page 1.
+        // The hook's 'page' state is managed by the hook itself based on these requests.
+        // sortOption (the state from useFoodHistory) is not needed here because
+        // if sortOpt param is undefined, fetchFoodHistory hook should use its internal current sortOption.
+        // If sortOpt is provided (e.g. from sort change), that specific one is used.
         [fetchFoodHistory, timeUnit, selectedDate, weeksAgo, selectedMonth, listFadeAnim, listSlideAnim],
     )
 
@@ -903,41 +911,17 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
         flatListRef.current?.scrollToOffset({ offset: 0, animated: true })
     }, [])
 
-    // Handle delete with confirmation
+    // Handle delete with confirmation - simplified to use hook's confirmation
     const handleDeleteWithConfirmation = useCallback(async (item: FoodItem) => {
-        if (Platform.OS === "web") {
-            const confirmed = window.confirm(`Are you sure you want to delete "${item.predictName}"?`);
-            if (confirmed) {
-                await handleDeleteItem(item.id);
-                // Hide scroll-to-top button after delete and refresh data
-                setShowScrollToTop(false);
-                // Call API refresh
-                fetchData(true, undefined, false);
-            }
-        } else {
-            Alert.alert(
-                "Delete Food Item",
-                `Are you sure you want to delete "${item.predictName}"?`,
-                [
-                    {
-                        text: "Cancel",
-                        style: "cancel",
-                    },
-                    {
-                        text: "Delete",
-                        style: "destructive",
-                        onPress: async () => {
-                            await handleDeleteItem(item.id);
-                            // Hide scroll-to-top button after delete and refresh data
-                            setShowScrollToTop(false);
-                            // Call API refresh
-                            fetchData(true, undefined, false);
-                        },
-                    },
-                ],
-            );
+        await handleDeleteItem(item.id);
+    }, [handleDeleteItem]); 
+
+    // Handle load more function for pagination
+    const handleLoadMore = useCallback(() => {
+        if (!isLoadingMore && hasMore && !isLoading) {
+            fetchFoodHistory(page + 1, false, sortOption, timeUnit, selectedDate, weeksAgo, selectedMonth);
         }
-    }, [handleDeleteItem, fetchData]);
+    }, [isLoadingMore, hasMore, isLoading, fetchFoodHistory, page, sortOption, timeUnit, selectedDate, weeksAgo, selectedMonth]);
 
     // Enhanced compact time unit selector with loading states
     const renderCompactTimeSelector = () => {
@@ -967,98 +951,195 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
         )
     }
 
-    // Enhanced render function with animations
-    const renderFoodItem = useCallback(
-        ({ item, index }: { item: FoodItem; index: number }) => {
-            const formattedDate = formatDate(item.createdAt)
-            const isDeleting = item.isDeleting || false
+    // Define props for FoodItemCard
+    interface FoodItemCardProps {
+        item: FoodItem;
+        index: number;
+        listFadeAnim: Animated.Value;
+        listSlideAnim: Animated.Value;
+        onOpenImage: (uri: string) => void;
+        onStartEdit: (item: FoodItem) => void;
+        onDeleteItemConfirmation: (item: FoodItem) => void;
+    }
 
-            return (
-                <Animated.View
-                    style={{
-                        opacity: listFadeAnim,
-                        transform: [
-                            { translateY: listSlideAnim },
-                            {
-                                translateY: listSlideAnim.interpolate({
-                                    inputRange: [-20, 0],
-                                    outputRange: [-20 + index * 2, index * 2],
-                                    extrapolate: "clamp",
-                                }),
-                            },
-                        ],
-                    }}
-                >
-                    <View style={[sharedStyles.foodCard, isDeleting && { opacity: 0.9 }]}>
-                        {/* Delete Loading Overlay */}
-                        {isDeleting && <DeleteLoadingOverlay />}
+    // Custom comparison function for FoodItemCard
+    const areFoodItemCardsEqual = (
+        prevProps: Readonly<FoodItemCardProps>,
+        nextProps: Readonly<FoodItemCardProps>,
+    ): boolean => {
+        // If index changes, we need to re-render for animation if item is the same.
+        // However, if item ID is different, it's a new item at that index.
+        if (prevProps.item.id === nextProps.item.id && prevProps.index !== nextProps.index) {
+            return false;
+        }
 
-                        <View style={sharedStyles.foodCardHeader}>
-                            <Text style={sharedStyles.foodName}>{item.predictName}</Text>
-                            <View style={sharedStyles.actionButtons}>
-                                <TouchableOpacity
-                                    style={sharedStyles.editButton}
-                                    onPress={() => startEditing(item)}
-                                    disabled={isDeleting}
-                                >
-                                    <Ionicons name="create-outline" size={18} color={isDeleting ? "#ccc" : "#3498db"} />
-                                </TouchableOpacity>
-                                <TouchableOpacity
-                                    style={[sharedStyles.deleteButton, isDeleting && { opacity: 0.5 }]}
-                                    onPress={() => handleDeleteWithConfirmation(item)}
-                                    disabled={isDeleting}
-                                >
-                                    {isDeleting ? (
-                                        <Ionicons name="reload-outline" size={18} color="#e74c3c" />
-                                    ) : (
-                                        <Ionicons name="trash-outline" size={18} color="#e74c3c" />
-                                    )}
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                        <Text style={sharedStyles.foodCalories}>{item.calo} calories</Text>
+        // If animated values change (shouldn't by reference, but good practice)
+        if (
+            prevProps.listFadeAnim !== nextProps.listFadeAnim ||
+            prevProps.listSlideAnim !== nextProps.listSlideAnim
+        ) {
+            return false;
+        }
 
-                        <View style={sharedStyles.imagesContainer}>
+        // If callbacks change (shouldn't if memoized correctly in parent)
+        if (
+            prevProps.onOpenImage !== nextProps.onOpenImage ||
+            prevProps.onStartEdit !== nextProps.onStartEdit ||
+            prevProps.onDeleteItemConfirmation !== nextProps.onDeleteItemConfirmation
+        ) {
+            return false;
+        }
+
+        // Compare item properties
+        const pItem = prevProps.item;
+        const nItem = nextProps.item;
+
+        return (
+            pItem.id === nItem.id &&
+            pItem.predictName === nItem.predictName &&
+            pItem.calo === nItem.calo &&
+            pItem.comment === nItem.comment &&
+            pItem.createdAt === nItem.createdAt && // Direct comparison for string
+            pItem.confidencePercentage === nItem.confidencePercentage &&
+            pItem.isDeleting === nItem.isDeleting &&
+            pItem.publicUrl.originImage === nItem.publicUrl.originImage &&
+            pItem.publicUrl.segmentationImage === nItem.publicUrl.segmentationImage
+        );
+    };
+
+const FoodItemCard: React.FC<FoodItemCardProps> = React.memo(
+    ({
+        item,
+        index,
+        listFadeAnim,
+        listSlideAnim,
+        onOpenImage, // Renamed from openImageModal for clarity within card
+        onStartEdit, // Renamed from startEditing
+        onDeleteItemConfirmation, // Renamed from handleDeleteWithConfirmation
+    }) => {
+        const formattedDate = useMemo(() => formatDate(item.createdAt), [item.createdAt]);
+        const isDeleting = item.isDeleting || false
+
+        // Callbacks specific to this item, using the passed-in handlers
+        const handleOpenOriginImage = useCallback(() => {
+            onOpenImage(item.publicUrl.originImage);
+        }, [onOpenImage, item.publicUrl.originImage]);
+
+        const handleOpenSegmentationImage = useCallback(() => {
+            onOpenImage(item.publicUrl.segmentationImage);
+        }, [onOpenImage, item.publicUrl.segmentationImage]);
+        
+        const handleEdit = useCallback(() => {
+            onStartEdit(item);
+        }, [onStartEdit, item]);
+
+        const handleDelete = useCallback(() => {
+            onDeleteItemConfirmation(item);
+        }, [onDeleteItemConfirmation, item]);
+
+
+        return (
+            <Animated.View
+                style={{
+                    opacity: listFadeAnim,
+                    transform: [
+                        { translateY: listSlideAnim },
+                        {
+                            translateY: listSlideAnim.interpolate({
+                                inputRange: [-20, 0],
+                                outputRange: [-20 + index * 2, index * 2],
+                                extrapolate: "clamp",
+                            }),
+                        },
+                    ],
+                }}
+            >
+                <View style={[sharedStyles.foodCard, isDeleting && { opacity: 0.9 }]}>
+                    {/* Delete Loading Overlay */}
+                    {isDeleting && <DeleteLoadingOverlay />}
+
+                    <View style={sharedStyles.foodCardHeader}>
+                        <Text style={sharedStyles.foodName}>{item.predictName}</Text>
+                        <View style={sharedStyles.actionButtons}>
                             <TouchableOpacity
-                                style={sharedStyles.imageWrapper}
-                                onPress={() => openImageModal(item.publicUrl.originImage)}
-                                activeOpacity={0.9}
+                                style={sharedStyles.editButton}
+                                onPress={handleEdit} // Use internal handler
                                 disabled={isDeleting}
                             >
-                                <Image
-                                    source={{ uri: item.publicUrl.originImage }}
-                                    style={sharedStyles.thumbnailImage}
-                                    resizeMode="contain"
-                                />
+                                <Ionicons name="create-outline" size={18} color={isDeleting ? "#ccc" : "#3498db"} />
                             </TouchableOpacity>
-
                             <TouchableOpacity
-                                style={sharedStyles.imageWrapper}
-                                onPress={() => openImageModal(item.publicUrl.segmentationImage)}
-                                activeOpacity={0.9}
+                                style={[sharedStyles.deleteButton, isDeleting && { opacity: 0.5 }]}
+                                onPress={handleDelete} // Use internal handler
                                 disabled={isDeleting}
                             >
-                                <Image
-                                    source={{ uri: item.publicUrl.segmentationImage }}
-                                    style={sharedStyles.thumbnailImage}
-                                    resizeMode="contain"
-                                />
+                                {isDeleting ? (
+                                    <Ionicons name="reload-outline" size={18} color="#e74c3c" />
+                                ) : (
+                                    <Ionicons name="trash-outline" size={18} color="#e74c3c" />
+                                )}
                             </TouchableOpacity>
-                        </View>
-
-                        <Text style={sharedStyles.foodDate}>{formattedDate}</Text>
-                        <Text style={sharedStyles.confidenceText}>Confidence: {item.confidencePercentage}</Text>
-
-                        <View style={sharedStyles.commentContainer}>
-                            <Text style={sharedStyles.commentLabel}>Notes:</Text>
-                            <Text style={sharedStyles.foodComment}>{item.comment ? item.comment : "No notes"}</Text>
                         </View>
                     </View>
-                </Animated.View>
-            )
-        },
-        [openImageModal, handleDeleteItem, startEditing, listFadeAnim, listSlideAnim, fetchData, handleDeleteWithConfirmation],
-    )
+                    <Text style={sharedStyles.foodCalories}>{item.calo} calories</Text>
+
+                    <View style={sharedStyles.imagesContainer}>
+                        <TouchableOpacity
+                            style={sharedStyles.imageWrapper}
+                            onPress={handleOpenOriginImage} // Use internal handler
+                            activeOpacity={0.9}
+                            disabled={isDeleting}
+                        >
+                            <Image
+                                source={{ uri: item.publicUrl.originImage }}
+                                style={sharedStyles.thumbnailImage}
+                                resizeMode="contain"
+                            />
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={sharedStyles.imageWrapper}
+                            onPress={handleOpenSegmentationImage} // Use internal handler
+                            activeOpacity={0.9}
+                            disabled={isDeleting}
+                        >
+                            <Image
+                                source={{ uri: item.publicUrl.segmentationImage }}
+                                style={sharedStyles.thumbnailImage}
+                                resizeMode="contain"
+                            />
+                        </TouchableOpacity>
+                    </View>
+
+                    <Text style={sharedStyles.foodDate}>{formattedDate}</Text>
+                    <Text style={sharedStyles.confidenceText}>Confidence: {item.confidencePercentage}</Text>
+
+                    <View style={sharedStyles.commentContainer}>
+                        <Text style={sharedStyles.commentLabel}>Notes:</Text>
+                        <Text style={sharedStyles.foodComment}>{item.comment ? item.comment : "No notes"}</Text>
+                    </View>
+                </View>
+            </Animated.View>
+        )
+    },
+    areFoodItemCardsEqual // Attach the custom comparison function here
+)
+
+    // Ensure renderItem is memoized and optimized
+    const renderFoodItem = useCallback(
+        ({ item, index }: { item: FoodItem; index: number }) => (
+            <FoodItemCard
+                item={item}
+                index={index}
+                listFadeAnim={listFadeAnim}
+                listSlideAnim={listSlideAnim}
+                onOpenImage={openImageModal}
+                onStartEdit={startEditing}
+                onDeleteItemConfirmation={handleDeleteWithConfirmation}
+            />
+        ),
+        [listFadeAnim, listSlideAnim, openImageModal, startEditing, handleDeleteWithConfirmation]
+    );
 
     // Enhanced empty state with animation
     const renderEmpty = useCallback(() => {
@@ -1079,8 +1160,28 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
                     <Text style={sharedStyles.retryButtonText}>Retry</Text>
                 </TouchableOpacity>
             </Animated.View>
-        )
-    }, [isLoading, fetchData, timeUnit, listFadeAnim, listSlideAnim])
+        )    }, [isLoading, fetchData, timeUnit, listFadeAnim, listSlideAnim])
+    const uniqueFoodItems = useMemo(() => {
+        const seenIds = new Set<string>();
+        return foodItems.filter(item => {
+            if (seenIds.has(item.id)) {
+                // console.warn(`Duplicate item ID found and removed: ${item.id}`); // Optional: for debugging
+                return false;
+            }
+            seenIds.add(item.id);
+            return true;
+        });
+    }, [foodItems]);
+
+    // Stable keyExtractor
+    const keyExtractor = useCallback((item: FoodItem) => item.id, []);
+
+    // Footer component for loading more data
+    const renderFooter = useCallback(() => {
+        if (!isLoadingMore) return null
+
+        return <ActivityIndicator size="small" color="#0066CC" />
+    }, [isLoadingMore])
 
     // Main render with enhanced loading states
     if (isLoading && !isInitialized) {
@@ -1098,11 +1199,9 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
                 <TouchableOpacity style={sharedStyles.retryButton} onPress={() => fetchData()}>
                     <Text style={sharedStyles.retryButtonText}>Retry</Text>
                 </TouchableOpacity>
-            </View>
-        )
+            </View>        )
     }
-
-    // Create header component for FlatList
+      // Create header component for FlatList
     const ListHeaderComponent = () => (
         <View>
             {renderCompactTimeSelector()}
@@ -1110,21 +1209,31 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
                 <Text style={sharedStyles.periodHeaderText}>{getTimePeriodLabel()}</Text>
             </View>
         </View>
-    )
-
+    );
     return (
         <View style={sharedStyles.container}>
             <FlatList
                 ref={flatListRef}
-                data={foodItems}
+                data={uniqueFoodItems}
                 renderItem={renderFoodItem}
-                keyExtractor={(item) => item.id}
-                contentContainerStyle={sharedStyles.listContainer}
+                keyExtractor={keyExtractor}
+                contentContainerStyle={[
+                    sharedStyles.listContainer,
+                    { paddingBottom: Math.ceil(uniqueFoodItems.length / 10) * 30 } 
+                ]}
                 showsVerticalScrollIndicator={false}
                 ListEmptyComponent={renderEmpty}
                 ListHeaderComponent={ListHeaderComponent}
+                ListFooterComponent={renderFooter}
                 onScroll={handleScroll}
-                scrollEventThrottle={16}
+                scrollEventThrottle={16}                
+                onEndReached={handleLoadMore}
+                onEndReachedThreshold={0.5}
+                initialNumToRender={10} 
+                windowSize={15} // Increased for better performance
+                maxToRenderPerBatch={10} 
+                updateCellsBatchingPeriod={100} // Adjusted for smoother updates
+                removeClippedSubviews // Enabled for Android performance
                 refreshControl={
                     <RefreshControl
                         refreshing={isRefreshing}

@@ -534,8 +534,7 @@ const ImageModal: React.FC<{
                     onClick={(e) => e.stopPropagation()}
                 >
                     <img
-                        src={imageUri || "/placeholder.svg"}
-                        alt="Full size"
+                        src={imageUri}
                         style={{ maxWidth: "100%", maxHeight: "calc(90vh - 50px)", borderRadius: 8, objectFit: "contain" }}
                     />
                 </div>
@@ -677,14 +676,6 @@ const areFoodHistoryItemsEqual = (prevProps: Readonly<FoodHistoryItemProps>, nex
 
     const pItem = prevProps.item;
     const nItem = nextProps.item;
-
-    // Robustly compare createdAt (handles Date objects or primitives)
-    // Since FoodItem.createdAt is string, direct comparison is fine.
-    // const createdAtEqual = (
-    //     pItem.createdAt instanceof Date && nItem.createdAt instanceof Date ?
-    //     pItem.createdAt.getTime() === nItem.createdAt.getTime() :
-    //     pItem.createdAt === nItem.createdAt
-    // );
 
     return pItem.id === nItem.id &&
         pItem.predictName === nItem.predictName &&
