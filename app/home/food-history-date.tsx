@@ -1194,10 +1194,38 @@ const FoodItemCard: React.FC<FoodItemCardProps> = React.memo(
 
     // Footer component for loading more data
     const renderFooter = useCallback(() => {
-        if (!isLoadingMore) return null
+        if (!isLoadingMore) return null;
 
-        return <ActivityIndicator size="small" color="#0066CC" />
-    }, [isLoadingMore])
+        return (
+            <View style={sharedStyles.footerLoader}>
+                <ActivityIndicator size="small" color="#0066CC" />
+                <Text style={sharedStyles.loadingMoreText}>Loading more...</Text>
+            </View>
+        );
+    }, [isLoadingMore]);
+
+    // Render end of list message
+    const renderEndOfList = useCallback(() => {
+        // Use uniqueFoodItems.length to check if the list is empty
+        if (isLoadingMore || hasMore || uniqueFoodItems.length === 0) return null;
+
+        return (
+            <View style={sharedStyles.endOfListContainer}>
+                <Text style={sharedStyles.endOfListText}>No more items to load</Text>
+            </View>
+        );
+    }, [isLoadingMore, hasMore, uniqueFoodItems.length]); // Add uniqueFoodItems.length
+
+    // Stable ListFooterComponent renderer
+    const listFooterComponentRenderer = useCallback(() => {
+        const dynamicMarginTop = Math.ceil(uniqueFoodItems.length / 10) * 20;
+        return (
+            <View style={{ marginTop: dynamicMarginTop }}>
+                {renderFooter()}
+                {renderEndOfList()}
+            </View>
+        );
+    }, [renderFooter, renderEndOfList, uniqueFoodItems.length]); // Add uniqueFoodItems.length
 
     // Main render with enhanced loading states
     if (isLoading && !isInitialized) {
@@ -1233,14 +1261,14 @@ const FoodItemCard: React.FC<FoodItemCardProps> = React.memo(
                 data={uniqueFoodItems}
                 renderItem={renderFoodItem}
                 keyExtractor={keyExtractor}
-                contentContainerStyle={[
-                    sharedStyles.listContainer,
-                    { paddingBottom: Math.ceil(uniqueFoodItems.length / 10) * 30 } 
-                ]}
+                contentContainerStyle={
+                    sharedStyles.listContainer
+                    // Removed paddingBottom: Math.ceil(uniqueFoodItems.length / 10) * 30 
+                }
                 showsVerticalScrollIndicator={false}
                 ListEmptyComponent={renderEmpty}
                 ListHeaderComponent={ListHeaderComponent}
-                ListFooterComponent={renderFooter}
+                ListFooterComponent={listFooterComponentRenderer} // Updated to use the combined renderer
                 onScroll={handleScroll}
                 scrollEventThrottle={16}                
                 onEndReached={handleLoadMore}
