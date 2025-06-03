@@ -1,5 +1,6 @@
 "use client"
 
+import { MAX_CALO_DISPLAY } from "@/constants/general_constants"
 import { URL_USER_PROFILE } from "@/constants/url_constants"
 import { getData, patchData } from "@/context/request_context"
 import { useTabReload } from "@/hooks/use-tab-reload"
@@ -388,17 +389,17 @@ const Personal = () => {
         return option ? option.label : "Day"
     }
 
-    const calculateCaloriePercentage = () => {
+    const calculateCaloriePercentage = (): number => {
         if (!profile?.totalCalories || !profile?.calorieLimit || profile.calorieLimit === 0) {
             return 0
         }
         const percentage = (profile.totalCalories / profile.calorieLimit) * 100
-        return Math.round(percentage)
+        return percentage >= MAX_CALO_DISPLAY ? parseFloat(percentage.toExponential(2)) : parseFloat(percentage.toFixed(2))
     }
 
     // Determine progress bar color based on percentage
     const getProgressColor = () => {
-        const percentage = calculateCaloriePercentage()
+        const percentage = calculateCaloriePercentage() // Ensure percentage is a number
         if (percentage < 80) return "#4caf50" // Green - good
         if (percentage < 100) return "#ff9800" // Orange - warning
         return "#f44336" // Red - exceeded
@@ -476,7 +477,7 @@ const Personal = () => {
         const str = value.toString()
         // If number is too long, show with limited decimal places
         if (str.length > 10) {
-            if (value >= 1000000) {
+            if (value >= MAX_CALO_DISPLAY) {
                 return value.toExponential(2)
             } else {
                 return value.toFixed(2)
@@ -529,14 +530,10 @@ const Personal = () => {
                         {!isEditing && profile?.totalCalories !== undefined && (
                             <View style={styles.calorieProgressContainer}>
                                 <View style={styles.calorieInfoRow}>
-                                    <Text style={styles.calorieTitle}>Calories Consumed</Text>
+                                    <Text style={styles.calorieTitle}>Calories Consumed (kcal) in {getPeriodLabel(profile.calorieLimitPeriod)}</Text>
                                     <Text style={styles.calorieValue} numberOfLines={1} adjustsFontSizeToFit>
                                         {formatDecimalDisplay(profile.totalCalories)} / {formatDecimalDisplay(profile.calorieLimit)}
                                     </Text>
-                                </View>
-
-                                <View style={styles.caloriePeriodRow}>
-                                    <Text style={styles.periodText}>Period: {getPeriodLabel(profile.calorieLimitPeriod)}</Text>
                                 </View>
 
                                 <View style={styles.progressBarContainer}>
@@ -887,7 +884,6 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 24,
         fontWeight: "bold",
-        color: Colors.darkGray,
     },
     reloadingText: {
         fontSize: 14,
@@ -915,21 +911,21 @@ const styles = StyleSheet.create({
     },
     formContainer: {
         backgroundColor: "#fff",
-        borderRadius: 12,
+        borderRadius: 8,
         padding: 16,
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 3,
-        marginBottom: 16,
         flex: 1,
     },
     calorieProgressContainer: {
         marginBottom: 20,
         backgroundColor: "#f9f9f9",
-        borderRadius: 12,
-        padding: 16,
+        borderRadius: 10,
+        padding: 10,
+        paddingBottom: 15,
         borderWidth: 1,
         borderColor: "#eee",
         shadowColor: "#000",
@@ -939,36 +935,22 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
     calorieInfoRow: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        alignItems: "center",
-        marginBottom: 8,
+        flexDirection: "column",
+        marginBottom: 10,
     },
     calorieTitle: {
-        fontSize: 16,
-        fontWeight: "600",
-        color: "#333",
-        flex: 1,
+        fontWeight: "bold",
+        textAlign: "center", // Center-align the text
     },
     calorieValue: {
-        fontSize: 16,
         fontWeight: "bold",
-        color: Colors.primary,
-        flex: 1,
-        textAlign: "right",
-    },
-    caloriePeriodRow: {
-        marginBottom: 12,
-    },
-    periodText: {
-        fontSize: 14,
-        color: "#666",
-        fontStyle: "italic",
+        color: "#3498db",
+        textAlign: "center", // Center-align the text
     },
     progressBarContainer: {
         height: 24,
         backgroundColor: Colors.borderGray,
-        borderRadius: 12,
+        borderRadius: 8,
         overflow: "hidden",
         position: "relative",
         justifyContent: "center",
@@ -979,7 +961,6 @@ const styles = StyleSheet.create({
         left: 0,
         top: 0,
         height: "100%",
-        borderRadius: 12,
         minWidth: 2,
     },
     progressTextContainer: {
