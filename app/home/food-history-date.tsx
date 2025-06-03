@@ -792,9 +792,11 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
     useEffect(() => {
         if (!isInitialized) {
             // Ensure only page 1 is fetched on initial load
+            // Pass refresh: true for initial load to set up pagination correctly.
             fetchFoodHistory(1, true, undefined, timeUnit, selectedDate, weeksAgo, selectedMonth);
             setIsInitialized(true);
         }
+        // Dependencies are correct for an initial load effect.
     }, [fetchFoodHistory, isInitialized, timeUnit, selectedDate, weeksAgo, selectedMonth])
 
     // FIXED: Register refresh trigger function
@@ -811,9 +813,15 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
     // Fetch data when time unit or related parameters change (but not on initial mount)
     useEffect(() => {
         if (isInitialized) {
-            fetchData(false, undefined, true)
+            // Pass true for refresh to ensure pagination is reset in useFoodHistory
+            // when filter parameters change.
+            fetchData(true, undefined, true)
         }
-    }, [timeUnit, selectedDate, weeksAgo, selectedMonth])
+        // Dependencies: when timeUnit, selectedDate, weeksAgo, or selectedMonth change,
+        // fetchData gets a new reference (due to its own dependencies on these state vars),
+        // which correctly triggers this effect.
+        // isInitialized ensures it only runs after the initial setup.
+    }, [timeUnit, selectedDate, weeksAgo, selectedMonth, fetchData, isInitialized]);
 
     // Handle sort option change with enhanced animations
     useEffect(() => {
@@ -831,12 +839,16 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
 
     // Handle time unit change with animation
     const handleTimeUnitChange = useCallback((unit: TimeUnit) => {
-        setTimeUnit(unit)
+        setTimeUnit(unit);
+        // The fetchFoodHistory call is removed from here.
+        // The useEffect that depends on [timeUnit, selectedDate, weeksAgo, selectedMonth]
+        // will now be solely responsible for fetching data when these change.
+
         // Reset weeks to 0 when switching to week unit
         if (unit === "week") {
-            setWeeksAgo(0)
+            setWeeksAgo(0);
         }
-    }, [])
+    }, []) // setTimeUnit and setWeeksAgo are stable, so dependencies can be empty.
 
     // Handle date change with animation
     const handleDateChange = useCallback((date: string) => {
@@ -1159,7 +1171,8 @@ const FoodItemCard: React.FC<FoodItemCardProps> = React.memo(
                 ]}
             >
                 <Text style={sharedStyles.emptyText}>No food history found for this {timeUnit}</Text>
-                <TouchableOpacity style={sharedStyles.retryButton} onPress={() => fetchData(false, undefined, true)}>
+                {/* Changed to fetchData(true, ...) for a full refresh on retry */}
+                <TouchableOpacity style={sharedStyles.retryButton} onPress={() => fetchData(true, undefined, true)}>
                     <Text style={sharedStyles.retryButtonText}>Retry</Text>
                 </TouchableOpacity>
             </Animated.View>
