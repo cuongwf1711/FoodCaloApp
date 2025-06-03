@@ -61,7 +61,6 @@ interface ValidationErrors {
     calorieLimit?: string
 }
 
-// Calorie limit period options
 const PERIOD_OPTIONS = [
     { label: "Day", value: "day" },
     { label: "Week", value: "week" },
@@ -660,10 +659,9 @@ const Personal = () => {
                             </View>
                         )}
 
-                        {/* Calorie Limit and Period in one row - Now supports decimals */}
                         <View style={styles.rowContainer}>
                             <View style={[styles.columnContainer, { marginRight: 8 }]}>
-                                <Text style={styles.fieldLabel}>Calorie Limit:</Text>
+                                <Text style={styles.fieldLabel}>Calorie Limit (kcal):</Text>
                                 {isEditing ? (
                                     <>
                                         <TextInput

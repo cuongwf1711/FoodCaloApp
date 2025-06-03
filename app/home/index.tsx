@@ -548,7 +548,7 @@ const ImageModal: React.FC<{
                         maxWidth: "100%",
                         maxHeight: "90%",
                         objectFit: "contain",
-                        borderRadius: 0,
+                        borderRadius: 8,
                         boxShadow: "none",
                     }}
                 />
@@ -1486,8 +1486,6 @@ const Index: React.FC = () => {
 
                 {/* Image Selection Card */}
                 <View style={styles.card}>
-                    <Text style={styles.cardTitle}>Select Image</Text>
-
                     {selectedImage ? (
                         <TouchableOpacity
                             onPress={() => openImageModal(selectedImage.uri)}

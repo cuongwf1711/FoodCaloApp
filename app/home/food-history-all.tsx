@@ -535,7 +535,7 @@ const ImageModal: React.FC<{
                 >
                     <img
                         src={imageUri}
-                        style={{ maxWidth: "100%", maxHeight: "calc(90vh - 50px)", borderRadius: 8, objectFit: "contain" }}
+                        style={{ maxWidth: "100%", maxHeight: "90%", borderRadius: 8, objectFit: "contain" }}
                     />
                 </div>
             </div>
