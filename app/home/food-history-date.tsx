@@ -982,44 +982,50 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
         prevProps: Readonly<FoodItemCardProps>,
         nextProps: Readonly<FoodItemCardProps>,
     ): boolean => {
-        // If index changes, we need to re-render for animation if item is the same.
-        // However, if item ID is different, it's a new item at that index.
-        if (prevProps.item.id === nextProps.item.id && prevProps.index !== nextProps.index) {
+        // If item IDs are different, they are different items, so re-render.
+        if (prevProps.item.id !== nextProps.item.id) {
             return false;
         }
 
-        // If animated values change (shouldn't by reference, but good practice)
-        if (
-            prevProps.listFadeAnim !== nextProps.listFadeAnim ||
-            prevProps.listSlideAnim !== nextProps.listSlideAnim
-        ) {
-            return false;
-        }
+        // Item IDs are the same. Now check if content or other relevant props changed.
 
-        // If callbacks change (shouldn't if memoized correctly in parent)
+        // The listFadeAnim and listSlideAnim Animated.Value object references are stable
+        // as they are initialized via useState in the parent.
+        // React.memo compares props to decide if a re-render is needed.
+        // Changes to the *values* of these Animated.Value objects will trigger
+        // updates in the Animated.View wrapping the card, not a full React re-render
+        // of the card component if other props are equal.
+
+        // If callbacks change (references should be stable due to useCallback in parent)
         if (
             prevProps.onOpenImage !== nextProps.onOpenImage ||
             prevProps.onStartEdit !== nextProps.onStartEdit ||
             prevProps.onDeleteItemConfirmation !== nextProps.onDeleteItemConfirmation
         ) {
+            // console.warn("Callback changed reference, re-rendering FoodItemCard"); // For debugging
             return false;
         }
+        
+        // At this point, item.id is the same, and critical callbacks have the same reference.
+        // The index prop might have changed, but since FoodItemCard's rendering (including animations)
+        // no longer directly depends on `index` for visual output, an index change alone
+        // shouldn't force a re-render if the item content is identical.
 
-        // Compare item properties
         const pItem = prevProps.item;
         const nItem = nextProps.item;
 
-        return (
-            pItem.id === nItem.id &&
+        // Compare all relevant item properties
+        const contentIsSame =
             pItem.predictName === nItem.predictName &&
             pItem.calo === nItem.calo &&
             pItem.comment === nItem.comment &&
-            pItem.createdAt === nItem.createdAt && // Direct comparison for string
+            pItem.createdAt === nItem.createdAt &&
             pItem.confidencePercentage === nItem.confidencePercentage &&
             pItem.isDeleting === nItem.isDeleting &&
             pItem.publicUrl.originImage === nItem.publicUrl.originImage &&
-            pItem.publicUrl.segmentationImage === nItem.publicUrl.segmentationImage
-        );
+            pItem.publicUrl.segmentationImage === nItem.publicUrl.segmentationImage;
+
+        return contentIsSame;
     };
 
 const FoodItemCard: React.FC<FoodItemCardProps> = React.memo(
@@ -1059,13 +1065,14 @@ const FoodItemCard: React.FC<FoodItemCardProps> = React.memo(
                     opacity: listFadeAnim,
                     transform: [
                         { translateY: listSlideAnim },
-                        {
-                            translateY: listSlideAnim.interpolate({
-                                inputRange: [-20, 0],
-                                outputRange: [-20 + index * 2, index * 2],
-                                extrapolate: "clamp",
-                            }),
-                        },
+                        // Removed index-dependent stagger animation for performance
+                        // {
+                        //     translateY: listSlideAnim.interpolate({
+                        //         inputRange: [-20, 0],
+                        //         outputRange: [-20 + index * 2, index * 2],
+                        //         extrapolate: "clamp",
+                        //     }),
+                        // },
                     ],
                 }}
             >
@@ -1218,14 +1225,16 @@ const FoodItemCard: React.FC<FoodItemCardProps> = React.memo(
 
     // Stable ListFooterComponent renderer
     const listFooterComponentRenderer = useCallback(() => {
-        const dynamicMarginTop = Math.ceil(uniqueFoodItems.length / 10) * 20;
+        // Removed dynamicMarginTop as it was causing marginBottom in FlatList's contentContainerStyle
+        // The paddingBottom in listContainer should handle spacing at the end.
+        // If specific margin is needed for the footer itself, it can be added here.
         return (
-            <View style={{ marginTop: dynamicMarginTop }}>
+            <View> 
                 {renderFooter()}
                 {renderEndOfList()}
             </View>
         );
-    }, [renderFooter, renderEndOfList, uniqueFoodItems.length]); // Add uniqueFoodItems.length
+    }, [renderFooter, renderEndOfList]); // Removed uniqueFoodItems.length, not directly needed for this structure
 
     // Main render with enhanced loading states
     if (isLoading && !isInitialized) {
@@ -1274,7 +1283,7 @@ const FoodItemCard: React.FC<FoodItemCardProps> = React.memo(
                 onEndReached={handleLoadMore}
                 onEndReachedThreshold={0.5}
                 initialNumToRender={10} 
-                windowSize={15} // Increased for better performance
+                windowSize={21} // Default is 21. Larger values render more items offscreen.
                 maxToRenderPerBatch={10} 
                 updateCellsBatchingPeriod={100} // Adjusted for smoother updates
                 removeClippedSubviews // Enabled for Android performance
