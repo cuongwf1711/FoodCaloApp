@@ -136,7 +136,6 @@ export default function SignIn() {
                             if (passwordError) setPasswordError("")
                         }}
                         error={passwordError}
-                        hint="Password must be at least 8 characters, including letters and numbers"
                         textContentType="password"
                         autoComplete="password"
                     />

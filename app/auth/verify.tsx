@@ -9,6 +9,7 @@ import { getPasswordErrorMessage } from "@/utils/validation"
 import { useLocalSearchParams, useRouter } from "expo-router"
 import { useState } from "react"
 import {
+    ActivityIndicator,
     KeyboardAvoidingView,
     ScrollView,
     StyleSheet,
@@ -137,26 +138,34 @@ export default function Verify() {
 
                     <View style={styles.formGroup}>
                         <Text style={styles.label}>Verification Code</Text>
-                        <TextInput
-                            placeholder="Enter code from email"
-                            value={otp}
-                            onChangeText={(t) => {
-                                setOtp(t)
-                                otpError && setOtpError("")
-                            }}
-                            style={[styles.input, otpError && styles.inputError]}
-                            keyboardType="number-pad"
-                            placeholderTextColor="#999"
-                        />
+                        <View style={styles.inputContainer}>
+                            <TextInput
+                                placeholder="Enter code from email"
+                                value={otp}
+                                onChangeText={(t) => {
+                                    setOtp(t)
+                                    otpError && setOtpError("")
+                                }}
+                                style={[styles.inputWithButton, otpError && styles.inputError]}
+                                keyboardType="number-pad"
+                                placeholderTextColor="#999"
+                            />
+                            <TouchableOpacity
+                                style={[styles.resendButtonInside, resendLoading && styles.resendButtonDisabled]}
+                                onPress={handleResendCode}
+                                disabled={resendLoading}
+                            >
+                                <View style={styles.resendContent}>
+                                    {resendLoading ? (
+                                        <ActivityIndicator size="small" color="#007AFF" />
+                                    ) : (
+                                        <Text style={styles.resendTextInside}>Resend Code</Text>
+                                    )}
+                                </View>
+                            </TouchableOpacity>
+                        </View>
                         {otpError ? <Text style={styles.errorText}>{otpError}</Text> : null}
                         <Text style={styles.hint}>The verification code has been sent to your email.</Text>
-                        <TouchableOpacity
-                            style={[styles.resendButton, resendLoading && styles.resendButtonDisabled]}
-                            onPress={handleResendCode}
-                            disabled={resendLoading}
-                        >
-                            <Text style={styles.resendText}>{resendLoading ? "Resending..." : "Resend Code"}</Text>
-                        </TouchableOpacity>
                     </View>
                     <PasswordInput
                         label="New Password"
@@ -236,15 +245,43 @@ const styles = StyleSheet.create({
         color: "#333", // Add explicit text color to ensure visibility on all platforms
     },
     inputError: { borderColor: "red" },
-    errorText: { color: "red", fontSize: 14, marginTop: 4 },
-    hint: { fontSize: 12, color: "#666", marginTop: 4 },
-    resendButton: {
-        marginTop: 8,
-        alignSelf: "flex-end",
-        padding: 8,
+    inputContainer: {
+        position: "relative",
+    },
+    inputWithButton: {
+        height: 50,
+        borderWidth: 1,
+        borderColor: "#ddd",
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingRight: 80,
+        fontSize: 16,
+        backgroundColor: "white",
+        color: "#333",
+    },
+    resendButtonInside: {
+        position: "absolute",
+        right: 8,
+        top: "50%",
+        transform: [{ translateY: -12 }],
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+    },
+    resendContent: {
+        flexDirection: "row",
+        alignItems: "center",
+    },
+    loadingSpinner: {
+        marginRight: 4,
+    },
+    resendTextInside: {
+        color: "#007AFF",
+        fontSize: 12,
+        fontWeight: "500",
     },
     resendButtonDisabled: { opacity: 0.6 },
-    resendText: { color: "#007AFF", fontSize: 14, fontWeight: "500" },
+    errorText: { color: "red", fontSize: 14, marginTop: 4 },
+    hint: { fontSize: 12, color: "#666", marginTop: 4 },
     verifyButton: {
         backgroundColor: "#007AFF",
         height: 50,
