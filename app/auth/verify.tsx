@@ -27,7 +27,7 @@ import { URL_FORGOT_PASSWORD, URL_RESEND_EMAIL, URL_SET_PASSWORD, URL_SIGN_UP } 
 export default function Verify() {
     const { email, mode } = useLocalSearchParams()
     const { height } = useWindowDimensions()
-    const keyboardVerticalOffset = height * 0.1 // Tính offset động dựa trên chiều cao màn hình
+    const keyboardVerticalOffset = height * 0.1 // Calculate dynamic offset based on screen height
     const [otp, setOtp] = useState("")
     const [password, setPassword] = useState("")
     const [confirmPassword, setConfirmPassword] = useState("")
