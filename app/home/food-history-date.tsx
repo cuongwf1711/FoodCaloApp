@@ -34,6 +34,7 @@ import {
     useFoodHistory,
     WeekInput,
 } from "@/utils/food-history-utils";
+import { formatDecimalDisplay } from "@/utils/number-utils";
 
 // Platform-specific module imports for gesture handling
 let GestureHandlerModule: any; // Renamed to avoid conflict
@@ -1034,9 +1035,9 @@ const FoodItemCard: React.FC<FoodItemCardProps> = React.memo(
         index,
         listFadeAnim,
         listSlideAnim,
-        onOpenImage, // Renamed from openImageModal for clarity within card
-        onStartEdit, // Renamed from startEditing
-        onDeleteItemConfirmation, // Renamed from handleDeleteWithConfirmation
+        onOpenImage,
+        onStartEdit,
+        onDeleteItemConfirmation,
     }) => {
         const formattedDate = useMemo(() => formatDate(item.createdAt), [item.createdAt]);
         const isDeleting = item.isDeleting || false
@@ -1103,7 +1104,7 @@ const FoodItemCard: React.FC<FoodItemCardProps> = React.memo(
                             </TouchableOpacity>
                         </View>
                     </View>
-                    <Text style={sharedStyles.foodCalories}>{item.calo} kilocalories</Text>
+                    <Text style={sharedStyles.foodCalories}>{formatDecimalDisplay(item.calo)} kilocalories</Text>
 
                     <View style={sharedStyles.imagesContainer}>
                         <TouchableOpacity

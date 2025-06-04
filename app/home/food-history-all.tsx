@@ -28,6 +28,7 @@ import {
     styles as sharedStyles,
     useFoodHistory,
 } from "@/utils/food-history-utils";
+import { formatDecimalDisplay } from "@/utils/number-utils";
 
 import { showMessage } from "@/utils/showMessage";
 import * as FileSystem from 'expo-file-system';
@@ -743,7 +744,7 @@ const FoodHistoryItem: React.FC<FoodHistoryItemProps> = React.memo(({
                     </TouchableOpacity>
                 </View>
             </View>
-            <Text style={sharedStyles.foodCalories}>{item.calo} kilocalories</Text>
+            <Text style={sharedStyles.foodCalories}>{formatDecimalDisplay(item.calo)} kilocalories</Text>
 
             <View style={sharedStyles.imagesContainer}>
                 <TouchableOpacity

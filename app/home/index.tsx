@@ -28,6 +28,7 @@ import {
 import { useTabReload } from "@/hooks/use-tab-reload"
 import { Colors } from "@/styles/colors"
 import { formatDate, styles as sharedStyles } from "@/utils/food-history-utils"
+import { formatDecimalDisplay } from "@/utils/number-utils"
 
 // Add CSS animation for web spinning effect - only on client side
 if (typeof window !== "undefined" && Platform.OS === "web") {
@@ -1616,7 +1617,9 @@ const Index: React.FC = () => {
                                 </TouchableOpacity>
                             </View>
                         </View>
-                                <Text style={sharedStyles.foodCalories}>{result.calo} kilocalories</Text>
+                        <Text style={sharedStyles.foodCalories} numberOfLines={1} adjustsFontSizeToFit>
+                            {formatDecimalDisplay(result.calo)} kilocalories
+                        </Text>
 
                         <View style={sharedStyles.imagesContainer}>
                             <TouchableOpacity

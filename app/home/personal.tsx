@@ -5,6 +5,7 @@ import { URL_USER_PROFILE } from "@/constants/url_constants"
 import { getData, patchData } from "@/context/request_context"
 import { useTabReload } from "@/hooks/use-tab-reload"
 import { Colors } from "@/styles/colors"
+import { formatDecimalDisplay } from "@/utils/number-utils"
 import { showMessage } from "@/utils/showMessage"
 import { StatusBar } from "expo-status-bar"
 import { useEffect, useRef, useState } from "react"
@@ -469,23 +470,6 @@ const Personal = () => {
         return value.toString()
     }
 
-    // Format decimal number for display - truncate if too long
-    const formatDecimalDisplay = (value: number | null | undefined): string => {
-        if (value === null || value === undefined) {
-            return "..."
-        }
-        const str = value.toString()
-        // If number is too long, show with limited decimal places
-        if (str.length > 10) {
-            if (value >= MAX_CALO_DISPLAY) {
-                return value.toExponential(2)
-            } else {
-                return value.toFixed(2)
-            }
-        }
-        return str
-    }
-
     // Handle decimal input changes with text state management and strict validation
     const handleDecimalInputChange = (field: keyof UserProfile, text: string, setInputText: (text: string) => void) => {
         // Validate and clean the input
@@ -766,7 +750,7 @@ const Personal = () => {
                                     </>
                                 ) : (
                                     <Text style={styles.fieldValue} numberOfLines={1} adjustsFontSizeToFit>
-                                        {formatDecimalDisplay(profile?.lengthReferencePoint || 0)}
+                                        {profile?.lengthReferencePoint}
                                     </Text>
                                 )}
                             </View>
@@ -789,7 +773,7 @@ const Personal = () => {
                                     </>
                                 ) : (
                                     <Text style={styles.fieldValue} numberOfLines={1} adjustsFontSizeToFit>
-                                        {formatDecimalDisplay(profile?.widthReferencePoint || 0)}
+                                        {profile?.widthReferencePoint}
                                     </Text>
                                 )}
                             </View>
@@ -800,8 +784,8 @@ const Personal = () => {
                             <Text style={styles.fieldLabel}>Area Finger (cm²):</Text>
                             <Text style={styles.fieldValue} numberOfLines={1} adjustsFontSizeToFit>
                                 {isEditing
-                                    ? formatDecimalDisplay(calculateAreaReferencePoint())
-                                    : formatDecimalDisplay(profile?.areaReferencePoint || 0)}
+                                    ? calculateAreaReferencePoint()
+                                    : profile?.areaReferencePoint}
                                 {isEditing && <Text style={styles.calculatedText}> (length x width)</Text>}
                             </Text>
                         </View>
