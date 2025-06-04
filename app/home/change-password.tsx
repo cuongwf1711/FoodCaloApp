@@ -1,6 +1,7 @@
 "use client"
 
 // Change Password Screen - Allows users to update their password securely
+import { PasswordInput } from "@/components/PasswordInput"
 import { SIGNIN_ROUTE } from "@/constants/router_constants"
 import { ACCESS_TOKEN, REFRESH_TOKEN, USER_EMAIL } from "@/constants/token_constants"
 import { AuthContext } from "@/context/AuthContext"
@@ -16,7 +17,6 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    TextInput,
     TouchableOpacity,
     View
 } from "react-native"
@@ -106,68 +106,52 @@ export default function ChangePassword() {
                     <Text style={styles.pageTitle}>Change Password</Text>
                     <Text style={styles.description}>
                         To secure your account, please enter your current password and your new password
-                    </Text>
+                    </Text>                    <View style={styles.form}>
+                        <PasswordInput
+                            label="Current Password"
+                            placeholder="Enter your current password"
+                            value={oldPassword}
+                            onChangeText={(text) => {
+                                setOldPassword(text)
+                                if (oldPasswordError) setOldPasswordError("")
+                            }}
+                            error={oldPasswordError}
+                            containerStyle={styles.inputContainer}
+                        />
 
-                    <View style={styles.form}>
-                        <View style={styles.inputContainer}>
-                            <Text style={styles.label}>Current Password</Text>
-                            <TextInput
-                                placeholder="Enter your current password"
-                                value={oldPassword}
-                                onChangeText={(text) => {
-                                    setOldPassword(text)
-                                    if (oldPasswordError) setOldPasswordError("")
-                                }}
-                                secureTextEntry
-                                style={[styles.input, oldPasswordError ? styles.inputError : null]}
-                                placeholderTextColor="#999"
-                            />
-                            {oldPasswordError ? <Text style={styles.errorText}>{oldPasswordError}</Text> : null}
-                        </View>
+                        <PasswordInput
+                            label="New Password"
+                            placeholder="Enter your new password"
+                            value={newPassword}
+                            onChangeText={(text) => {
+                                setNewPassword(text)
+                                if (newPasswordError) setNewPasswordError("")
+                                if (confirmPasswordError && text === confirmPassword) {
+                                    setConfirmPasswordError("")
+                                }
+                                // Clear error if new password is different from old password
+                                if (oldPassword && text !== oldPassword && newPasswordError.includes("different from current")) {
+                                    setNewPasswordError("")
+                                }
+                            }}
+                            error={newPasswordError}
+                            hint="Password must be at least 8 characters, include both letters and numbers, and be different from your current password"
+                            containerStyle={styles.inputContainer}
+                        />
 
-                        <View style={styles.inputContainer}>
-                            <Text style={styles.label}>New Password</Text>
-                            <TextInput
-                                placeholder="Enter your new password"
-                                value={newPassword}
-                                onChangeText={(text) => {
-                                    setNewPassword(text)
-                                    if (newPasswordError) setNewPasswordError("")
-                                    if (confirmPasswordError && text === confirmPassword) {
-                                        setConfirmPasswordError("")
-                                    }
-                                    // Clear error if new password is different from old password
-                                    if (oldPassword && text !== oldPassword && newPasswordError.includes("different from current")) {
-                                        setNewPasswordError("")
-                                    }
-                                }}
-                                secureTextEntry
-                                placeholderTextColor="#999"
-                                style={[styles.input, newPasswordError ? styles.inputError : null]}
-                            />
-                            {newPasswordError ? <Text style={styles.errorText}>{newPasswordError}</Text> : null}
-                            <Text style={styles.passwordHint}>
-                                Password must be at least 8 characters, include both letters and numbers, and be different from your current password
-                            </Text>
-                        </View>
-
-                        <View style={styles.inputContainer}>
-                            <Text style={styles.label}>Confirm New Password</Text>
-                            <TextInput
-                                placeholder="Re-enter your new password"
-                                value={confirmPassword}
-                                onChangeText={(text) => {
-                                    setConfirmPassword(text)
-                                    if (confirmPasswordError && text === newPassword) {
-                                        setConfirmPasswordError("")
-                                    }
-                                }}
-                                secureTextEntry
-                                placeholderTextColor="#999"
-                                style={[styles.input, confirmPasswordError ? styles.inputError : null]}
-                            />
-                            {confirmPasswordError ? <Text style={styles.errorText}>{confirmPasswordError}</Text> : null}
-                        </View>
+                        <PasswordInput
+                            label="Confirm New Password"
+                            placeholder="Re-enter your new password"
+                            value={confirmPassword}
+                            onChangeText={(text) => {
+                                setConfirmPassword(text)
+                                if (confirmPasswordError && text === newPassword) {
+                                    setConfirmPasswordError("")
+                                }
+                            }}
+                            error={confirmPasswordError}
+                            containerStyle={styles.inputContainer}
+                        />
 
                         <TouchableOpacity
                             style={[styles.button, isLoading ? styles.buttonDisabled : null]}
@@ -179,8 +163,7 @@ export default function ChangePassword() {
 
                         <View style={styles.infoContainer}>
                             <Text style={styles.infoText}>
-                                After successfully changing your password, you will be redirected to the login page to sign in with your
-                                new password.
+                                After successfully changing your password, you will be redirected to the login page to sign in with your new password.
                             </Text>
                         </View>
                     </View>

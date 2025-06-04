@@ -1,6 +1,7 @@
 "use client"
 
 // app/signin.tsx
+import { PasswordInput } from "@/components/PasswordInput"
 import { FORGOT_PASSWORD_ROUTE, SIGNUP_ROUTE } from "@/constants/router_constants"
 import { ACCESS_TOKEN, REFRESH_TOKEN, USER_EMAIL } from "@/constants/token_constants"
 import { AuthContext } from "@/context/AuthContext"
@@ -106,9 +107,7 @@ export default function SignIn() {
             <ScrollView contentContainerStyle={styles.scrollContainer}>
                 <View style={styles.container}>
                     <Text style={styles.title}>Sign In</Text>
-                    <Text style={styles.subtitle}>Please sign in to continue</Text>
-
-                    <View style={styles.formGroup}>
+                    <Text style={styles.subtitle}>Please sign in to continue</Text>                    <View style={styles.formGroup}>
                         <Text style={styles.label}>Email</Text>
                         <TextInput
                             placeholder="Enter your email address"
@@ -127,26 +126,19 @@ export default function SignIn() {
                         {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
                     </View>
 
-                    <View style={styles.formGroup}>
-                        <Text style={styles.label}>Password</Text>
-                        <TextInput
-                            placeholder="Enter your password"
-                            value={password}
-                            onChangeText={(text) => {
-                                setPassword(text)
-                                if (passwordError) setPasswordError("")
-                            }}
-                            secureTextEntry
-                            style={[styles.input, passwordError ? styles.inputError : null]}
-                            textContentType="password"
-                            autoComplete="password"
-                            placeholderTextColor="#999"
-                        />
-                        {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
-                        <Text style={styles.passwordHint}>
-                            Password must be at least 8 characters, including letters and numbers
-                        </Text>
-                    </View>
+                    <PasswordInput
+                        label="Password"
+                        placeholder="Enter your password"
+                        value={password}
+                        onChangeText={(text) => {
+                            setPassword(text)
+                            if (passwordError) setPasswordError("")
+                        }}
+                        error={passwordError}
+                        hint="Password must be at least 8 characters, including letters and numbers"
+                        textContentType="password"
+                        autoComplete="password"
+                    />
 
                     <TouchableOpacity
                         style={[styles.signInButton, isLoading ? styles.signInButtonDisabled : null]}

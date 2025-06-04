@@ -1,6 +1,7 @@
 "use client"
 
 // app/verify.tsx
+import { PasswordInput } from "@/components/PasswordInput"
 import { SIGNIN_ROUTE } from "@/constants/router_constants"
 import { postData } from "@/context/request_context"
 import { showMessage } from "@/utils/showMessage"
@@ -120,8 +121,8 @@ export default function Verify() {
             : "Enter the verification code and your new password."
 
     return (
-        <KeyboardAvoidingView behavior="height" style={styles.keyboardAvoid}>
-            <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <KeyboardAvoidingView behavior="padding" style={styles.keyboardAvoid} keyboardVerticalOffset={90}>
+            <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
                 <View style={styles.container}>
                     <Text style={styles.title}>{getTitle()}</Text>
                     <Text style={styles.subtitle}>{getSubtitle()}</Text>
@@ -174,22 +175,17 @@ export default function Verify() {
                         <Text style={styles.hint}>Password must be at least 8 characters with letters and numbers.</Text>
                     </View>
 
-                    <View style={styles.formGroup}>
-                        <Text style={styles.label}>Confirm Password</Text>
-                        <TextInput
-                            placeholder="Re-enter password"
-                            value={confirmPassword}
-                            onChangeText={(t) => {
-                                setConfirmPassword(t)
-                                confirmPasswordError && t === password && setConfirmPasswordError("")
-                            }}
-                            secureTextEntry
-                            style={[styles.input, confirmPasswordError && styles.inputError]}
-                            textContentType="newPassword"
-                            placeholderTextColor="#999"
-                        />
-                        {confirmPasswordError ? <Text style={styles.errorText}>{confirmPasswordError}</Text> : null}
-                    </View>
+                    <PasswordInput
+                        label="Confirm Password"
+                        placeholder="Re-enter password"
+                        value={confirmPassword}
+                        onChangeText={(t) => {
+                            setConfirmPassword(t)
+                            confirmPasswordError && t === password && setConfirmPasswordError("")
+                        }}
+                        error={confirmPasswordError}
+                        textContentType="newPassword"
+                    />
 
                     <TouchableOpacity
                         style={[styles.verifyButton, loading && styles.verifyButtonDisabled]}
