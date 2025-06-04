@@ -455,9 +455,9 @@ export const EditModal: React.FC<{
     const handleSave = () => {
         if (!calories.trim() || isNaN(Number(calories)) || Number(calories) <= 0) {
             if (Platform.OS === "web") {
-                alert("Please enter a valid number of kilocalories greater than 0.")
+                alert("Please enter a valid number greater than 0.")
             } else {
-                Alert.alert("Invalid Input", "Please enter a valid number of kilocalories greater than 0.")
+                Alert.alert("Invalid Input", "Please enter a valid number greater than 0.")
             }
             return
         }
@@ -557,7 +557,7 @@ export const EditModal: React.FC<{
                             pattern="[0-9]*"
                             value={calories}
                             onChange={(e) => handleCaloriesChange(e.target.value)}
-                            placeholder="Enter kilocalories"
+                            placeholder="Enter Calories"
                             style={{
                                 width: "100%",
                                 padding: "12px",
@@ -714,7 +714,7 @@ export const EditModal: React.FC<{
                                 value={calories}
                                 onChangeText={handleCaloriesChange}
                                 keyboardType="numeric"
-                                placeholder="Enter kilocalories"
+                                placeholder="Enter Calories"
                                 placeholderTextColor={"#999"}
                                 maxLength={MAX_CALORIES.toString().length}
                             />

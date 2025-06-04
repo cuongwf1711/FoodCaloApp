@@ -744,7 +744,7 @@ const FoodHistoryItem: React.FC<FoodHistoryItemProps> = React.memo(({
                     </TouchableOpacity>
                 </View>
             </View>
-            <Text style={sharedStyles.foodCalories}>{formatDecimalDisplay(item.calo)} kilocalories</Text>
+            <Text style={sharedStyles.foodCalories}>{formatDecimalDisplay(item.calo)} kcal</Text>
 
             <View style={sharedStyles.imagesContainer}>
                 <TouchableOpacity

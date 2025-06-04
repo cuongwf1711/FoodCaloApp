@@ -627,7 +627,6 @@ const Personal = () => {
                                             onChangeText={(text) => handleChange("calorieLimit", text)}
                                             keyboardType="numeric"
                                             editable={!isAutoSetCalorieLimit()}
-                                            placeholder="e.g. 2000"
                                             maxLength={MAX_CALORIES.toString().length}
                                         />
                                         {validationErrors.calorieLimit && (

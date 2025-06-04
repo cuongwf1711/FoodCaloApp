@@ -1243,7 +1243,7 @@ const Index: React.FC = () => {
                             </View>
                         </View>
                         <Text style={sharedStyles.foodCalories} numberOfLines={1} adjustsFontSizeToFit>
-                            {formatDecimalDisplay(result.calo)} kilocalories
+                            {formatDecimalDisplay(result.calo)} kcal
                         </Text>
 
                         <View style={sharedStyles.imagesContainer}>
