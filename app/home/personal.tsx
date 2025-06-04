@@ -547,7 +547,6 @@ const Personal = () => {
                                             value={getValue("age")?.toString()}
                                             onChangeText={(text) => handleChange("age", Number.parseInt(text) || 0)}
                                             keyboardType="number-pad"
-                                            placeholder="0-200"
                                         />
                                         {validationErrors.age && <Text style={styles.errorText}>{validationErrors.age}</Text>}
                                     </>
@@ -568,7 +567,6 @@ const Personal = () => {
                                             value={getValue("height")?.toString()}
                                             onChangeText={(text) => handleChange("height", Number.parseInt(text) || 0)}
                                             keyboardType="number-pad"
-                                            placeholder="0-999"
                                         />
                                         {validationErrors.height && <Text style={styles.errorText}>{validationErrors.height}</Text>}
                                     </>
@@ -586,7 +584,6 @@ const Personal = () => {
                                             value={getValue("weight")?.toString()}
                                             onChangeText={(text) => handleChange("weight", Number.parseInt(text) || 0)}
                                             keyboardType="number-pad"
-                                            placeholder="0-999"
                                         />
                                         {validationErrors.weight && <Text style={styles.errorText}>{validationErrors.weight}</Text>}
                                     </>
@@ -712,7 +709,6 @@ const Personal = () => {
                                                 handleDecimalInputChange("lengthReferencePoint", text, setLengthInputText)
                                             }
                                             keyboardType="decimal-pad"
-                                            placeholder="e.g. 15.5"
                                             maxLength={10}
                                         />
                                         {validationErrors.lengthReferencePoint && (
@@ -735,7 +731,6 @@ const Personal = () => {
                                             value={widthInputText || getValue("widthReferencePoint")?.toString()}
                                             onChangeText={(text) => handleDecimalInputChange("widthReferencePoint", text, setWidthInputText)}
                                             keyboardType="decimal-pad"
-                                            placeholder="e.g. 7.25"
                                             maxLength={10}
                                         />
                                         {validationErrors.widthReferencePoint && (
