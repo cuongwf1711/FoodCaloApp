@@ -859,7 +859,7 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
         }
     }, [fetchFoodHistory])
 
-    // Add useEffect mới để register refresh trigger:
+    // Add new useEffect to register refresh trigger:
     useEffect(() => {
         const refreshTrigger = () => {
             const now = Date.now()

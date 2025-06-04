@@ -9,22 +9,22 @@ import axios, {
     InternalAxiosRequestConfig
 } from "axios";
 
-// Tạo axios instance với cấu hình chung
+// Create axios instance with common configuration
 const api: AxiosInstance = axios.create({
-    baseURL: BASE_URL,        // Thay đổi nếu cần
-    // timeout: 10000,                              // Thời gian chờ mặc định: 10s
+    baseURL: BASE_URL,        // Change if needed
+    // timeout: 10000,                              // Default timeout: 10s
     headers: {
         "ngrok-skip-browser-warning": "true",
         "Content-Type": "application/json",
     },
 });
 
-// Interceptor để tự động gắn token vào mỗi request
+// Interceptor to automatically attach token to each request
 api.interceptors.request.use(
     async (config: InternalAxiosRequestConfig) => {
         const token = await AsyncStorage.getItem(ACCESS_TOKEN);
         if (token) {
-            // Sử dụng AxiosHeaders để thêm header đảm bảo kiểu chính xác
+            // Use AxiosHeaders to add header ensuring correct type
             const headers = config.headers as AxiosHeaders;
             headers.set("Authorization", `Bearer ${token}`);
         }
@@ -33,7 +33,7 @@ api.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
-// Hàm chung thực hiện request với override config nếu cần
+// Common function to execute request with override config if needed
 async function request<T>(
     method: "get" | "post" | "put" | "patch" | "delete",
     url: string,
@@ -55,7 +55,7 @@ async function request<T>(
     return api.request<T>(config);
   }
 
-// Export các helper CRUD
+// Export CRUD helpers
 export const getData = <T>(
     url: string,
     params?: any,
@@ -80,7 +80,7 @@ export const patchData = <T>(
     config?: AxiosRequestConfig
 ) => request<T>("patch", url, data, config);
 
-// Xác thực token (gửi token trong body)
+// Verify token (send token in body)
 export const verifyAccessToken = async() =>
     api.post(URL_VERIFY_TOKEN, { token: await AsyncStorage.getItem(ACCESS_TOKEN) });
 

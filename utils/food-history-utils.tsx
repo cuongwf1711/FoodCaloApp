@@ -88,7 +88,7 @@ export const useFoodHistory = (
     // Force update counter for Android compatibility
     const [updateCounter, setUpdateCounter] = useState(0)
 
-    // Trong useFoodHistory hook, thêm ref để track fetch state:
+    // In useFoodHistory hook, add ref to track fetch state:
     const isFetchingRef = useRef(false)
     const lastFetchParamsRef = useRef<string>("")
 
