@@ -1874,15 +1874,19 @@ export const styles = StyleSheet.create({
         width: "100%",
         height: undefined,
         aspectRatio: 1.33,
-    },
-    foodDate: {
+    },    foodDate: {
         fontSize: 14,
         color: "#666",
-        marginBottom: 8,
     },
     confidenceText: {
         fontSize: 14,
         color: "#3498db",
+    },
+    dateConfidenceRow: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 8,
     },
     commentContainer: {
         marginTop: 8,

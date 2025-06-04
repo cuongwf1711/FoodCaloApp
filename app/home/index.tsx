@@ -1271,11 +1271,12 @@ const Index: React.FC = () => {
                                     style={sharedStyles.thumbnailImage}
                                     resizeMode="contain"
                                 />
-                            </TouchableOpacity>
-                        </View>
+                            </TouchableOpacity>                        </View>
 
-                        <Text style={sharedStyles.foodDate}>{formatDate(result.createdAt)}</Text>
-                        <Text style={sharedStyles.confidenceText}>Confidence: {result.confidencePercentage}</Text>
+                        <View style={sharedStyles.dateConfidenceRow}>
+                            <Text style={sharedStyles.foodDate}>{formatDate(result.createdAt)}</Text>
+                            <Text style={sharedStyles.confidenceText}>Confidence: {result.confidencePercentage}</Text>
+                        </View>
 
                         <View style={sharedStyles.commentContainer}>
                             <Text style={sharedStyles.commentLabel}>Notes:</Text>
