@@ -1,5 +1,3 @@
-// export const BASE_URL = 'https://mighty-baboon-busy.ngrok-free.app/api/v1';
-// export const BASE_URL = 'http://104.214.179.114:8000/api/v1';
 export const BASE_URL = 'https://mighty-baboon-busy.ngrok-free.app/api/v1';
 
 // npx expo export --platform web
