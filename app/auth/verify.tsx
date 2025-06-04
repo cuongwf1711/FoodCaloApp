@@ -200,14 +200,6 @@ export default function Verify() {
                     >
                         <Text style={styles.verifyButtonText}>{loading ? "Processing..." : "Confirm"}</Text>
                     </TouchableOpacity>
-
-                    <View style={styles.infoContainer}>
-                        <Text style={styles.infoText}>
-                            {mode === "signup"
-                                ? "After confirmation, you will be redirected to the sign in page."
-                                : "After resetting your password, you will be redirected to the sign in page."}
-                        </Text>
-                    </View>
                 </View>
             </ScrollView>
         </KeyboardAvoidingView>

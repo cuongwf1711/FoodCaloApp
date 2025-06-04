@@ -86,7 +86,6 @@ export default function SignUp() {
                             placeholderTextColor="#999"
                         />
                         {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
-                        <Text style={styles.hint}>Make sure you have access to this email to receive the verification code.</Text>
                     </View>
 
                     <TouchableOpacity

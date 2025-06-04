@@ -85,7 +85,6 @@ export default function ForgotPassword() {
                             placeholderTextColor="#999"
                         />
                         {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
-                        <Text style={styles.hint}>Make sure you have access to this email to receive the verification code.</Text>
                     </View>
 
                     <TouchableOpacity
@@ -95,13 +94,6 @@ export default function ForgotPassword() {
                     >
                         <Text style={styles.sendButtonText}>{loading ? "Sending..." : "Send Request"}</Text>
                     </TouchableOpacity>
-
-                    <View style={styles.infoContainer}>
-                        <Text style={styles.infoText}>
-                            After receiving the verification code, you'll be directed to the verification page to enter the code and
-                            reset your password.
-                        </Text>
-                    </View>
 
                     <TouchableOpacity onPress={() => router.push(SIGNIN_ROUTE)} style={styles.backButton} disabled={loading}>
                         <Text style={styles.backButtonText}>Back to Sign In</Text>
