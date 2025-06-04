@@ -107,7 +107,8 @@ export default function SignIn() {
             <ScrollView contentContainerStyle={styles.scrollContainer}>
                 <View style={styles.container}>
                     <Text style={styles.title}>Sign In</Text>
-                    <Text style={styles.subtitle}>Please sign in to continue</Text>                    <View style={styles.formGroup}>
+                    <Text style={styles.subtitle}>Please sign in to continue</Text>                    
+                    <View style={styles.formGroup}>
                         <Text style={styles.label}>Email</Text>
                         <TextInput
                             placeholder="Enter your email address"

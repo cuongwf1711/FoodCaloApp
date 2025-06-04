@@ -155,25 +155,19 @@ export default function Verify() {
                             <Text style={styles.resendText}>{resendLoading ? "Resending..." : "Resend Code"}</Text>
                         </TouchableOpacity>
                     </View>
-
-                    <View style={styles.formGroup}>
-                        <Text style={styles.label}>New Password</Text>
-                        <TextInput
-                            placeholder="Enter new password"
-                            value={password}
-                            onChangeText={(t) => {
-                                setPassword(t)
-                                passwordError && setPasswordError("")
-                                confirmPasswordError && t === confirmPassword && setConfirmPasswordError("")
-                            }}
-                            secureTextEntry
-                            style={[styles.input, passwordError && styles.inputError]}
-                            textContentType="newPassword"
-                            placeholderTextColor="#999"
-                        />
-                        {passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
-                        <Text style={styles.hint}>Password must be at least 8 characters with letters and numbers.</Text>
-                    </View>
+                    <PasswordInput
+                        label="New Password"
+                        placeholder="Enter new password"
+                        value={password}
+                        onChangeText={(t) => {
+                            setPassword(t)
+                            passwordError && setPasswordError("")
+                            confirmPasswordError && t === confirmPassword && setConfirmPasswordError("")
+                        }}
+                        error={passwordError}
+                        hint="Password must be at least 8 characters with letters and numbers."
+                        textContentType="newPassword"
+                    />
 
                     <PasswordInput
                         label="Confirm Password"

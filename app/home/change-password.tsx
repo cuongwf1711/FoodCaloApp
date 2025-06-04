@@ -106,7 +106,8 @@ export default function ChangePassword() {
                     <Text style={styles.pageTitle}>Change Password</Text>
                     <Text style={styles.description}>
                         To secure your account, please enter your current password and your new password
-                    </Text>                    <View style={styles.form}>
+                    </Text>
+                    <View style={styles.form}>
                         <PasswordInput
                             label="Current Password"
                             placeholder="Enter your current password"
@@ -163,7 +164,8 @@ export default function ChangePassword() {
 
                         <View style={styles.infoContainer}>
                             <Text style={styles.infoText}>
-                                After successfully changing your password, you will be redirected to the login page to sign in with your new password.
+                                After successfully changing your password, you will be redirected to the login page to sign in with your
+                                new password.
                             </Text>
                         </View>
                     </View>
