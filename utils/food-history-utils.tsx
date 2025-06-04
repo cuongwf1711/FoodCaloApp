@@ -291,7 +291,7 @@ export const useFoodHistory = (
 
         try {
             const updatedData = {
-                calo: Number(calo),
+                calo: calo,
                 comment: comment,
             }
 
@@ -440,8 +440,7 @@ export const EditModal: React.FC<{
         // Remove non-numeric characters except for empty string
         const numericValue = value.replace(/[^0-9]/g, '')
         
-        // Check if the numeric value exceeds MAX_CALORIES
-        if (numericValue === '' || Number(numericValue) <= MAX_CALORIES) {
+        if (numericValue === '' || numericValue.length <= MAX_CALORIES.toString().length) {
             setCalories(numericValue)
         }
     }
@@ -539,7 +538,7 @@ export const EditModal: React.FC<{
                             e.currentTarget.style.color = "#666"
                         }}
                     >
-                        ×
+                        &times;
                     </button>
 
                     <h3 style={{ margin: "0 0 20px 0", fontSize: "18px", fontWeight: "600", color: "#333" }}>
@@ -1314,7 +1313,7 @@ export const DatePicker: React.FC<{
                                     style={styles.monthNavButton}
                                     onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
                                 >
-                                    <Text style={styles.monthNavButtonText}>‹</Text>
+                                    <Ionicons name="chevron-back" size={18} color="#333" />
                                 </TouchableOpacity>
                                 <Text style={styles.monthYearText}>
                                     {currentMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
@@ -1323,7 +1322,7 @@ export const DatePicker: React.FC<{
                                     style={styles.monthNavButton}
                                     onPress={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
                                 >
-                                    <Text style={styles.monthNavButtonText}>›</Text>
+                                    <Ionicons name="chevron-forward" size={18} color="#333" />
                                 </TouchableOpacity>
                             </View>
 
@@ -1400,7 +1399,7 @@ export const WeekInput: React.FC<{
                         boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
                     }}
                 >
-                    <span style={{ color: weeksAgo === 0 ? "#ccc" : "#333", fontSize: "16px" }}>−</span>
+                    <span style={{ color: weeksAgo === 0 ? "#ccc" : "#333", fontSize: "16px" }}>&minus;</span>
                 </button>
 
                 <input
@@ -1439,7 +1438,7 @@ export const WeekInput: React.FC<{
                         boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
                     }}
                 >
-                    <span style={{ color: weeksAgo >= 9999 ? "#ccc" : "#333", fontSize: "16px" }}>+</span>
+                    <span style={{ color: weeksAgo >= 9999 ? "#ccc" : "#333", fontSize: "16px" }}>&#43;</span>
                 </button>
             </div>
         )
@@ -1541,11 +1540,11 @@ export const MonthPicker: React.FC<{
                         <View style={styles.monthCalendarContainer}>
                             <View style={styles.yearNavigation}>
                                 <TouchableOpacity style={styles.yearNavButton} onPress={() => setCurrentYear(currentYear - 1)}>
-                                    <Text style={styles.yearNavButtonText}>‹</Text>
+                                    <Ionicons name="chevron-back" size={18} color="#333" />
                                 </TouchableOpacity>
                                 <Text style={styles.yearText}>{currentYear}</Text>
                                 <TouchableOpacity style={styles.yearNavButton} onPress={() => setCurrentYear(currentYear + 1)}>
-                                    <Text style={styles.yearNavButtonText}>›</Text>
+                                    <Ionicons name="chevron-forward" size={18} color="#333" />
                                 </TouchableOpacity>
                             </View>
 
@@ -1593,13 +1592,13 @@ export const MonthPicker: React.FC<{
 
 // Helper Functions
 export const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const day = date.getDate()
-    const month = date.getMonth() + 1
-    const year = date.getFullYear()
-    const hours = date.getHours()
-    const minutes = String(date.getMinutes()).padStart(2, "0")
-    return `${day}/${month}/${year} • ${hours}:${minutes}`
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const year = date.getFullYear();
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    return `${day}/${month}/${year} • ${hours}:${minutes}`;
 }
 
 export const getPeriodLabel = (period: string) => {

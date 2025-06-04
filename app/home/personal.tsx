@@ -1,6 +1,6 @@
 "use client"
 
-import { MAX_CALO_DISPLAY } from "@/constants/general_constants"
+import { MAX_CALO_DISPLAY, MAX_CALORIES } from "@/constants/general_constants"
 import { URL_USER_PROFILE } from "@/constants/url_constants"
 import { getData, patchData } from "@/context/request_context"
 import { useTabReload } from "@/hooks/use-tab-reload"
@@ -408,8 +408,8 @@ const Personal = () => {
 
     // Helper function to parse decimal input - STRICT validation for numbers only
     const parseDecimalInput = (text: string): number => {
-        // Only allow digits, decimal point, and minus sign at the beginning
-        const cleanText = text.replace(/[^0-9.-]/g, "")
+        // Only allow digits, decimal point at the beginning
+        const cleanText = text.replace(/[^0-9.]/g, "")
 
         // Handle multiple decimal points - keep only the first one
         const parts = cleanText.split(".")
@@ -418,24 +418,13 @@ const Personal = () => {
             result = parts[0] + "." + parts.slice(1).join("").replace(/\./g, "")
         }
 
-        // Handle multiple minus signs - keep only the first one if at the beginning
-        if (result.includes("-")) {
-            const minusCount = (result.match(/-/g) || []).length
-            if (minusCount > 1 || (result.indexOf("-") !== 0 && result.includes("-"))) {
-                result = result.replace(/-/g, "")
-                if (text.startsWith("-")) {
-                    result = "-" + result
-                }
-            }
-        }
-
         return Number.parseFloat(result) || 0
     }
 
     // Validate input text to only allow numbers and decimal point
     const validateNumericInput = (text: string): string => {
         // Only allow digits, one decimal point, and minus sign at the beginning
-        let cleanText = text.replace(/[^0-9.-]/g, "")
+        let cleanText = text.replace(/[^0-9.]/g, "")
 
         // Handle decimal points
         const decimalCount = (cleanText.match(/\./g) || []).length
@@ -443,23 +432,6 @@ const Personal = () => {
             const firstDecimalIndex = cleanText.indexOf(".")
             cleanText =
                 cleanText.substring(0, firstDecimalIndex + 1) + cleanText.substring(firstDecimalIndex + 1).replace(/\./g, "")
-        }
-
-        // Handle minus signs - only allow at the beginning
-        if (cleanText.includes("-")) {
-            const minusPositions = []
-            for (let i = 0; i < cleanText.length; i++) {
-                if (cleanText[i] === "-") {
-                    minusPositions.push(i)
-                }
-            }
-
-            if (minusPositions.length > 1 || (minusPositions.length === 1 && minusPositions[0] !== 0)) {
-                cleanText = cleanText.replace(/-/g, "")
-                if (text.startsWith("-")) {
-                    cleanText = "-" + cleanText
-                }
-            }
         }
 
         return cleanText
@@ -651,12 +623,12 @@ const Personal = () => {
                                                 isAutoSetCalorieLimit() && styles.disabledInput,
                                                 validationErrors.calorieLimit && styles.inputError,
                                             ]}
-                                            value={calorieInputText || getValue("calorieLimit")?.toString()}
-                                            onChangeText={(text) => handleDecimalInputChange("calorieLimit", text, setCalorieInputText)}
-                                            keyboardType="decimal-pad"
+                                            value={getValue("calorieLimit")?.toString()}
+                                            onChangeText={(text) => handleChange("calorieLimit", text)}
+                                            keyboardType="numeric"
                                             editable={!isAutoSetCalorieLimit()}
-                                            placeholder="e.g. 2000.5"
-                                            maxLength={15}
+                                            placeholder="e.g. 2000"
+                                            maxLength={MAX_CALORIES.toString().length}
                                         />
                                         {validationErrors.calorieLimit && (
                                             <Text style={styles.errorText}>{validationErrors.calorieLimit}</Text>

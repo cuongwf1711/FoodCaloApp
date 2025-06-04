@@ -714,11 +714,13 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
     const getTimePeriodLabel = useCallback(() => {
         switch (timeUnit) {
             case "day":
+                if (!selectedDate) return "Food History";
                 const [y1, m1, d1] = selectedDate.split("-")
                 return `Food History for ${d1}-${m1}-${y1}`
             case "week":
                 return `Food History for ${weeksAgo} weeks ago`
             case "month":
+                if (!selectedDate) return "Food History";
                 const [y2, m2] = selectedMonth.split("-")
                 return `Food History for ${m2}-${y2}`
             default:
