@@ -15,7 +15,8 @@ import {
     Text,
     TextInput,
     TouchableOpacity,
-    View
+    View,
+    useWindowDimensions
 } from "react-native"
 import { URL_FORGOT_PASSWORD, URL_RESEND_EMAIL, URL_SET_PASSWORD, URL_SIGN_UP } from "../../constants/url_constants"
 
@@ -25,6 +26,8 @@ import { URL_FORGOT_PASSWORD, URL_RESEND_EMAIL, URL_SET_PASSWORD, URL_SIGN_UP } 
  */
 export default function Verify() {
     const { email, mode } = useLocalSearchParams()
+    const { height } = useWindowDimensions()
+    const keyboardVerticalOffset = height * 0.1 // Tính offset động dựa trên chiều cao màn hình
     const [otp, setOtp] = useState("")
     const [password, setPassword] = useState("")
     const [confirmPassword, setConfirmPassword] = useState("")
@@ -121,7 +124,7 @@ export default function Verify() {
             : "Enter the verification code and your new password."
 
     return (
-        <KeyboardAvoidingView behavior="padding" style={styles.keyboardAvoid} keyboardVerticalOffset={90}>
+        <KeyboardAvoidingView behavior="padding" style={styles.keyboardAvoid} keyboardVerticalOffset={keyboardVerticalOffset}>
             <ScrollView contentContainerStyle={styles.scrollContainer} keyboardShouldPersistTaps="handled">
                 <View style={styles.container}>
                     <Text style={styles.title}>{getTitle()}</Text>

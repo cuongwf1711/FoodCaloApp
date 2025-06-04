@@ -771,7 +771,8 @@ const FoodHistoryItem: React.FC<FoodHistoryItemProps> = React.memo(({
                         style={sharedStyles.thumbnailImage}
                         resizeMode="contain"
                     />
-                </TouchableOpacity>            </View>
+                </TouchableOpacity>            
+            </View>
 
             <View style={sharedStyles.dateConfidenceRow}>
                 <Text style={sharedStyles.foodDate}>{formattedDate}</Text>

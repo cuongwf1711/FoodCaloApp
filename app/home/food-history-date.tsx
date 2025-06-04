@@ -1256,7 +1256,8 @@ const FoodItemCard: React.FC<FoodItemCardProps> = React.memo(
                 <TouchableOpacity style={sharedStyles.retryButton} onPress={() => fetchData()}>
                     <Text style={sharedStyles.retryButtonText}>Retry</Text>
                 </TouchableOpacity>
-            </View>        )
+            </View>        
+        )
     }
       // Create header component for FlatList
     const ListHeaderComponent = () => (
