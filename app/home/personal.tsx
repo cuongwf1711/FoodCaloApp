@@ -77,7 +77,6 @@ const Personal = () => {
     // Profile data state
     const [profile, setProfile] = useState<UserProfile | null>(null)
     const [editedProfile, setEditedProfile] = useState<Partial<UserProfileUpdate>>({})
-    const [loading, setLoading] = useState(true)
     const [saving, setSaving] = useState(false)
     const [resetting, setResetting] = useState(false)
     const [isEditing, setIsEditing] = useState(false)
@@ -164,7 +163,6 @@ const Personal = () => {
     // Fetch user profile from API
     const fetchUserProfile = async () => {
         try {
-            setLoading(true)
             const response = await getData<UserProfile>(URL_USER_PROFILE)
             setProfile(response.data)
             setEditedProfile({})
@@ -175,8 +173,6 @@ const Personal = () => {
             setCalorieInputText("")
         } catch (error) {
             showMessage(error)
-        } finally {
-            setLoading(false)
         }
     }
 
@@ -453,15 +449,6 @@ const Personal = () => {
         // Parse and update the actual value
         const numericValue = parseDecimalInput(validatedText)
         handleChange(field, numericValue)
-    }
-
-    // Show loading indicator while fetching data
-    if (loading) {
-        return (
-            <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#0066cc" />
-            </View>
-        )
     }
 
     return (
