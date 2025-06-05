@@ -460,7 +460,6 @@ const Personal = () => {
         return (
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#0066cc" />
-                <Text style={styles.loadingText}>Loading information...</Text>
             </View>
         )
     }

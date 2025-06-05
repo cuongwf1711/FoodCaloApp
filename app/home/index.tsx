@@ -11,7 +11,6 @@ import {
     ActivityIndicator,
     Alert,
     Animated,
-    Easing,
     Image,
     Modal,
     Platform,
@@ -23,150 +22,11 @@ import {
 } from "react-native"
 
 // Import shared utilities
+import { EnhancedLoadingOverlay } from "@/components/LoadingOverlays"
 import { useTabReload } from "@/hooks/use-tab-reload"
 import { Colors } from "@/styles/colors"
 import { EditModal, formatDate, styles as sharedStyles } from "@/utils/food-history-utils"
 import { formatDecimalDisplay } from "@/utils/number-utils"
-
-// Add CSS animation for web spinning effect - only on client side
-if (typeof window !== "undefined" && Platform.OS === "web") {
-    const style = document.createElement("style")
-    style.textContent = `
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
-    @keyframes fadeInUp {
-      from { 
-        opacity: 0; 
-        transform: translateY(20px); 
-      }
-      to { 
-        opacity: 1; 
-        transform: translateY(0); 
-      }
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.7; }
-    }
-  `
-    document.head.appendChild(style)
-}
-
-// Enhanced Loading Component with better animations
-const EnhancedLoadingOverlay: React.FC = () => {
-    const [fadeAnim] = useState(new Animated.Value(0))
-    const [scaleAnim] = useState(new Animated.Value(0.8))
-
-    useEffect(() => {
-        Animated.parallel([
-            Animated.timing(fadeAnim, {
-                toValue: 1,
-                duration: 300,
-                useNativeDriver: true,
-                easing: Easing.out(Easing.ease),
-            }),
-            Animated.spring(scaleAnim, {
-                toValue: 1,
-                tension: 100,
-                friction: 8,
-                useNativeDriver: true,
-            }),
-        ]).start()
-    }, [])
-
-    if (Platform.OS === "web") {
-        return (
-            <div
-                style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: "rgba(255, 255, 255, 0.9)",
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    zIndex: 999,
-                    animation: "fadeInUp 0.3s ease-out",
-                }}
-            >
-                <div
-                    style={{
-                        backgroundColor: "#fff",
-                        borderRadius: "12px",
-                        padding: "24px",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-                        minWidth: "60px",
-                        minHeight: "60px",
-                        animation: "pulse 2s infinite",
-                    }}
-                >
-                    <div
-                        style={{
-                            width: "40px",
-                            height: "40px",
-                            border: "4px solid #f3f3f3",
-                            borderTop: "4px solid #3498db",
-                            borderRadius: "50%",
-                            animation: "spin 1s linear infinite",
-                        }}
-                    />
-                </div>
-            </div>
-        )
-    }
-
-    return (
-        <Animated.View
-            style={[
-                {
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: "rgba(255, 255, 255, 0.9)",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    zIndex: 999,
-                },
-                {
-                    opacity: fadeAnim,
-                    transform: [{ scale: scaleAnim }],
-                },
-            ]}
-        >
-            <Animated.View
-                style={[
-                    {
-                        backgroundColor: "#fff",
-                        borderRadius: 12,
-                        padding: 24,
-                        alignItems: "center",
-                        shadowColor: "#000",
-                        shadowOffset: { width: 0, height: 4 },
-                        shadowOpacity: 0.15,
-                        shadowRadius: 20,
-                        elevation: 8,
-                        minWidth: 60,
-                        minHeight: 60,
-                    },
-                    {
-                        transform: [{ scale: scaleAnim }],
-                    },
-                ]}
-            >
-                <ActivityIndicator size="large" color="#3498db" />
-            </Animated.View>
-        </Animated.View>
-    )
-}
 
 // Simplified type definitions
 type ImageAsset = {
