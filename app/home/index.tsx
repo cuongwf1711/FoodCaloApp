@@ -784,6 +784,7 @@ const Index: React.FC = () => {
     const [modalImageUri, setModalImageUri] = useState("")
     const [isEditing, setIsEditing] = useState(false)
     const [isDeleting, setIsDeleting] = useState(false)
+    const [imagesAreReady, setImagesAreReady] = useState(false)
 
     // Animation values for result card
     const resultCardAnim = useRef(new Animated.Value(0)).current
@@ -1102,6 +1103,32 @@ const Index: React.FC = () => {
         setIsEditing(false)
     }
 
+    // Poll image URLs to check if they are ready
+    useEffect(() => {
+        if (result?.publicUrl) {
+            setImagesAreReady(false)
+            pollImages()
+        }
+    }, [result])
+
+    async function pollImages(retries = 8) {
+        const checkUrl = async (url: string) => {
+            try {
+                const res = await fetch(url, { method: 'HEAD' })
+                return res.ok
+            } catch {
+                return false
+            }
+        }
+        for (let i = 0; i < retries; i++) {
+            const originOk = await checkUrl(result!.publicUrl.originImage)
+            const segOk = await checkUrl(result!.publicUrl.segmentationImage)
+            if (originOk && segOk) break
+            await new Promise((r) => setTimeout(r, 1000))
+        }
+        setImagesAreReady(true)
+    }
+
     return (
         <Animated.View style={[{ flex: 1 }, animatedStyle]}>
             <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
@@ -1247,31 +1274,46 @@ const Index: React.FC = () => {
                         </Text>
 
                         <View style={sharedStyles.imagesContainer}>
-                            <TouchableOpacity
-                                style={sharedStyles.imageWrapper}
-                                onPress={() => openImageModal(result.publicUrl.originImage)}
-                                activeOpacity={0.8}
-                                disabled={isDeleting}
-                            >
-                                <Image
-                                    source={{ uri: result.publicUrl.originImage }}
-                                    style={sharedStyles.thumbnailImage}
-                                    resizeMode="contain"
-                                />
-                            </TouchableOpacity>
+                            {/* Conditional rendering based on imagesAreReady state */}
+                            { !imagesAreReady ? (
+                                <>
+                                    <View style={sharedStyles.imageWrapper}>
+                                        <ActivityIndicator size="large" color="#3498db" />
+                                    </View>
+                                    <View style={sharedStyles.imageWrapper}>
+                                        <ActivityIndicator size="large" color="#3498db" />
+                                    </View>
+                                </>
+                            ) : (
+                                <>
+                                    <TouchableOpacity
+                                        style={sharedStyles.imageWrapper}
+                                        onPress={() => openImageModal(result.publicUrl.originImage)}
+                                        activeOpacity={0.8}
+                                        disabled={isDeleting}
+                                    >
+                                        <Image
+                                            source={{ uri: result.publicUrl.originImage }}
+                                            style={sharedStyles.thumbnailImage}
+                                            resizeMode="contain"
+                                        />
+                                    </TouchableOpacity>
 
-                            <TouchableOpacity
-                                style={sharedStyles.imageWrapper}
-                                onPress={() => openImageModal(result.publicUrl.segmentationImage)}
-                                activeOpacity={0.8}
-                                disabled={isDeleting}
-                            >
-                                <Image
-                                    source={{ uri: result.publicUrl.segmentationImage }}
-                                    style={sharedStyles.thumbnailImage}
-                                    resizeMode="contain"
-                                />
-                            </TouchableOpacity>                        </View>
+                                    <TouchableOpacity
+                                        style={sharedStyles.imageWrapper}
+                                        onPress={() => openImageModal(result.publicUrl.segmentationImage)}
+                                        activeOpacity={0.8}
+                                        disabled={isDeleting}
+                                    >
+                                        <Image
+                                            source={{ uri: result.publicUrl.segmentationImage }}
+                                            style={sharedStyles.thumbnailImage}
+                                            resizeMode="contain"
+                                        />
+                                    </TouchableOpacity>
+                                </>
+                            )}
+                        </View>
 
                         <View style={sharedStyles.dateConfidenceRow}>
                             <Text style={sharedStyles.foodDate}>{formatDate(result.createdAt)}</Text>
