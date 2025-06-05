@@ -9,7 +9,7 @@ import {
 } from '@/constants/token_constants';
 import { URL_REFRESH_TOKEN } from '@/constants/url_constants';
 import { AuthContext } from '@/context/AuthContext';
-import { postData, verifyAccessToken } from '@/context/request_context';
+import { postData, registerAuthUpdaters, verifyAccessToken } from '@/context/request_context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -28,6 +28,11 @@ export default function RootLayout() {
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
   const segments = useSegments();
+
+  // Register auth updaters for global error handling
+  useEffect(() => {
+    registerAuthUpdaters(setToken, setEmail);
+  }, []);
 
   useEffect(() => {
     const checkAuth = async () => {
