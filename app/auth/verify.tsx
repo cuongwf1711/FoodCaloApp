@@ -198,7 +198,7 @@ export default function Verify() {
                         onPress={handleVerify}
                         disabled={loading}
                     >
-                        <Text style={styles.verifyButtonText}>{loading ? "Processing..." : "Confirm"}</Text>
+                        <Text style={styles.verifyButtonText}>{loading ? <ActivityIndicator color="#fff" /> : "Confirm"}</Text>
                     </TouchableOpacity>
                 </View>
             </ScrollView>

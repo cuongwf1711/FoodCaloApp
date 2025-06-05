@@ -82,7 +82,7 @@ if (typeof window !== "undefined" && Platform.OS === "web") {
 }
 
 // Enhanced Loading Component with better animations
-const EnhancedLoadingOverlay: React.FC<{ message?: string }> = ({ message = "Loading data..." }) => {
+const EnhancedLoadingOverlay: React.FC<{}> = () => {
     const [fadeAnim] = useState(new Animated.Value(0))
     const [scaleAnim] = useState(new Animated.Value(0.8))
 
@@ -144,15 +144,6 @@ const EnhancedLoadingOverlay: React.FC<{ message?: string }> = ({ message = "Loa
                             marginBottom: "16px",
                         }}
                     />
-                    <div
-                        style={{
-                            fontSize: "16px",
-                            color: "#666",
-                            fontWeight: "500",
-                        }}
-                    >
-                        {message}
-                    </div>
                 </div>
             </div>
         )
@@ -177,14 +168,13 @@ const EnhancedLoadingOverlay: React.FC<{ message?: string }> = ({ message = "Loa
                 ]}
             >
                 <ActivityIndicator size="large" color="#3498db" />
-                <Text style={sharedStyles.loadingOverlayText}>{message}</Text>
             </Animated.View>
         </Animated.View>
     )
 }
 
 // Enhanced Delete Loading Overlay similar to EnhancedLoadingOverlay
-const DeleteLoadingOverlay: React.FC<{ message?: string }> = ({ message = "Deleting..." }) => {
+const DeleteLoadingOverlay: React.FC<{}> = () => {
     const [fadeAnim] = useState(new Animated.Value(0))
     const [scaleAnim] = useState(new Animated.Value(0.8))
 
@@ -248,15 +238,6 @@ const DeleteLoadingOverlay: React.FC<{ message?: string }> = ({ message = "Delet
                             marginBottom: "16px",
                         }}
                     />
-                    <div
-                        style={{
-                            fontSize: "16px",
-                            color: "#e74c3c",
-                            fontWeight: "500",
-                        }}
-                    >
-                        {message}
-                    </div>
                 </div>
             </div>
         )
@@ -305,12 +286,6 @@ const DeleteLoadingOverlay: React.FC<{ message?: string }> = ({ message = "Delet
                 ]}
             >
                 <ActivityIndicator size="large" color="#e74c3c" />
-                <Text style={{
-                    marginTop: 16,
-                    fontSize: 16,
-                    color: '#e74c3c',
-                    fontWeight: '500',
-                }}>{message}</Text>
             </Animated.View>
         </Animated.View>
     )

@@ -9,6 +9,7 @@ import { getEmailErrorMessage } from "@/utils/validation"
 import { useRouter } from "expo-router"
 import { useState } from "react"
 import {
+    ActivityIndicator,
     KeyboardAvoidingView,
     ScrollView,
     StyleSheet,
@@ -93,7 +94,7 @@ export default function SignUp() {
                         onPress={handleSendOtp}
                         disabled={loading}
                     >
-                        <Text style={styles.continueButtonText}>{loading ? "Sending..." : "Continue"}</Text>
+                        <Text style={styles.continueButtonText}>{loading ? <ActivityIndicator color="#fff" /> : "Continue"}</Text>
                     </TouchableOpacity>
 
                     <View style={styles.divider}>

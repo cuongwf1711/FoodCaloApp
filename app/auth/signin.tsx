@@ -13,6 +13,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage"
 import { useRouter } from "expo-router"
 import { useContext, useState } from "react"
 import {
+    ActivityIndicator,
     KeyboardAvoidingView,
     ScrollView,
     StyleSheet,
@@ -145,7 +146,7 @@ export default function SignIn() {
                         onPress={handleSignIn}
                         disabled={isLoading}
                     >
-                        <Text style={styles.signInButtonText}>{isLoading ? "Signing in..." : "Sign In"}</Text>
+                        <Text style={styles.signInButtonText}>{isLoading ? <ActivityIndicator color="#fff" /> : "Sign In"}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity

@@ -8,6 +8,7 @@ import { getEmailErrorMessage } from "@/utils/validation"
 import { useRouter } from "expo-router"
 import { useState } from "react"
 import {
+    ActivityIndicator,
     KeyboardAvoidingView,
     ScrollView,
     StyleSheet,
@@ -92,7 +93,7 @@ export default function ForgotPassword() {
                         onPress={handleResendEmail}
                         disabled={loading}
                     >
-                        <Text style={styles.sendButtonText}>{loading ? "Sending..." : "Send Request"}</Text>
+                        <Text style={styles.sendButtonText}>{loading ? <ActivityIndicator color="#fff" /> : "Send Request"}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity onPress={() => router.push(SIGNIN_ROUTE)} style={styles.backButton} disabled={loading}>

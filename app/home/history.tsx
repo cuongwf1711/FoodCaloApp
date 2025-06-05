@@ -4,7 +4,7 @@ import type React from "react"
 
 import { StatusBar } from "expo-status-bar"
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Animated, Easing, StyleSheet, Text, View } from "react-native"
+import { ActivityIndicator, Animated, Easing, StyleSheet, Text, View } from "react-native"
 
 // Import shared utilities
 import {
@@ -236,7 +236,7 @@ const FoodHistoryScreen: React.FC = () => {
                 <Text style={styles.calorieLimitValue} numberOfLines={1} adjustsFontSizeToFit>
                   {userProfile
                     ? `${formatDecimalDisplay(userProfile.calorieLimit)} / ${getPeriodLabel(userProfile.calorieLimitPeriod)}`
-                    : "Loading..."}
+                    : <ActivityIndicator color="#3498db" />}
                 </Text>
               </View>
               <View style={styles.totalCaloriesSection}>
