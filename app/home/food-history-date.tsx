@@ -1025,11 +1025,14 @@ const FoodItemCard: React.FC<FoodItemCardProps> = React.memo(
                 scrollEventThrottle={16}                
                 onEndReached={handleLoadMore}
                 onEndReachedThreshold={0.5}
-                initialNumToRender={10} 
-                windowSize={21} // Default is 21. Larger values render more items offscreen.
-                maxToRenderPerBatch={10} 
+                initialNumToRender={8} 
+                windowSize={10} // Reduced from 21 for better performance
+                maxToRenderPerBatch={5} // Reduced from 10 for better performance
                 updateCellsBatchingPeriod={100} // Adjusted for smoother updates
-                removeClippedSubviews // Enabled for Android performance
+                removeClippedSubviews={Platform.OS === 'android'} // Only enable on Android
+                legacyImplementation={false}
+                disableVirtualization={false}
+                getItemLayout={undefined}
                 refreshControl={
                     <RefreshControl
                         refreshing={isRefreshing}

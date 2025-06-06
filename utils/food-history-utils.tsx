@@ -1621,13 +1621,13 @@ export const pollImages = async (item: FoodItem, retries = 8): Promise<boolean> 
         }
         await new Promise((r) => setTimeout(r, 1000))
     }
-    return false
+    // Always return true after retries to stop infinite loading, just like index.tsx
+    return true
 }
 
 // Hook to manage image polling for food items
 export const useImagePolling = (foodItems: FoodItem[], setFoodItems: React.Dispatch<React.SetStateAction<FoodItem[]>>) => {
     const pollingRefs = useRef<Set<string>>(new Set())
-    
     const startPolling = useCallback(async (item: FoodItem) => {
         if (pollingRefs.current.has(item.id) || item.imagesReady) {
             return
@@ -1636,18 +1636,26 @@ export const useImagePolling = (foodItems: FoodItem[], setFoodItems: React.Dispa
         pollingRefs.current.add(item.id)
         
         try {
-            const ready = await pollImages(item)
-            if (ready) {
-                setFoodItems(prevItems => 
-                    prevItems.map(prevItem => 
-                        prevItem.id === item.id 
-                            ? { ...prevItem, imagesReady: true }
-                            : prevItem
-                    )
+            await pollImages(item)
+            // Always set imagesReady to true after polling, regardless of success/failure
+            // This matches the behavior in index.tsx to prevent infinite loading
+            setFoodItems(prevItems => 
+                prevItems.map(prevItem => 
+                    prevItem.id === item.id 
+                        ? { ...prevItem, imagesReady: true }
+                        : prevItem
                 )
-            }
+            )
         } catch (error) {
             console.warn('Failed to poll images for item:', item.id, error)
+            // Still set imagesReady to true even on error to stop loading indicator
+            setFoodItems(prevItems => 
+                prevItems.map(prevItem => 
+                    prevItem.id === item.id 
+                        ? { ...prevItem, imagesReady: true }
+                        : prevItem
+                )
+            )
         } finally {
             pollingRefs.current.delete(item.id)
         }

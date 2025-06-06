@@ -851,12 +851,14 @@ const FoodHistoryAllView: React.FC<FoodHistoryAllViewProps> = ({
                         tintColor="#3498db"
                     />
                 }
-                initialNumToRender={10}
-                maxToRenderPerBatch={10}
-                windowSize={21}
-                removeClippedSubviews={true}
-                updateCellsBatchingPeriod={50} // Reduce batching period for smoother updates
-                disableVirtualization={false} // Ensure virtualization is enabled
+                initialNumToRender={8}
+                maxToRenderPerBatch={5}
+                windowSize={10}
+                removeClippedSubviews={Platform.OS === 'android'}
+                updateCellsBatchingPeriod={100}
+                disableVirtualization={false}
+                getItemLayout={undefined}
+                legacyImplementation={false}
             />
 
             {showScrollToTop && (
