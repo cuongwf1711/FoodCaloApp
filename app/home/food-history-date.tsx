@@ -245,7 +245,6 @@ const ImageModal: React.FC<{
                 }}
                 onClick={onClose}
             >
-                {/* Top right buttons container */}
                 <div style={{
                     position: "absolute",
                     top: "50px",
@@ -412,7 +411,8 @@ const ImageModal: React.FC<{
                     />
                 </View>
             </View>
-        </Modal>    );
+        </Modal>    
+    );
 };
 
 /**
@@ -515,9 +515,6 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
             }
 
             try {
-                // Always fetch page 1 when fetchData is called, as it implies a new dataset or a refresh.
-                // The 'refresh' parameter is passed to the hook to indicate if it's a hard refresh
-                // (e.g. pull-to-refresh) or if new filters/sort are applied (also starting from page 1).
                 await fetchFoodHistory(1, refresh, sortOpt, timeUnit, selectedDate, weeksAgo, selectedMonth)
 
                 if (showAnimation && !refresh) {
@@ -548,11 +545,6 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
                 listSlideAnim.setValue(0)
             }
         },
-        // 'page' is removed from dependencies because fetchData always requests page 1.
-        // The hook's 'page' state is managed by the hook itself based on these requests.
-        // sortOption (the state from useFoodHistory) is not needed here because
-        // if sortOpt param is undefined, fetchFoodHistory hook should use its internal current sortOption.
-        // If sortOpt is provided (e.g. from sort change), that specific one is used.
         [fetchFoodHistory, timeUnit, selectedDate, weeksAgo, selectedMonth, listFadeAnim, listSlideAnim],
     )
 
@@ -585,10 +577,6 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
             // when filter parameters change.
             fetchData(true, undefined, true)
         }
-        // Dependencies: when timeUnit, selectedDate, weeksAgo, or selectedMonth change,
-        // fetchData gets a new reference (due to its own dependencies on these state vars),
-        // which correctly triggers this effect.
-        // isInitialized ensures it only runs after the initial setup.
     }, [timeUnit, selectedDate, weeksAgo, selectedMonth, fetchData, isInitialized]);
 
     // Handle sort option change with enhanced animations
@@ -755,16 +743,6 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
             return false;
         }
 
-        // Item IDs are the same. Now check if content or other relevant props changed.
-
-        // The listFadeAnim and listSlideAnim Animated.Value object references are stable
-        // as they are initialized via useState in the parent.
-        // React.memo compares props to decide if a re-render is needed.
-        // Changes to the *values* of these Animated.Value objects will trigger
-        // updates in the Animated.View wrapping the card, not a full React re-render
-        // of the card component if other props are equal.
-
-        // If callbacks change (references should be stable due to useCallback in parent)
         if (
             prevProps.onOpenImage !== nextProps.onOpenImage ||
             prevProps.onStartEdit !== nextProps.onStartEdit ||
@@ -773,11 +751,6 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
             // console.warn("Callback changed reference, re-rendering FoodItemCard"); // For debugging
             return false;
         }
-        
-        // At this point, item.id is the same, and critical callbacks have the same reference.
-        // The index prop might have changed, but since FoodItemCard's rendering (including animations)
-        // no longer directly depends on `index` for visual output, an index change alone
-        // shouldn't force a re-render if the item content is identical.
 
         const pItem = prevProps.item;
         const nItem = nextProps.item;
@@ -834,19 +807,10 @@ const FoodItemCard: React.FC<FoodItemCardProps> = React.memo(
                     opacity: listFadeAnim,
                     transform: [
                         { translateY: listSlideAnim },
-                        // Removed index-dependent stagger animation for performance
-                        // {
-                        //     translateY: listSlideAnim.interpolate({
-                        //         inputRange: [-20, 0],
-                        //         outputRange: [-20 + index * 2, index * 2],
-                        //         extrapolate: "clamp",
-                        //     }),
-                        // },
                     ],
                 }}
             >
                 <View style={[sharedStyles.foodCard, isDeleting && { opacity: 0.9 }]}>
-                    {/* Delete Loading Overlay */}
                     {isDeleting && <DeleteLoadingOverlay />}
 
                     <View style={sharedStyles.foodCardHeader}>
@@ -872,8 +836,8 @@ const FoodItemCard: React.FC<FoodItemCardProps> = React.memo(
                             </TouchableOpacity>
                         </View>
                     </View>
-                    <Text style={sharedStyles.foodCalories}>{formatDecimalDisplay(item.calo)} kcal</Text>                    <View style={sharedStyles.imagesContainer}>
-                        {/* Conditional rendering based on imagesReady state */}
+                    <Text style={sharedStyles.foodCalories}>{formatDecimalDisplay(item.calo)} kcal</Text>                    
+                    <View style={sharedStyles.imagesContainer}>
                         {!item.imagesReady ? (
                             <>
                                 <View style={sharedStyles.imageWrapper}>
@@ -988,7 +952,6 @@ const FoodItemCard: React.FC<FoodItemCardProps> = React.memo(
         return (
             <View style={sharedStyles.footerLoader}>
                 <ActivityIndicator size="small" color="#0066CC" />
-                <Text style={sharedStyles.loadingMoreText}>Loading more...</Text>
             </View>
         );
     }, [isLoadingMore]);
@@ -1007,9 +970,6 @@ const FoodItemCard: React.FC<FoodItemCardProps> = React.memo(
 
     // Stable ListFooterComponent renderer
     const listFooterComponentRenderer = useCallback(() => {
-        // Removed dynamicMarginTop as it was causing marginBottom in FlatList's contentContainerStyle
-        // The paddingBottom in listContainer should handle spacing at the end.
-        // If specific margin is needed for the footer itself, it can be added here.
         return (
             <View> 
                 {renderFooter()}
