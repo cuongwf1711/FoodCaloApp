@@ -42,6 +42,7 @@ export interface FoodItem {
     comment: string
     calo: number
     isDeleting?: boolean
+    imagesReady?: boolean
 }
 
 export interface ApiResponse {
@@ -91,6 +92,16 @@ export const useFoodHistory = (
     // In useFoodHistory hook, add ref to track fetch state:
     const isFetchingRef = useRef(false)
     const lastFetchParamsRef = useRef<string>("")
+
+    // Image polling functionality
+    const { pollItemsWithoutReadyImages, startPolling } = useImagePolling(foodItems, setFoodItems)
+
+    // Poll images when new food items are loaded
+    useEffect(() => {
+        if (foodItems.length > 0) {
+            pollItemsWithoutReadyImages()
+        }
+    }, [foodItems.length, pollItemsWithoutReadyImages])
 
     useEffect(() => {
         if (externalSortOption && externalSortOption !== sortOption) {
@@ -331,8 +342,7 @@ export const useFoodHistory = (
                 setTimeout(() => {
                     callback(newSortOption)
                 }, 300)
-            }
-        },
+            }        },
         [isSortChanging, sortOption],
     )
 
@@ -358,6 +368,8 @@ export const useFoodHistory = (
         setError,
         scrollPosition,
         setScrollPosition,
+        pollItemsWithoutReadyImages,
+        startPolling,
         scrollToTop: useCallback((flatListRef: React.RefObject<FlatList>, onComplete?: () => void) => {
             if (flatListRef.current) {
                 flatListRef.current.scrollToOffset({
@@ -1588,6 +1600,68 @@ export const MonthPicker: React.FC<{
             </Modal>
         </View>
     )
+}
+
+// Utility function to poll images for readiness
+export const pollImages = async (item: FoodItem, retries = 8): Promise<boolean> => {
+    const checkUrl = async (url: string) => {
+        try {
+            const res = await fetch(url, { method: 'HEAD' })
+            return res.ok
+        } catch {
+            return false
+        }
+    }
+    
+    for (let i = 0; i < retries; i++) {
+        const originOk = await checkUrl(item.publicUrl.originImage)
+        const segOk = await checkUrl(item.publicUrl.segmentationImage)
+        if (originOk && segOk) {
+            return true
+        }
+        await new Promise((r) => setTimeout(r, 1000))
+    }
+    return false
+}
+
+// Hook to manage image polling for food items
+export const useImagePolling = (foodItems: FoodItem[], setFoodItems: React.Dispatch<React.SetStateAction<FoodItem[]>>) => {
+    const pollingRefs = useRef<Set<string>>(new Set())
+    
+    const startPolling = useCallback(async (item: FoodItem) => {
+        if (pollingRefs.current.has(item.id) || item.imagesReady) {
+            return
+        }
+        
+        pollingRefs.current.add(item.id)
+        
+        try {
+            const ready = await pollImages(item)
+            if (ready) {
+                setFoodItems(prevItems => 
+                    prevItems.map(prevItem => 
+                        prevItem.id === item.id 
+                            ? { ...prevItem, imagesReady: true }
+                            : prevItem
+                    )
+                )
+            }
+        } catch (error) {
+            console.warn('Failed to poll images for item:', item.id, error)
+        } finally {
+            pollingRefs.current.delete(item.id)
+        }
+    }, [setFoodItems])
+    
+    const pollItemsWithoutReadyImages = useCallback(() => {
+        foodItems
+            .filter(item => !item.imagesReady && !pollingRefs.current.has(item.id))
+            .forEach(item => {
+                startPolling(item)
+            })
+    }, [foodItems, startPolling])
+    
+    return { pollItemsWithoutReadyImages, startPolling }
 }
 
 // Helper Functions

@@ -790,6 +790,7 @@ const FoodHistoryDateView: React.FC<FoodHistoryDateViewProps> = ({
             pItem.createdAt === nItem.createdAt &&
             pItem.confidencePercentage === nItem.confidencePercentage &&
             pItem.isDeleting === nItem.isDeleting &&
+            pItem.imagesReady === nItem.imagesReady && // Added imagesReady comparison
             pItem.publicUrl.originImage === nItem.publicUrl.originImage &&
             pItem.publicUrl.segmentationImage === nItem.publicUrl.segmentationImage;
 
@@ -871,34 +872,47 @@ const FoodItemCard: React.FC<FoodItemCardProps> = React.memo(
                             </TouchableOpacity>
                         </View>
                     </View>
-                    <Text style={sharedStyles.foodCalories}>{formatDecimalDisplay(item.calo)} kcal</Text>
+                    <Text style={sharedStyles.foodCalories}>{formatDecimalDisplay(item.calo)} kcal</Text>                    <View style={sharedStyles.imagesContainer}>
+                        {/* Conditional rendering based on imagesReady state */}
+                        {!item.imagesReady ? (
+                            <>
+                                <View style={sharedStyles.imageWrapper}>
+                                    <ActivityIndicator size="large" color="#3498db" />
+                                </View>
+                                <View style={sharedStyles.imageWrapper}>
+                                    <ActivityIndicator size="large" color="#3498db" />
+                                </View>
+                            </>
+                        ) : (
+                            <>
+                                <TouchableOpacity
+                                    style={sharedStyles.imageWrapper}
+                                    onPress={handleOpenOriginImage} // Use internal handler
+                                    activeOpacity={0.9}
+                                    disabled={isDeleting}
+                                >
+                                    <Image
+                                        source={{ uri: item.publicUrl.originImage }}
+                                        style={sharedStyles.thumbnailImage}
+                                        resizeMode="contain"
+                                    />
+                                </TouchableOpacity>
 
-                    <View style={sharedStyles.imagesContainer}>
-                        <TouchableOpacity
-                            style={sharedStyles.imageWrapper}
-                            onPress={handleOpenOriginImage} // Use internal handler
-                            activeOpacity={0.9}
-                            disabled={isDeleting}
-                        >
-                            <Image
-                                source={{ uri: item.publicUrl.originImage }}
-                                style={sharedStyles.thumbnailImage}
-                                resizeMode="contain"
-                            />
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={sharedStyles.imageWrapper}
-                            onPress={handleOpenSegmentationImage} // Use internal handler
-                            activeOpacity={0.9}
-                            disabled={isDeleting}
-                        >
-                            <Image
-                                source={{ uri: item.publicUrl.segmentationImage }}
-                                style={sharedStyles.thumbnailImage}
-                                resizeMode="contain"
-                            />
-                        </TouchableOpacity>                    </View>
+                                <TouchableOpacity
+                                    style={sharedStyles.imageWrapper}
+                                    onPress={handleOpenSegmentationImage} // Use internal handler
+                                    activeOpacity={0.9}
+                                    disabled={isDeleting}
+                                >
+                                    <Image
+                                        source={{ uri: item.publicUrl.segmentationImage }}
+                                        style={sharedStyles.thumbnailImage}
+                                        resizeMode="contain"
+                                    />
+                                </TouchableOpacity>
+                            </>
+                        )}                   
+                    </View>
 
                     <View style={sharedStyles.dateConfidenceRow}>
                         <Text style={sharedStyles.foodDate}>{formattedDate}</Text>

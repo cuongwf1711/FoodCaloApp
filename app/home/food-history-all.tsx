@@ -450,6 +450,7 @@ const areFoodHistoryItemsEqual = (prevProps: Readonly<FoodHistoryItemProps>, nex
         pItem.createdAt === nItem.createdAt && // Direct comparison for string
         pItem.confidencePercentage === nItem.confidencePercentage &&
         pItem.isDeleting === nItem.isDeleting &&
+        pItem.imagesReady === nItem.imagesReady && // Added imagesReady comparison
         pItem.publicUrl.originImage === nItem.publicUrl.originImage &&
         pItem.publicUrl.segmentationImage === nItem.publicUrl.segmentationImage;
 };
@@ -512,31 +513,45 @@ const FoodHistoryItem: React.FC<FoodHistoryItemProps> = React.memo(({
             <Text style={sharedStyles.foodCalories}>{formatDecimalDisplay(item.calo)} kcal</Text>
 
             <View style={sharedStyles.imagesContainer}>
-                <TouchableOpacity
-                    style={sharedStyles.imageWrapper}
-                    onPress={handleOpenOriginImage}
-                    activeOpacity={0.9}
-                    disabled={isDeleting}
-                >
-                    <Image
-                        source={{ uri: item.publicUrl.originImage }}
-                        style={sharedStyles.thumbnailImage}
-                        resizeMode="contain"
-                    />
-                </TouchableOpacity>
+                {/* Conditional rendering based on imagesReady state */}
+                {!item.imagesReady ? (
+                    <>
+                        <View style={sharedStyles.imageWrapper}>
+                            <ActivityIndicator size="large" color="#3498db" />
+                        </View>
+                        <View style={sharedStyles.imageWrapper}>
+                            <ActivityIndicator size="large" color="#3498db" />
+                        </View>
+                    </>
+                ) : (
+                    <>
+                        <TouchableOpacity
+                            style={sharedStyles.imageWrapper}
+                            onPress={handleOpenOriginImage}
+                            activeOpacity={0.9}
+                            disabled={isDeleting}
+                        >
+                            <Image
+                                source={{ uri: item.publicUrl.originImage }}
+                                style={sharedStyles.thumbnailImage}
+                                resizeMode="contain"
+                            />
+                        </TouchableOpacity>
 
-                <TouchableOpacity
-                    style={sharedStyles.imageWrapper}
-                    onPress={handleOpenSegmentationImage}
-                    activeOpacity={0.9}
-                    disabled={isDeleting}
-                >
-                    <Image
-                        source={{ uri: item.publicUrl.segmentationImage }}
-                        style={sharedStyles.thumbnailImage}
-                        resizeMode="contain"
-                    />
-                </TouchableOpacity>            
+                        <TouchableOpacity
+                            style={sharedStyles.imageWrapper}
+                            onPress={handleOpenSegmentationImage}
+                            activeOpacity={0.9}
+                            disabled={isDeleting}
+                        >
+                            <Image
+                                source={{ uri: item.publicUrl.segmentationImage }}
+                                style={sharedStyles.thumbnailImage}
+                                resizeMode="contain"
+                            />
+                        </TouchableOpacity>
+                    </>
+                )}          
             </View>
 
             <View style={sharedStyles.dateConfidenceRow}>
