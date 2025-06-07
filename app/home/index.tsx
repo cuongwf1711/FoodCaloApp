@@ -3,7 +3,7 @@
 import React from "react"
 
 import { URL_FOOD_CALO_ESTIMATOR } from "@/constants/url_constants"
-import { deleteData, patchData, postData } from "@/context/request_context"
+import { deleteData, downloadFile, headData, patchData, postData } from "@/context/request_context"
 import { showMessage } from "@/utils/showMessage"
 import { Ionicons } from '@expo/vector-icons'
 import { useEffect, useRef, useState } from "react"
@@ -215,18 +215,17 @@ const ImageModal: React.FC<{
                     document.body.style.width = ""
                     document.removeEventListener("keydown", handleEscape)
                 }
-            }
-        }
+            }        }
     }, [visible, onClose])
-
+    
     const downloadImage = async () => {
         if (!imageUri) return
 
         try {
             if (Platform.OS === "web") {
-                // Web download implementation
-                const response = await fetch(imageUri)
-                const blob = await response.blob()
+                // Web download implementation using axios
+                const response = await downloadFile(imageUri)
+                const blob = response.data
                 
                 // Create download link
                 const url = window.URL.createObjectURL(blob)
@@ -950,19 +949,18 @@ const Index: React.FC = () => {
                 setIsEditing(false)
                 clearAllState()
                 showMessage({ message: "Failed to update result" }, true)
-            }
-        } catch (error) {
+            }        } catch (error) {
             // Clear everything if error occurred during edit
             setIsEditing(false)
             clearAllState()
             showMessage(error)
         }
     }
-
+    
     const cancelEditing = () => {
         setIsEditing(false)
     }
-
+    
     // Poll image URLs to check if they are ready
     useEffect(() => {
         if (result?.publicUrl) {
@@ -970,12 +968,12 @@ const Index: React.FC = () => {
             pollImages()
         }
     }, [result])
-
-    async function pollImages(retries = 8) {
+    
+    async function pollImages(retries = 10) {
         const checkUrl = async (url: string) => {
             try {
-                const res = await fetch(url, { method: 'HEAD' })
-                return res.ok
+                const res = await headData(url)
+                return res.status === 200
             } catch {
                 return false
             }

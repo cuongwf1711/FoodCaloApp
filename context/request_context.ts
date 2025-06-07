@@ -31,7 +31,7 @@ export const registerAuthUpdaters = (
 };
 
 // Create axios instance with common configuration
-const api: AxiosInstance = axios.create({
+export const api: AxiosInstance = axios.create({
     baseURL: BASE_URL,        // Change if needed
     // timeout: 10000,                              // Default timeout: 10s
     headers: {
@@ -134,6 +134,33 @@ export const patchData = <T>(
     data: any,
     config?: AxiosRequestConfig
 ) => request<T>("patch", url, data, config);
+
+// Head method for checking URL availability
+export const headData = <T>(
+    url: string,
+    config?: AxiosRequestConfig
+): Promise<AxiosResponse<T>> => {
+    const headConfig: AxiosRequestConfig = {
+        method: "head",
+        url,
+        ...config,
+    };
+    return api.request<T>(headConfig);
+};
+
+// Download file method for blob responses
+export const downloadFile = async (
+    url: string,
+    config?: AxiosRequestConfig
+): Promise<AxiosResponse<Blob>> => {
+    const downloadConfig: AxiosRequestConfig = {
+        method: "get",
+        url,
+        responseType: "blob",
+        ...config,
+    };
+    return api.request<Blob>(downloadConfig);
+};
 
 // Verify token (send token in body)
 export const verifyAccessToken = async() =>

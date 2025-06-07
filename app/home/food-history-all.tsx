@@ -30,6 +30,7 @@ import {
 } from "@/utils/food-history-utils";
 import { formatDecimalDisplay } from "@/utils/number-utils";
 
+import { downloadFile } from "@/context/request_context";
 import { showMessage } from "@/utils/showMessage";
 import * as FileSystem from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library';
@@ -160,13 +161,12 @@ const ImageModal: React.FC<{
 
     const downloadImage = async () => {
         if (!imageUri) return;
-        try {
-            if (Platform.OS === "web") {
-                const response = await fetch(imageUri);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+        try {            if (Platform.OS === "web") {
+                const response = await downloadFile(imageUri);
+                if (!response || response.status !== 200) {
+                    throw new Error(`HTTP error! status: ${response?.status || 'Unknown'}`);
                 }
-                const blob = await response.blob();
+                const blob = response.data;
                 const url = window.URL.createObjectURL(blob);
                 const link = document.createElement('a');
                 link.href = url;

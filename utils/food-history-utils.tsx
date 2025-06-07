@@ -6,7 +6,7 @@ import { Platform } from "react-native"
 
 import { MAX_CALORIES, MAX_COMMENT_LENGTH } from "@/constants/general_constants"
 import { URL_FOOD_CALO_ESTIMATOR, URL_USER_PROFILE } from "@/constants/url_constants"
-import { deleteData, getData, patchData } from "@/context/request_context"
+import { deleteData, getData, headData, patchData } from "@/context/request_context"
 import { Colors } from "@/styles/colors"
 import { showMessage } from "@/utils/showMessage"
 import { useCallback, useEffect, useRef, useState } from "react"
@@ -1606,12 +1606,11 @@ export const MonthPicker: React.FC<{
 export const pollImages = async (item: FoodItem, retries = 8): Promise<boolean> => {
     const checkUrl = async (url: string) => {
         try {
-            const res = await fetch(url, { method: 'HEAD' })
-            return res.ok
+            const res = await headData(url)
+            return res.status === 200
         } catch {
             return false
-        }
-    }
+        }    }
     
     for (let i = 0; i < retries; i++) {
         const originOk = await checkUrl(item.publicUrl.originImage)
