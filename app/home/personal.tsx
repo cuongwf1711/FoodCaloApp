@@ -36,6 +36,7 @@ interface UserProfile {
     lengthReferencePoint: number | null
     widthReferencePoint: number | null
     areaReferencePoint: number | null
+    activityFactor: number | null
     autoSetCalorieLimit?: boolean
     totalCalories?: number
 }
@@ -50,6 +51,7 @@ interface UserProfileUpdate {
     calorieLimitPeriod?: string
     lengthReferencePointCustom?: number
     widthReferencePointCustom?: number
+    activityFactor?: number
     autoSetCalorieLimit?: boolean
 }
 
@@ -61,6 +63,7 @@ interface ValidationErrors {
     lengthReferencePoint?: string
     widthReferencePoint?: string
     calorieLimit?: string
+    activityFactor?: string
 }
 
 const PERIOD_OPTIONS = [
@@ -81,18 +84,15 @@ const Personal = () => {
     const [resetting, setResetting] = useState(false)
     const [isEditing, setIsEditing] = useState(false)
     const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
-    const [showPeriodDropdown, setShowPeriodDropdown] = useState(false)
-
-    // Text input states for decimal fields to handle display properly
+    const [showPeriodDropdown, setShowPeriodDropdown] = useState(false)    // Text input states for decimal fields to handle display properly
     const [lengthInputText, setLengthInputText] = useState("")
     const [widthInputText, setWidthInputText] = useState("")
     const [calorieInputText, setCalorieInputText] = useState("")
+    const [activityFactorInputText, setActivityFactorInputText] = useState("")
 
     // Animated values for button effects
     const saveButtonScale = useRef(new Animated.Value(1)).current
-    const resetButtonScale = useRef(new Animated.Value(1)).current
-
-    // Use tab reload hook
+    const resetButtonScale = useRef(new Animated.Value(1)).current    // Use tab reload hook
     const { isReloading, animatedStyle } = useTabReload("personal", {
         onReload: async () => {
             // Reset all state when tab is reloaded
@@ -103,6 +103,7 @@ const Personal = () => {
             setLengthInputText("")
             setWidthInputText("")
             setCalorieInputText("")
+            setActivityFactorInputText("")
 
             // Refresh profile data
             await fetchUserProfile()
@@ -123,9 +124,7 @@ const Personal = () => {
                 useNativeDriver: true,
             }),
         ]).start()
-    }
-
-    // Toggle edit mode
+    }    // Toggle edit mode
     const toggleEditMode = () => {
         if (isEditing) {
             // If currently in edit mode, cancel changes
@@ -135,11 +134,13 @@ const Personal = () => {
             setLengthInputText("")
             setWidthInputText("")
             setCalorieInputText("")
+            setActivityFactorInputText("")
         } else {
             // Initialize input text states when entering edit mode
             setLengthInputText(formatNumberForInput(profile?.lengthReferencePoint || 0))
             setWidthInputText(formatNumberForInput(profile?.widthReferencePoint || 0))
             setCalorieInputText(formatNumberForInput(profile?.calorieLimit || 0))
+            setActivityFactorInputText(formatNumberForInput(profile?.activityFactor || 0))
         }
         setIsEditing(!isEditing)
     }
@@ -158,9 +159,7 @@ const Personal = () => {
     // Fetch profile data on component mount
     useEffect(() => {
         fetchUserProfile()
-    }, [])
-
-    // Fetch user profile from API
+    }, [])    // Fetch user profile from API
     const fetchUserProfile = async () => {
         try {
             const response = await getData<UserProfile>(URL_USER_PROFILE)
@@ -171,6 +170,7 @@ const Personal = () => {
             setLengthInputText("")
             setWidthInputText("")
             setCalorieInputText("")
+            setActivityFactorInputText("")
         } catch (error) {
             showMessage(error)
         }
@@ -208,13 +208,23 @@ const Personal = () => {
         const widthRef = getValue("widthReferencePoint") as number
         if (widthRef < 0 || widthRef > 10) {
             errors.widthReferencePoint = "Width reference point must be between 0 and 10"
-        }
-
-        // Validate calorie limit (only when not auto-calculated) - no upper limit, supports decimals
+        }        // Validate calorie limit (only when not auto-calculated) - no upper limit, supports decimals
         if (!isAutoSetCalorieLimit()) {
             const calorieLimit = getValue("calorieLimit") as number
             if (calorieLimit < 0) {
                 errors.calorieLimit = "Calorie limit cannot be negative"
+            }
+        }
+
+        // Validate activity factor (0-5) - supports decimals with max 2 decimal places
+        const activityFactor = getValue("activityFactor") as number
+        if (activityFactor < 0 || activityFactor > 5) {
+            errors.activityFactor = "Activity factor must be between 0 and 5"
+        } else {
+            // Check for max 2 decimal places
+            const decimalPlaces = (activityFactor.toString().split('.')[1] || '').length
+            if (decimalPlaces > 2) {
+                errors.activityFactor = "Activity factor can have maximum 2 decimal places"
             }
         }
 
@@ -293,15 +303,14 @@ const Personal = () => {
             if (Object.keys(changedValues).length > 0) {
                 const response = await patchData<UserProfile>(URL_USER_PROFILE, changedValues)
                 setProfile(response.data)
-            }
-
-            setEditedProfile({})
+            }            setEditedProfile({})
             setValidationErrors({})
             setIsEditing(false)
             // Reset input text states
             setLengthInputText("")
             setWidthInputText("")
             setCalorieInputText("")
+            setActivityFactorInputText("")
         } catch (error) {
             showMessage(error)
         } finally {
@@ -415,9 +424,7 @@ const Personal = () => {
         }
 
         return Number.parseFloat(result) || 0
-    }
-
-    // Validate input text to only allow numbers and decimal point
+    }    // Validate input text to only allow numbers and decimal point
     const validateNumericInput = (text: string): string => {
         // Only allow digits, one decimal point, and minus sign at the beginning
         let cleanText = text.replace(/[^0-9.]/g, "")
@@ -433,12 +440,32 @@ const Personal = () => {
         return cleanText
     }
 
+    // Validate activity factor input with max 2 decimal places
+    const validateActivityFactorInput = (text: string): string => {
+        // Only allow digits and one decimal point
+        let cleanText = text.replace(/[^0-9.]/g, "")
+
+        // Handle decimal points
+        const decimalCount = (cleanText.match(/\./g) || []).length
+        if (decimalCount > 1) {
+            const firstDecimalIndex = cleanText.indexOf(".")
+            cleanText =
+                cleanText.substring(0, firstDecimalIndex + 1) + cleanText.substring(firstDecimalIndex + 1).replace(/\./g, "")
+        }
+
+        // Limit to 2 decimal places
+        const parts = cleanText.split(".")
+        if (parts.length > 1 && parts[1].length > 2) {
+            cleanText = parts[0] + "." + parts[1].substring(0, 2)
+        }
+
+        return cleanText
+    }
+
     // Format number for input field
     const formatNumberForInput = (value: number): string => {
         return value.toString()
-    }
-
-    // Handle decimal input changes with text state management and strict validation
+    }    // Handle decimal input changes with text state management and strict validation
     const handleDecimalInputChange = (field: keyof UserProfile, text: string, setInputText: (text: string) => void) => {
         // Validate and clean the input
         const validatedText = validateNumericInput(text)
@@ -449,6 +476,19 @@ const Personal = () => {
         // Parse and update the actual value
         const numericValue = parseDecimalInput(validatedText)
         handleChange(field, numericValue)
+    }
+
+    // Handle activity factor input changes with max 2 decimal places validation
+    const handleActivityFactorInputChange = (text: string) => {
+        // Validate and clean the input with activity factor specific rules
+        const validatedText = validateActivityFactorInput(text)
+
+        // Update the text input state with validated text
+        setActivityFactorInputText(validatedText)
+
+        // Parse and update the actual value
+        const numericValue = parseDecimalInput(validatedText)
+        handleChange("activityFactor", numericValue)
     }
 
     return (
@@ -466,40 +506,39 @@ const Personal = () => {
                         <TouchableOpacity style={styles.cancelButton} onPress={toggleEditMode} activeOpacity={0.7}>
                             <Text style={styles.cancelButtonText}>{isEditing ? "Cancel" : "Edit"}</Text>
                         </TouchableOpacity>
-                    </View>
-
-                    <View style={styles.formContainer}>
-                        {!isEditing && profile?.totalCalories !== undefined && (
-                            <View style={styles.calorieProgressContainer}>
-                                <View style={styles.calorieInfoRow}>
-                                    <Text style={styles.calorieTitle}>Calories Consumed (kcal) in {getPeriodLabel(profile.calorieLimitPeriod)}</Text>
-                                    <Text style={styles.calorieValue} numberOfLines={1} adjustsFontSizeToFit>
-                                        {formatDecimalDisplay(profile.totalCalories)} / {formatDecimalDisplay(profile.calorieLimit)}
-                                    </Text>
-                                </View>
-
-                                <View style={styles.progressBarContainer}>
-                                    <View
-                                        style={[
-                                            styles.progressBar,
-                                            {
-                                                width: `${Math.min(calculateCaloriePercentage(), 100)}%`,
-                                                backgroundColor: getProgressColor(),
-                                            },
-                                        ]}
-                                    />
-                                    <View style={styles.progressTextContainer}>
-                                        <Text style={styles.progressText}>{calculateCaloriePercentage()}%</Text>
+                    </View>                    <View style={styles.formContainer}>
+                        <View style={styles.scrollableContent}>
+                            {!isEditing && profile?.totalCalories !== undefined && (
+                                <View style={styles.calorieProgressContainer}>
+                                    <View style={styles.calorieInfoRow}>
+                                        <Text style={styles.calorieTitle}>Calories Consumed (kcal) in {getPeriodLabel(profile.calorieLimitPeriod)}</Text>
+                                        <Text style={styles.calorieValue} numberOfLines={1} adjustsFontSizeToFit>
+                                            {formatDecimalDisplay(profile.totalCalories)} / {formatDecimalDisplay(profile.calorieLimit)}
+                                        </Text>
                                     </View>
-                                </View>
 
-                                {calculateCaloriePercentage() > 100 && (
-                                    <View style={styles.warningContainer}>
-                                        <Text style={styles.warningText}>⚠️ Calorie limit exceeded!</Text>
+                                    <View style={styles.progressBarContainer}>
+                                        <View
+                                            style={[
+                                                styles.progressBar,
+                                                {
+                                                    width: `${Math.min(calculateCaloriePercentage(), 100)}%`,
+                                                    backgroundColor: getProgressColor(),
+                                                },
+                                            ]}
+                                        />
+                                        <View style={styles.progressTextContainer}>
+                                            <Text style={styles.progressText}>{calculateCaloriePercentage()}%</Text>
+                                        </View>
                                     </View>
-                                )}
-                            </View>
-                        )}
+
+                                    {calculateCaloriePercentage() > 100 && (
+                                        <View style={styles.warningContainer}>
+                                            <Text style={styles.warningText}>⚠️ Calorie limit exceeded!</Text>
+                                        </View>
+                                    )}
+                                </View>
+                            )}
 
                         {/* Gender and Age in one row */}
                         <View style={styles.rowContainer}>
@@ -575,25 +614,51 @@ const Personal = () => {
                                     </>
                                 ) : (
                                     <Text style={styles.fieldValue}>{profile?.weight}</Text>
+                                )}                            </View>
+                        </View>
+                        {/* Activity Factor and Auto-calculate calorie limit row */}
+                        <View style={styles.rowContainer}>
+                            <View style={[styles.columnContainer, { marginRight: 8 }]}>
+                                <Text style={styles.fieldLabel}>Activity Factor:</Text>
+                                {isEditing ? (
+                                    <>
+                                        <TextInput
+                                            style={[styles.input, validationErrors.activityFactor && styles.inputError]}
+                                            value={activityFactorInputText || getValue("activityFactor")?.toString()}
+                                            onChangeText={handleActivityFactorInputChange}
+                                            keyboardType="decimal-pad"
+                                            maxLength={4} // Allows for X.XX format
+                                            placeholder="0.00 - 5.00"
+                                        />
+                                        {validationErrors.activityFactor && (
+                                            <Text style={styles.errorText}>{validationErrors.activityFactor}</Text>
+                                        )}
+                                    </>
+                                ) : (
+                                    <Text style={styles.fieldValue} numberOfLines={1} adjustsFontSizeToFit>
+                                        {profile?.activityFactor}
+                                    </Text>
+                                )}
+                            </View>
+
+                            <View style={styles.columnContainer}>
+                                {/* Auto-calculate calorie limit */}
+                                {isEditing && (
+                                    <>
+                                        <Text style={styles.fieldLabel}>Auto-calculate calorie limit:</Text>
+                                        <View style={styles.switchContainer}>
+                                            <Text style={styles.switchLabel}>{isAutoSetCalorieLimit() ? "On" : "Off"}</Text>
+                                            <Switch
+                                                value={isAutoSetCalorieLimit()}
+                                                onValueChange={(value) => handleChange("autoSetCalorieLimit", value)}
+                                                trackColor={{ false: "#e9e9e9", true: "#81b0ff" }}
+                                                thumbColor={isAutoSetCalorieLimit() ? "#0066cc" : "#f4f3f4"}
+                                            />
+                                        </View>
+                                    </>
                                 )}
                             </View>
                         </View>
-
-                        {/* Auto-calculate calorie limit */}
-                        {isEditing && (
-                            <View style={styles.fieldRow}>
-                                <Text style={styles.fieldLabel}>Auto-calculate calorie limit:</Text>
-                                <View style={styles.switchContainer}>
-                                    <Text style={styles.switchLabel}>{isAutoSetCalorieLimit() ? "On" : "Off"}</Text>
-                                    <Switch
-                                        value={isAutoSetCalorieLimit()}
-                                        onValueChange={(value) => handleChange("autoSetCalorieLimit", value)}
-                                        trackColor={{ false: "#e9e9e9", true: "#81b0ff" }}
-                                        thumbColor={isAutoSetCalorieLimit() ? "#0066cc" : "#f4f3f4"}
-                                    />
-                                </View>
-                            </View>
-                        )}
 
                         <View style={styles.rowContainer}>
                             <View style={[styles.columnContainer, { marginRight: 8 }]}>
@@ -740,11 +805,10 @@ const Personal = () => {
                                     : profile?.areaReferencePoint}
                                 {isEditing && <Text style={styles.calculatedText}> (length x width)</Text>}
                             </Text>
-                        </View>
-
-                        {/* Calorie unit note */}
-                        <View style={styles.noteContainer}>
-                            <Text style={styles.noteText}>Note: Calorie values are displayed in kilocalories (kcal)</Text>
+                        </View>                            {/* Calorie unit note */}
+                            <View style={styles.noteContainer}>
+                                <Text style={styles.noteText}>Note: Calorie values are displayed in kilocalories (kcal)</Text>
+                            </View>
                         </View>
                     </View>
 
@@ -844,8 +908,7 @@ const styles = StyleSheet.create({
     cancelButtonText: {
         color: "#fff",
         fontWeight: "600",
-    },
-    formContainer: {
+    },    formContainer: {
         backgroundColor: "#fff",
         borderRadius: 8,
         padding: 16,
@@ -854,6 +917,9 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 3,
+        flex: 1,
+    },
+    scrollableContent: {
         flex: 1,
     },
     calorieProgressContainer: {
