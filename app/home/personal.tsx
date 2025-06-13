@@ -25,7 +25,6 @@ import {
     View,
 } from "react-native"
 
-// User profile type definition
 interface UserProfile {
     gender: boolean | null
     age: number | null
@@ -41,7 +40,6 @@ interface UserProfile {
     totalCalories?: number
 }
 
-// Interface for profile update data
 interface UserProfileUpdate {
     gender?: boolean | null
     age?: number
@@ -55,7 +53,6 @@ interface UserProfileUpdate {
     autoSetCalorieLimit?: boolean
 }
 
-// Validation errors interface
 interface ValidationErrors {
     age?: string
     height?: string
@@ -72,30 +69,24 @@ const PERIOD_OPTIONS = [
     { label: "Month", value: "month" },
 ]
 
-/**
- * Personal Profile Screen
- * Allows users to view and edit their profile information
- */
 const Personal = () => {
-    // Profile data state
     const [profile, setProfile] = useState<UserProfile | null>(null)
     const [editedProfile, setEditedProfile] = useState<Partial<UserProfileUpdate>>({})
     const [saving, setSaving] = useState(false)
     const [resetting, setResetting] = useState(false)
     const [isEditing, setIsEditing] = useState(false)
     const [validationErrors, setValidationErrors] = useState<ValidationErrors>({})
-    const [showPeriodDropdown, setShowPeriodDropdown] = useState(false)    // Text input states for decimal fields to handle display properly
+    const [showPeriodDropdown, setShowPeriodDropdown] = useState(false)
     const [lengthInputText, setLengthInputText] = useState("")
     const [widthInputText, setWidthInputText] = useState("")
     const [calorieInputText, setCalorieInputText] = useState("")
     const [activityFactorInputText, setActivityFactorInputText] = useState("")
 
-    // Animated values for button effects
     const saveButtonScale = useRef(new Animated.Value(1)).current
-    const resetButtonScale = useRef(new Animated.Value(1)).current    // Use tab reload hook
+    const resetButtonScale = useRef(new Animated.Value(1)).current
+
     const { isReloading, animatedStyle } = useTabReload("personal", {
         onReload: async () => {
-            // Reset all state when tab is reloaded
             setEditedProfile({})
             setValidationErrors({})
             setIsEditing(false)
@@ -105,12 +96,9 @@ const Personal = () => {
             setCalorieInputText("")
             setActivityFactorInputText("")
 
-            // Refresh profile data
-            await fetchUserProfile()
-        },
+            await fetchUserProfile()        },
     })
 
-    // Button press animation
     const animateButton = (animated: Animated.Value) => {
         Animated.sequence([
             Animated.timing(animated, {
@@ -124,19 +112,17 @@ const Personal = () => {
                 useNativeDriver: true,
             }),
         ]).start()
-    }    // Toggle edit mode
+    }
+
     const toggleEditMode = () => {
         if (isEditing) {
-            // If currently in edit mode, cancel changes
             setEditedProfile({})
             setValidationErrors({})
-            // Reset input text states
             setLengthInputText("")
             setWidthInputText("")
             setCalorieInputText("")
             setActivityFactorInputText("")
         } else {
-            // Initialize input text states when entering edit mode
             setLengthInputText(formatNumberForInput(profile?.lengthReferencePoint || 0))
             setWidthInputText(formatNumberForInput(profile?.widthReferencePoint || 0))
             setCalorieInputText(formatNumberForInput(profile?.calorieLimit || 0))
@@ -145,7 +131,6 @@ const Personal = () => {
         setIsEditing(!isEditing)
     }
 
-    // Reset to original values by refetching from API
     const resetToOriginal = async () => {
         animateButton(resetButtonScale)
         setResetting(true)
@@ -156,17 +141,16 @@ const Personal = () => {
         }
     }
 
-    // Fetch profile data on component mount
     useEffect(() => {
         fetchUserProfile()
-    }, [])    // Fetch user profile from API
+    }, [])
+
     const fetchUserProfile = async () => {
         try {
             const response = await getData<UserProfile>(URL_USER_PROFILE)
             setProfile(response.data)
             setEditedProfile({})
             setValidationErrors({})
-            // Reset input text states
             setLengthInputText("")
             setWidthInputText("")
             setCalorieInputText("")
@@ -176,39 +160,34 @@ const Personal = () => {
         }
     }
 
-    // Validate data before saving
     const validateProfile = (): boolean => {
         const errors: ValidationErrors = {}
 
-        // Validate age (0-200)
         const age = getValue("age") as number
         if (age < 0 || age > 200) {
             errors.age = "Age must be between 0 and 200"
         }
 
-        // Validate height (0-999)
         const height = getValue("height") as number
         if (height < 0 || height > 999) {
             errors.height = "Height must be between 0 and 999"
         }
 
-        // Validate weight (0-999)
         const weight = getValue("weight") as number
         if (weight < 0 || weight > 999) {
             errors.weight = "Weight must be between 0 and 999"
         }
 
-        // Validate length reference point (0-20) - now supports decimals
         const lengthRef = getValue("lengthReferencePoint") as number
         if (lengthRef < 0 || lengthRef > 20) {
             errors.lengthReferencePoint = "Length reference point must be between 0 and 20"
         }
 
-        // Validate width reference point (0-10) - now supports decimals
         const widthRef = getValue("widthReferencePoint") as number
         if (widthRef < 0 || widthRef > 10) {
             errors.widthReferencePoint = "Width reference point must be between 0 and 10"
-        }        // Validate calorie limit (only when not auto-calculated) - no upper limit, supports decimals
+        }
+
         if (!isAutoSetCalorieLimit()) {
             const calorieLimit = getValue("calorieLimit") as number
             if (calorieLimit < 0) {
@@ -216,12 +195,10 @@ const Personal = () => {
             }
         }
 
-        // Validate activity factor (0-5) - supports decimals with max 2 decimal places
         const activityFactor = getValue("activityFactor") as number
         if (activityFactor < 0 || activityFactor > 5) {
             errors.activityFactor = "Activity factor must be between 0 and 5"
         } else {
-            // Check for max 2 decimal places
             const decimalPlaces = (activityFactor.toString().split('.')[1] || '').length
             if (decimalPlaces > 2) {
                 errors.activityFactor = "Activity factor can have maximum 2 decimal places"
@@ -232,19 +209,15 @@ const Personal = () => {
         return Object.keys(errors).length === 0
     }
 
-    // Check if there are any changes
     const hasChanges = (): boolean => {
-        // If no fields have been edited, there are no changes
         if (Object.keys(editedProfile).length === 0) {
             return false
         }
 
-        // Check each edited field
         for (const key in editedProfile) {
             const field = key as keyof typeof editedProfile
             let originalValue: any
 
-            // Handle special fields
             if (field === "lengthReferencePointCustom") {
                 originalValue = profile?.lengthReferencePoint
             } else if (field === "widthReferencePointCustom") {
@@ -255,28 +228,22 @@ const Personal = () => {
 
             const newValue = editedProfile[field]
 
-            // If value is different from original, there are changes
             if (originalValue !== newValue) {
                 return true
             }
         }
 
-        // All fields have reverted to original values
         return false
     }
 
-    // Update user profile
     const updateProfile = async () => {
-        // Button animation effect
         animateButton(saveButtonScale)
 
-        // Check if there are any changes
         if (!hasChanges()) {
             showMessage({ message: "No changes to save" }, true)
             return
         }
 
-        // Validate data
         if (!validateProfile()) {
             return
         }
@@ -284,29 +251,25 @@ const Personal = () => {
         try {
             setSaving(true)
 
-            // Create object with only changed values
             const changedValues: Record<string, any> = {}
 
-            // Compare each field to determine which values have changed
             Object.keys(editedProfile).forEach((key) => {
                 const field = key as keyof typeof editedProfile
                 const originalValue = profile?.[field as keyof UserProfile]
                 const newValue = editedProfile[field]
 
-                // Only add to changedValues if value has actually changed
                 if (originalValue !== newValue) {
                     changedValues[field] = newValue
                 }
             })
 
-            // Only call API if there are actual changes
             if (Object.keys(changedValues).length > 0) {
                 const response = await patchData<UserProfile>(URL_USER_PROFILE, changedValues)
                 setProfile(response.data)
-            }            setEditedProfile({})
+            }
+            setEditedProfile({})
             setValidationErrors({})
             setIsEditing(false)
-            // Reset input text states
             setLengthInputText("")
             setWidthInputText("")
             setCalorieInputText("")
@@ -318,9 +281,7 @@ const Personal = () => {
         }
     }
 
-    // Handle field value changes with decimal support
     const handleChange = (field: keyof UserProfile | keyof UserProfileUpdate, value: any) => {
-        // Clear validation error for this field
         if (field in validationErrors) {
             setValidationErrors((prev) => {
                 const newErrors = { ...prev }
@@ -329,11 +290,9 @@ const Personal = () => {
             })
         }
 
-        // Determine original value
         let originalValue: any
         let editedField: string = field as string
 
-        // Handle special fields
         if (field === "lengthReferencePoint") {
             originalValue = profile?.lengthReferencePoint
             editedField = "lengthReferencePointCustom"
@@ -344,27 +303,22 @@ const Personal = () => {
             originalValue = profile?.[field as keyof UserProfile]
         }
 
-        // Update editedProfile
         setEditedProfile((prev) => {
             const newEdited = { ...prev }
 
-            // Use strict equality for comparison
             if (value === originalValue) {
-                // If value reverts to original, remove field from editedProfile
                 const typedField = editedField as keyof typeof newEdited
                 if (typedField in newEdited) {
                     delete newEdited[typedField]
                 }
             } else {
-                // Type casting to avoid TypeScript errors
-                ; (newEdited as any)[editedField] = value
+                (newEdited as any)[editedField] = value
             }
 
             return newEdited
         })
     }
 
-    // Get current value (from editedProfile if available, otherwise from profile)
     const getValue = (field: keyof UserProfile) => {
         if (field === "lengthReferencePoint" && "lengthReferencePointCustom" in editedProfile) {
             return editedProfile.lengthReferencePointCustom
@@ -375,21 +329,17 @@ const Personal = () => {
         return field in editedProfile ? editedProfile[field as keyof typeof editedProfile] : profile?.[field]
     }
 
-    // Calculate reference area with decimal precision
     const calculateAreaReferencePoint = () => {
         const length = (getValue("lengthReferencePoint") as number) || 0
         const width = (getValue("widthReferencePoint") as number) || 0
         const area = length * width
-        // Round to 4 decimal places for display
         return Math.round(area * 10000) / 10000
     }
 
-    // Check if autoSetCalorieLimit is enabled
     const isAutoSetCalorieLimit = () => {
         return getValue("autoSetCalorieLimit") === true
     }
 
-    // Get period label for calorie limit
     const getPeriodLabel = (value: string) => {
         const option = PERIOD_OPTIONS.find((opt) => opt.value === value)
         return option ? option.label : "Day"
@@ -403,20 +353,16 @@ const Personal = () => {
         return percentage >= MAX_CALO_DISPLAY ? parseFloat(percentage.toExponential(2)) : parseFloat(percentage.toFixed(2))
     }
 
-    // Determine progress bar color based on percentage
     const getProgressColor = () => {
-        const percentage = calculateCaloriePercentage() // Ensure percentage is a number
-        if (percentage < 80) return "#4caf50" // Green - good
-        if (percentage < 100) return "#ff9800" // Orange - warning
-        return "#f44336" // Red - exceeded
+        const percentage = calculateCaloriePercentage()
+        if (percentage < 80) return "#4caf50"
+        if (percentage < 100) return "#ff9800"
+        return "#f44336"
     }
 
-    // Helper function to parse decimal input - STRICT validation for numbers only
     const parseDecimalInput = (text: string): number => {
-        // Only allow digits, decimal point at the beginning
         const cleanText = text.replace(/[^0-9.]/g, "")
 
-        // Handle multiple decimal points - keep only the first one
         const parts = cleanText.split(".")
         let result = parts[0]
         if (parts.length > 1) {
@@ -424,12 +370,11 @@ const Personal = () => {
         }
 
         return Number.parseFloat(result) || 0
-    }    // Validate input text to only allow numbers and decimal point
+    }
+
     const validateNumericInput = (text: string): string => {
-        // Only allow digits, one decimal point, and minus sign at the beginning
         let cleanText = text.replace(/[^0-9.]/g, "")
 
-        // Handle decimal points
         const decimalCount = (cleanText.match(/\./g) || []).length
         if (decimalCount > 1) {
             const firstDecimalIndex = cleanText.indexOf(".")
@@ -440,20 +385,15 @@ const Personal = () => {
         return cleanText
     }
 
-    // Validate activity factor input with max 2 decimal places
     const validateActivityFactorInput = (text: string): string => {
-        // Only allow digits and one decimal point
         let cleanText = text.replace(/[^0-9.]/g, "")
 
-        // Handle decimal points
         const decimalCount = (cleanText.match(/\./g) || []).length
         if (decimalCount > 1) {
             const firstDecimalIndex = cleanText.indexOf(".")
-            cleanText =
-                cleanText.substring(0, firstDecimalIndex + 1) + cleanText.substring(firstDecimalIndex + 1).replace(/\./g, "")
+            cleanText = cleanText.substring(0, firstDecimalIndex + 1) + cleanText.substring(firstDecimalIndex + 1).replace(/\./g, "")
         }
 
-        // Limit to 2 decimal places
         const parts = cleanText.split(".")
         if (parts.length > 1 && parts[1].length > 2) {
             cleanText = parts[0] + "." + parts[1].substring(0, 2)
@@ -462,31 +402,20 @@ const Personal = () => {
         return cleanText
     }
 
-    // Format number for input field
     const formatNumberForInput = (value: number): string => {
         return value.toString()
-    }    // Handle decimal input changes with text state management and strict validation
+    }
+
     const handleDecimalInputChange = (field: keyof UserProfile, text: string, setInputText: (text: string) => void) => {
-        // Validate and clean the input
         const validatedText = validateNumericInput(text)
-
-        // Update the text input state with validated text
         setInputText(validatedText)
-
-        // Parse and update the actual value
         const numericValue = parseDecimalInput(validatedText)
         handleChange(field, numericValue)
     }
 
-    // Handle activity factor input changes with max 2 decimal places validation
     const handleActivityFactorInputChange = (text: string) => {
-        // Validate and clean the input with activity factor specific rules
         const validatedText = validateActivityFactorInput(text)
-
-        // Update the text input state with validated text
         setActivityFactorInputText(validatedText)
-
-        // Parse and update the actual value
         const numericValue = parseDecimalInput(validatedText)
         handleChange("activityFactor", numericValue)
     }
@@ -502,11 +431,13 @@ const Personal = () => {
                     contentContainerStyle={{ flex: 1 }}
                 >
                     <View style={styles.header}>
-                        <Text style={styles.title}>User Profile</Text>
+                        <Text style={styles.title}>User Profile</Text>                        
                         <TouchableOpacity style={styles.cancelButton} onPress={toggleEditMode} activeOpacity={0.7}>
                             <Text style={styles.cancelButtonText}>{isEditing ? "Cancel" : "Edit"}</Text>
                         </TouchableOpacity>
-                    </View>                    <View style={styles.formContainer}>
+                    </View>
+
+                    <View style={styles.formContainer}>
                         <View style={styles.scrollableContent}>
                             {!isEditing && profile?.totalCalories !== undefined && (
                                 <View style={styles.calorieProgressContainer}>
@@ -538,274 +469,265 @@ const Personal = () => {
                                         </View>
                                     )}
                                 </View>
-                            )}
-
-                        {/* Gender and Age in one row */}
-                        <View style={styles.rowContainer}>
-                            <View style={[styles.columnContainer, { marginRight: 8 }]}>
-                                <Text style={styles.fieldLabel}>Gender:</Text>
-                                {isEditing ? (
-                                    <View style={styles.switchContainer}>
-                                        <Text style={styles.switchLabel}>
-                                            {getValue("gender") === true ? "Male" : getValue("gender") === false ? "Female" : ""}
-                                        </Text>
-                                        <Switch
-                                            value={getValue("gender") === true}
-                                            onValueChange={(value) => handleChange("gender", value)}
-                                            trackColor={{ false: "#e9e9e9", true: "#81b0ff" }}
-                                            thumbColor={getValue("gender") === true ? "#0066cc" : "#f4f3f4"}
-                                        />
-                                    </View>
-                                ) : (
-                                    <Text style={styles.fieldValue}>
-                                        {profile?.gender === true ? "Male" : profile?.gender === false ? "Female" : ""}
-                                    </Text>
-                                )}
-                            </View>
-
-                            <View style={styles.columnContainer}>
-                                <Text style={styles.fieldLabel}>Age:</Text>
-                                {isEditing ? (
-                                    <>
-                                        <TextInput
-                                            style={[styles.input, validationErrors.age && styles.inputError]}
-                                            value={getValue("age")?.toString()}
-                                            onChangeText={(text) => handleChange("age", Number.parseInt(text) || 0)}
-                                            keyboardType="number-pad"
-                                        />
-                                        {validationErrors.age && <Text style={styles.errorText}>{validationErrors.age}</Text>}
-                                    </>
-                                ) : (
-                                    <Text style={styles.fieldValue}>{profile?.age}</Text>
-                                )}
-                            </View>
-                        </View>
-
-                        {/* Height and Weight in one row */}
-                        <View style={styles.rowContainer}>
-                            <View style={[styles.columnContainer, { marginRight: 8 }]}>
-                                <Text style={styles.fieldLabel}>Height (cm):</Text>
-                                {isEditing ? (
-                                    <>
-                                        <TextInput
-                                            style={[styles.input, validationErrors.height && styles.inputError]}
-                                            value={getValue("height")?.toString()}
-                                            onChangeText={(text) => handleChange("height", Number.parseInt(text) || 0)}
-                                            keyboardType="number-pad"
-                                        />
-                                        {validationErrors.height && <Text style={styles.errorText}>{validationErrors.height}</Text>}
-                                    </>
-                                ) : (
-                                    <Text style={styles.fieldValue}>{profile?.height}</Text>
-                                )}
-                            </View>
-
-                            <View style={styles.columnContainer}>
-                                <Text style={styles.fieldLabel}>Weight (kg):</Text>
-                                {isEditing ? (
-                                    <>
-                                        <TextInput
-                                            style={[styles.input, validationErrors.weight && styles.inputError]}
-                                            value={getValue("weight")?.toString()}
-                                            onChangeText={(text) => handleChange("weight", Number.parseInt(text) || 0)}
-                                            keyboardType="number-pad"
-                                        />
-                                        {validationErrors.weight && <Text style={styles.errorText}>{validationErrors.weight}</Text>}
-                                    </>
-                                ) : (
-                                    <Text style={styles.fieldValue}>{profile?.weight}</Text>
-                                )}                            </View>
-                        </View>
-                        {/* Activity Factor and Auto-calculate calorie limit row */}
-                        <View style={styles.rowContainer}>
-                            <View style={[styles.columnContainer, { marginRight: 8 }]}>
-                                <Text style={styles.fieldLabel}>Activity Factor:</Text>
-                                {isEditing ? (
-                                    <>
-                                        <TextInput
-                                            style={[styles.input, validationErrors.activityFactor && styles.inputError]}
-                                            value={activityFactorInputText || getValue("activityFactor")?.toString()}
-                                            onChangeText={handleActivityFactorInputChange}
-                                            keyboardType="decimal-pad"
-                                            maxLength={4} // Allows for X.XX format
-                                            placeholder="0.00 - 5.00"
-                                        />
-                                        {validationErrors.activityFactor && (
-                                            <Text style={styles.errorText}>{validationErrors.activityFactor}</Text>
-                                        )}
-                                    </>
-                                ) : (
-                                    <Text style={styles.fieldValue} numberOfLines={1} adjustsFontSizeToFit>
-                                        {profile?.activityFactor}
-                                    </Text>
-                                )}
-                            </View>
-
-                            <View style={styles.columnContainer}>
-                                {/* Auto-calculate calorie limit */}
-                                {isEditing && (
-                                    <>
-                                        <Text style={styles.fieldLabel}>Auto-calculate calorie limit:</Text>
+                            )}                            
+                            <View style={styles.rowContainer}>
+                                <View style={[styles.columnContainer, { marginRight: 8 }]}>
+                                    <Text style={styles.fieldLabel}>Gender:</Text>
+                                    {isEditing ? (
                                         <View style={styles.switchContainer}>
-                                            <Text style={styles.switchLabel}>{isAutoSetCalorieLimit() ? "On" : "Off"}</Text>
+                                            <Text style={styles.switchLabel}>
+                                                {getValue("gender") === true ? "Male" : getValue("gender") === false ? "Female" : ""}
+                                            </Text>
                                             <Switch
-                                                value={isAutoSetCalorieLimit()}
-                                                onValueChange={(value) => handleChange("autoSetCalorieLimit", value)}
+                                                value={getValue("gender") === true}
+                                                onValueChange={(value) => handleChange("gender", value)}
                                                 trackColor={{ false: "#e9e9e9", true: "#81b0ff" }}
-                                                thumbColor={isAutoSetCalorieLimit() ? "#0066cc" : "#f4f3f4"}
+                                                thumbColor={getValue("gender") === true ? "#0066cc" : "#f4f3f4"}
                                             />
                                         </View>
-                                    </>
-                                )}
-                            </View>
-                        </View>
+                                    ) : (
+                                        <Text style={styles.fieldValue}>
+                                            {profile?.gender === true ? "Male" : profile?.gender === false ? "Female" : ""}
+                                        </Text>
+                                    )}
+                                </View>
 
-                        <View style={styles.rowContainer}>
-                            <View style={[styles.columnContainer, { marginRight: 8 }]}>
-                                <Text style={styles.fieldLabel}>Calorie Limit (kcal):</Text>
-                                {isEditing ? (
-                                    <>
-                                        <TextInput
-                                            style={[
-                                                styles.input,
-                                                isAutoSetCalorieLimit() && styles.disabledInput,
-                                                validationErrors.calorieLimit && styles.inputError,
-                                            ]}
-                                            value={getValue("calorieLimit")?.toString()}
-                                            onChangeText={(text) => handleChange("calorieLimit", text)}
-                                            keyboardType="numeric"
-                                            editable={!isAutoSetCalorieLimit()}
-                                            maxLength={MAX_CALORIES.toString().length}
-                                        />
-                                        {validationErrors.calorieLimit && (
-                                            <Text style={styles.errorText}>{validationErrors.calorieLimit}</Text>
-                                        )}
-                                    </>
-                                ) : (
-                                    <Text style={styles.fieldValue} numberOfLines={1} adjustsFontSizeToFit>
-                                        {formatDecimalDisplay(profile?.calorieLimit)}
-                                    </Text>
-                                )}
-                            </View>
+                                <View style={styles.columnContainer}>
+                                    <Text style={styles.fieldLabel}>Age:</Text>
+                                    {isEditing ? (
+                                        <>
+                                            <TextInput
+                                                style={[styles.input, validationErrors.age && styles.inputError]}
+                                                value={getValue("age")?.toString()}
+                                                onChangeText={(text) => handleChange("age", Number.parseInt(text) || 0)}
+                                                keyboardType="number-pad"
+                                            />
+                                            {validationErrors.age && <Text style={styles.errorText}>{validationErrors.age}</Text>}
+                                        </>
+                                    ) : (
+                                        <Text style={styles.fieldValue}>{profile?.age}</Text>
+                                    )}
+                                </View>
+                            </View>                            
+                            <View style={styles.rowContainer}>
+                                <View style={[styles.columnContainer, { marginRight: 8 }]}>
+                                    <Text style={styles.fieldLabel}>Height (cm):</Text>
+                                    {isEditing ? (
+                                        <>
+                                            <TextInput
+                                                style={[styles.input, validationErrors.height && styles.inputError]}
+                                                value={getValue("height")?.toString()}
+                                                onChangeText={(text) => handleChange("height", Number.parseInt(text) || 0)}
+                                                keyboardType="number-pad"
+                                            />
+                                            {validationErrors.height && <Text style={styles.errorText}>{validationErrors.height}</Text>}
+                                        </>
+                                    ) : (
+                                        <Text style={styles.fieldValue}>{profile?.height}</Text>
+                                    )}
+                                </View>
 
-                            <View style={styles.columnContainer}>
-                                <Text style={styles.fieldLabel}>Calorie Limit Period:</Text>
-                                {isEditing ? (
-                                    <View>
-                                        <TouchableOpacity
-                                            style={styles.dropdownButton}
-                                            onPress={() => setShowPeriodDropdown(true)}
-                                            activeOpacity={0.7}
-                                        >
-                                            <Text style={styles.dropdownButtonText}>
-                                                {getPeriodLabel(getValue("calorieLimitPeriod") as string)}
-                                            </Text>
-                                        </TouchableOpacity>
+                                <View style={styles.columnContainer}>
+                                    <Text style={styles.fieldLabel}>Weight (kg):</Text>
+                                    {isEditing ? (
+                                        <>
+                                            <TextInput
+                                                style={[styles.input, validationErrors.weight && styles.inputError]}
+                                                value={getValue("weight")?.toString()}
+                                                onChangeText={(text) => handleChange("weight", Number.parseInt(text) || 0)}
+                                                keyboardType="number-pad"
+                                            />
+                                            {validationErrors.weight && <Text style={styles.errorText}>{validationErrors.weight}</Text>}
+                                        </>
+                                    ) : (
+                                        <Text style={styles.fieldValue}>{profile?.weight}</Text>
+                                    )}
+                                </View>
+                            </View>                            
+                            <View style={styles.rowContainer}>
+                                <View style={[styles.columnContainer, { marginRight: 8 }]}>
+                                    <Text style={styles.fieldLabel}>Activity Factor:</Text>
+                                    {isEditing ? (
+                                        <>
+                                            <TextInput
+                                                style={[styles.input, validationErrors.activityFactor && styles.inputError]}
+                                                value={activityFactorInputText || getValue("activityFactor")?.toString()}
+                                                onChangeText={handleActivityFactorInputChange}
+                                                keyboardType="decimal-pad"
+                                                maxLength={4}
+                                                placeholder="0.00 - 5.00"
+                                            />
+                                            {validationErrors.activityFactor && (
+                                                <Text style={styles.errorText}>{validationErrors.activityFactor}</Text>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <Text style={styles.fieldValue} numberOfLines={1} adjustsFontSizeToFit>
+                                            {profile?.activityFactor}
+                                        </Text>
+                                    )}
+                                </View>
 
-                                        <Modal
-                                            visible={showPeriodDropdown}
-                                            transparent={true}
-                                            animationType="fade"
-                                            onRequestClose={() => setShowPeriodDropdown(false)}
-                                        >
+                                <View style={styles.columnContainer}>
+                                    {isEditing && (
+                                        <>
+                                            <Text style={styles.fieldLabel}>Auto-calculate calorie limit:</Text>
+                                            <View style={styles.switchContainer}>
+                                                <Text style={styles.switchLabel}>{isAutoSetCalorieLimit() ? "On" : "Off"}</Text>
+                                                <Switch
+                                                    value={isAutoSetCalorieLimit()}
+                                                    onValueChange={(value) => handleChange("autoSetCalorieLimit", value)}
+                                                    trackColor={{ false: "#e9e9e9", true: "#81b0ff" }}
+                                                    thumbColor={isAutoSetCalorieLimit() ? "#0066cc" : "#f4f3f4"}
+                                                />
+                                            </View>
+                                        </>
+                                    )}
+                                </View>
+                            </View>                            
+                            <View style={styles.rowContainer}>
+                                <View style={[styles.columnContainer, { marginRight: 8 }]}>
+                                    <Text style={styles.fieldLabel}>Calorie Limit (kcal):</Text>
+                                    {isEditing ? (
+                                        <>
+                                            <TextInput
+                                                style={[
+                                                    styles.input,
+                                                    isAutoSetCalorieLimit() && styles.disabledInput,
+                                                    validationErrors.calorieLimit && styles.inputError,
+                                                ]}
+                                                value={getValue("calorieLimit")?.toString()}
+                                                onChangeText={(text) => handleChange("calorieLimit", text)}
+                                                keyboardType="numeric"
+                                                editable={!isAutoSetCalorieLimit()}
+                                                maxLength={MAX_CALORIES.toString().length}
+                                            />
+                                            {validationErrors.calorieLimit && (
+                                                <Text style={styles.errorText}>{validationErrors.calorieLimit}</Text>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <Text style={styles.fieldValue} numberOfLines={1} adjustsFontSizeToFit>
+                                            {formatDecimalDisplay(profile?.calorieLimit)}
+                                        </Text>
+                                    )}
+                                </View>
+
+                                <View style={styles.columnContainer}>
+                                    <Text style={styles.fieldLabel}>Calorie Limit Period:</Text>
+                                    {isEditing ? (
+                                        <View>
                                             <TouchableOpacity
-                                                style={styles.modalOverlay}
-                                                activeOpacity={1}
-                                                onPress={() => setShowPeriodDropdown(false)}
+                                                style={styles.dropdownButton}
+                                                onPress={() => setShowPeriodDropdown(true)}
+                                                activeOpacity={0.7}
                                             >
-                                                <View style={styles.dropdownModal}>
-                                                    {PERIOD_OPTIONS.map((option) => (
-                                                        <TouchableOpacity
-                                                            key={option.value}
-                                                            style={[
-                                                                styles.dropdownItem,
-                                                                getValue("calorieLimitPeriod") === option.value && styles.dropdownItemSelected,
-                                                            ]}
-                                                            onPress={() => {
-                                                                handleChange("calorieLimitPeriod", option.value)
-                                                                setShowPeriodDropdown(false)
-                                                            }}
-                                                            activeOpacity={0.7}
-                                                        >
-                                                            <Text
-                                                                style={[
-                                                                    styles.dropdownItemText,
-                                                                    getValue("calorieLimitPeriod") === option.value && styles.dropdownItemTextSelected,
-                                                                ]}
-                                                            >
-                                                                {option.label}
-                                                            </Text>
-                                                        </TouchableOpacity>
-                                                    ))}
-                                                </View>
+                                                <Text style={styles.dropdownButtonText}>
+                                                    {getPeriodLabel(getValue("calorieLimitPeriod") as string)}
+                                                </Text>
                                             </TouchableOpacity>
-                                        </Modal>
-                                    </View>
-                                ) : (
-                                    <Text style={styles.fieldValue}>{getPeriodLabel(profile?.calorieLimitPeriod || "day")}</Text>
-                                )}
-                            </View>
-                        </View>
 
-                        {/* Length and Width Reference Points in one row - Now supports decimals */}
-                        <View style={styles.rowContainer}>
-                            <View style={[styles.columnContainer, { marginRight: 8 }]}>
-                                <Text style={styles.fieldLabel}>Length Finger (cm):</Text>
-                                {isEditing ? (
-                                    <>
-                                        <TextInput
-                                            style={[styles.input, validationErrors.lengthReferencePoint && styles.inputError]}
-                                            value={lengthInputText || getValue("lengthReferencePoint")?.toString()}
-                                            onChangeText={(text) =>
-                                                handleDecimalInputChange("lengthReferencePoint", text, setLengthInputText)
-                                            }
-                                            keyboardType="decimal-pad"
-                                            maxLength={10}
-                                        />
-                                        {validationErrors.lengthReferencePoint && (
-                                            <Text style={styles.errorText}>{validationErrors.lengthReferencePoint}</Text>
-                                        )}
-                                    </>
-                                ) : (
-                                    <Text style={styles.fieldValue} numberOfLines={1} adjustsFontSizeToFit>
-                                        {profile?.lengthReferencePoint}
-                                    </Text>
-                                )}
+                                            <Modal
+                                                visible={showPeriodDropdown}
+                                                transparent={true}
+                                                animationType="fade"
+                                                onRequestClose={() => setShowPeriodDropdown(false)}
+                                            >
+                                                <TouchableOpacity
+                                                    style={styles.modalOverlay}
+                                                    activeOpacity={1}
+                                                    onPress={() => setShowPeriodDropdown(false)}
+                                                >
+                                                    <View style={styles.dropdownModal}>
+                                                        {PERIOD_OPTIONS.map((option) => (
+                                                            <TouchableOpacity
+                                                                key={option.value}
+                                                                style={[
+                                                                    styles.dropdownItem,
+                                                                    getValue("calorieLimitPeriod") === option.value && styles.dropdownItemSelected,
+                                                                ]}
+                                                                onPress={() => {
+                                                                    handleChange("calorieLimitPeriod", option.value)
+                                                                    setShowPeriodDropdown(false)
+                                                                }}
+                                                                activeOpacity={0.7}
+                                                            >
+                                                                <Text
+                                                                    style={[
+                                                                        styles.dropdownItemText,
+                                                                        getValue("calorieLimitPeriod") === option.value && styles.dropdownItemTextSelected,
+                                                                    ]}
+                                                                >
+                                                                    {option.label}
+                                                                </Text>
+                                                            </TouchableOpacity>
+                                                        ))}
+                                                    </View>
+                                                </TouchableOpacity>
+                                            </Modal>
+                                        </View>
+                                    ) : (
+                                        <Text style={styles.fieldValue}>{getPeriodLabel(profile?.calorieLimitPeriod || "day")}</Text>
+                                    )}
+                                </View>
+                            </View>                            
+                            <View style={styles.rowContainer}>
+                                <View style={[styles.columnContainer, { marginRight: 8 }]}>
+                                    <Text style={styles.fieldLabel}>Length Finger (cm):</Text>
+                                    {isEditing ? (
+                                        <>
+                                            <TextInput
+                                                style={[styles.input, validationErrors.lengthReferencePoint && styles.inputError]}
+                                                value={lengthInputText || getValue("lengthReferencePoint")?.toString()}
+                                                onChangeText={(text) =>
+                                                    handleDecimalInputChange("lengthReferencePoint", text, setLengthInputText)
+                                                }
+                                                keyboardType="decimal-pad"
+                                                maxLength={10}
+                                            />
+                                            {validationErrors.lengthReferencePoint && (
+                                                <Text style={styles.errorText}>{validationErrors.lengthReferencePoint}</Text>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <Text style={styles.fieldValue} numberOfLines={1} adjustsFontSizeToFit>
+                                            {profile?.lengthReferencePoint}
+                                        </Text>
+                                    )}
+                                </View>
+
+                                <View style={styles.columnContainer}>
+                                    <Text style={styles.fieldLabel}>Width Finger (cm):</Text>
+                                    {isEditing ? (
+                                        <>
+                                            <TextInput
+                                                style={[styles.input, validationErrors.widthReferencePoint && styles.inputError]}
+                                                value={widthInputText || getValue("widthReferencePoint")?.toString()}
+                                                onChangeText={(text) => handleDecimalInputChange("widthReferencePoint", text, setWidthInputText)}
+                                                keyboardType="decimal-pad"
+                                                maxLength={10}
+                                            />
+                                            {validationErrors.widthReferencePoint && (
+                                                <Text style={styles.errorText}>{validationErrors.widthReferencePoint}</Text>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <Text style={styles.fieldValue} numberOfLines={1} adjustsFontSizeToFit>
+                                            {profile?.widthReferencePoint}
+                                        </Text>
+                                    )}
+                                </View>
+                            </View>                            
+                            <View style={styles.fieldRow}>
+                                <Text style={styles.fieldLabel}>Area Finger (cm²):</Text>
+                                <Text style={styles.fieldValue} numberOfLines={1} adjustsFontSizeToFit>
+                                    {isEditing
+                                        ? calculateAreaReferencePoint()
+                                        : profile?.areaReferencePoint}
+                                    {isEditing && <Text style={styles.calculatedText}> (length x width)</Text>}
+                                </Text>
                             </View>
 
-                            <View style={styles.columnContainer}>
-                                <Text style={styles.fieldLabel}>Width Finger (cm):</Text>
-                                {isEditing ? (
-                                    <>
-                                        <TextInput
-                                            style={[styles.input, validationErrors.widthReferencePoint && styles.inputError]}
-                                            value={widthInputText || getValue("widthReferencePoint")?.toString()}
-                                            onChangeText={(text) => handleDecimalInputChange("widthReferencePoint", text, setWidthInputText)}
-                                            keyboardType="decimal-pad"
-                                            maxLength={10}
-                                        />
-                                        {validationErrors.widthReferencePoint && (
-                                            <Text style={styles.errorText}>{validationErrors.widthReferencePoint}</Text>
-                                        )}
-                                    </>
-                                ) : (
-                                    <Text style={styles.fieldValue} numberOfLines={1} adjustsFontSizeToFit>
-                                        {profile?.widthReferencePoint}
-                                    </Text>
-                                )}
-                            </View>
-                        </View>
-
-                        {/* Area Reference Point - Now shows decimal precision */}
-                        <View style={styles.fieldRow}>
-                            <Text style={styles.fieldLabel}>Area Finger (cm²):</Text>
-                            <Text style={styles.fieldValue} numberOfLines={1} adjustsFontSizeToFit>
-                                {isEditing
-                                    ? calculateAreaReferencePoint()
-                                    : profile?.areaReferencePoint}
-                                {isEditing && <Text style={styles.calculatedText}> (length x width)</Text>}
-                            </Text>
-                        </View>                            {/* Calorie unit note */}
                             <View style={styles.noteContainer}>
                                 <Text style={styles.noteText}>Note: Calorie values are displayed in kilocalories (kcal)</Text>
                             </View>
@@ -893,8 +815,7 @@ const styles = StyleSheet.create({
         left: "50%",
         top: 30,
         transform: [{ translateX: -50 }],
-    },
-    cancelButton: {
+    },    cancelButton: {
         padding: 8,
         backgroundColor: "#0066cc",
         borderRadius: 8,
@@ -908,7 +829,8 @@ const styles = StyleSheet.create({
     cancelButtonText: {
         color: "#fff",
         fontWeight: "600",
-    },    formContainer: {
+    },
+    formContainer: {
         backgroundColor: "#fff",
         borderRadius: 8,
         padding: 16,
