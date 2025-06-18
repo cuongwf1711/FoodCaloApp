@@ -545,7 +545,7 @@ const Index: React.FC = () => {
         }
     }, [result])
     
-    async function pollImages(retries = 10) {
+    async function pollImages(retries = 100) {
         const checkUrl = async (url: string) => {
             try {
                 const res = await headData(url)
