@@ -1,7 +1,7 @@
 export const BASE_URL = 'https://mighty-baboon-busy.ngrok-free.app/api/v1';
 
 // npx expo export --platform web
-// eas deploy --alias v1
+// eas deploy --prod
 // eas build --platform android --profile preview
 
 export default BASE_URL;
